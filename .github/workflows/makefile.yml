@@ -46,6 +46,8 @@ jobs:
         cd $GITHUB_WORKSPACE/kernel_workspace
         git clone https://github.com/2481849298/android_kernel_mtk6833.git kernel-4.14
         cd kernel-4.14
+        rm -rf KernelSU
+        curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
 
     - name: 下载内核模块
       run: |
