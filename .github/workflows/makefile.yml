@@ -44,10 +44,15 @@ jobs:
     - name: 下载内核源码
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
-        git clone https://github.com/2481849298/android_kernel_mtk6833.git android-kernel
-        cd android-kernel
+        git clone https://github.com/2481849298/android_kernel_mtk6833.git kernel-4.14
+        cd kernel-4.14
 
-               
+    - name: 下载内核模块
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace
+        git clone https://github.com/2481849298/android_kernel_modules_mtk6833.git vendor
+        cp -r vendor vnd/vendor
+              
     - name: 设置ccache缓存
       uses: hendrikmuhs/ccache-action@v1.2
       with:
@@ -57,7 +62,7 @@ jobs:
  
     - name: 开始编译内核
       run: |
-        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+        cd $GITHUB_WORKSPACE/kernel_workspace/kernel-4.14
         export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/bin:$GITHUB_WORKSPACE/kernel_workspace/gcc64/bin:$GITHUB_WORKSPACE/kernel_workspace/gcc32/bin:$PATH
         export KBUILD_BUILD_USER=酷安-玩机小白777
         make clean & make mrproper
@@ -72,7 +77,7 @@ jobs:
         sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
         sed -i 's!block=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!block=auto;!g' AnyKernel3/anykernel.sh
         sed -i 's/is_slot_device=0;/is_slot_device=auto;/g' AnyKernel3/anykernel.sh
-        cp android-kernel/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+        cp kernel-4.14/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
         rm -rf AnyKernel3/.git* AnyKernel3/README.md
         
     
@@ -88,4 +93,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: mtk6833内核-Image.gz-dtb
-        path: kernel_workspace/android-kernel/out/arch/arm64/boot/Image.gz-dtb
+        path: kernel_workspace/kernel-4.14/out/arch/arm64/boot/Image.gz-dtb
