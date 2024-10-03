@@ -142,7 +142,7 @@ obj-y += sched_assist/
 $(obj)/configs.o: $(obj)/config_data.h
 
 targets += config_data.gz
-$(obj)/config_data.gz: arch/arm64/configs/mt6833_defconfig FORCE
+$(obj)/config_data.gz: arch/arm64/configs/false_defconfig FORCE
 	$(call if_changed,gzip)
 
       filechk_ikconfiggz = (echo "static const char kernel_config_data[] __used = MAGIC_START"; cat $< | scripts/basic/bin2c; echo "MAGIC_END;")
