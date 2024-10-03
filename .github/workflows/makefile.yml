@@ -68,7 +68,7 @@ jobs:
         export KBUILD_BUILD_USER=酷安-玩机小白777
         make clean & make mrproper
         make -s -j$(nproc --all) O=out ARCH=arm64 mt6833_defconfig
-        make -j$(nproc --all) CC="ccache clang" O=out ARCH=arm64 CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi-
+        make -j$(nproc --all) CC="ccache clang" O=out ARCH=arm64 CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi- LD=ld.lld
                 
 
     - name: 制作Anykernel3卡刷包
