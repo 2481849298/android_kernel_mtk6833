@@ -51,7 +51,8 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
         git clone https://github.com/2481849298/android_kernel_modules_mtk6833.git vendor
-        cp -r vendor vnd/vendor
+        mkdir vnd
+        cp -r vendor vnd/
               
     - name: 设置ccache缓存
       uses: hendrikmuhs/ccache-action@v1.2
