@@ -54,7 +54,7 @@ MTK_PLATFORM_ID := $(patsubst CONSYS_%,%,$(subst ",,$(CONFIG_MTK_COMBO_CHIP)))
             export MTK_COMBO_CHIP=CONNAC2X2
             PATH_TO_WMT_DRV      = common
         else
-            export MTK_COMBO_CHIP=CONNAC
+            export MTK_COMBO_CHIP=SOC2_1X1
             PATH_TO_WMT_DRV      = common
         endif
 
@@ -69,6 +69,7 @@ MTK_PLATFORM_ID := $(patsubst CONSYS_%,%,$(subst ",,$(CONFIG_MTK_COMBO_CHIP)))
         export MTK_ANDROID_EMI=y
         export ADAPTOR_OPTS=$(MTK_COMBO_CHIP)
         export WIFI_ECO_VER=1
+        export BT_PLATFORM=connac1x
         export CONNAC_VER=1_0
         export MTK_WLAN_SERVICE=yes
         WLAN_IP_SET_1_SERIES := 6765 6761 6885 6893
