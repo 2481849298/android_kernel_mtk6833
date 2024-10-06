@@ -69,6 +69,7 @@ MTK_PLATFORM_ID := $(patsubst CONSYS_%,%,$(subst ",,$(CONFIG_MTK_COMBO_CHIP)))
         export MTK_ANDROID_EMI=y
         export ADAPTOR_OPTS=$(MTK_COMBO_CHIP)
         export WIFI_ECO_VER=1
+        export CONNAC_VER=1_0
         export MTK_WLAN_SERVICE=yes
         WLAN_IP_SET_1_SERIES := 6765 6761 6885 6893
         WLAN_IP_SET_2_SERIES := 3967 6785
