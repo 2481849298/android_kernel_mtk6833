@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef TCPC_TIMER_H_INCLUDED
@@ -74,6 +66,11 @@ enum {
 #endif	/* CONFIG_USB_PD_REV30 */
 
 	PD_TIMER_PE_IDLE_TOUT,
+#ifdef OPLUS_FEATURE_CHG_BASIC
+/********* workaround MO.230913213000256759: sc6607 workaround for pd abnormal start*********/
+	PD_TIMER_INT_INVAILD,
+/********* workaround MO.230913213000256759: sc6607 workaround for pd abnormal end*********/
+#endif
 	PD_PE_TIMER_END_ID,
 #endif /* CONFIG_USB_POWER_DELIVERY */
 

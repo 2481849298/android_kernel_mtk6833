@@ -103,6 +103,7 @@
 		touchpanel,panel-coords = <1080 2400>;
 		touchpanel,display-coords = <1080 2400>;
 		touchpanel,touchmajor-limit = <0 54>;
+		touchpanel,msecs-to-jiffies-time = <500>;
 		tp_type = <8>;
 		panel_type = <8>;
 		firmware_name = "focalt_";
@@ -148,6 +149,7 @@
                 touchpanel,panel-coords = <1080 2400>;
                 touchpanel,display-coords = <1080 2400>;
                 touchpanel,touchmajor-limit = <0 54>;
+		touchpanel,msecs-to-jiffies-time = <500>;
                 tp_type = <8>;
                 panel_type = <8>;
                 firmware_name = "goodix_";
@@ -591,6 +593,12 @@
 		regulator-always-on;
 	};
 };
+&mmc1 {
+	cd-gpios = <&pio 8 0>;
+	status = "okay";
+	vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
+};
+
 &mt6360_ldo {
 	ldo5_ctrls = [00 80 01 2d a4];
 	sdcard_det_en = <1>;
@@ -953,7 +961,7 @@
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO59__FUNC_GPIO59>;
 			slew-rate = <0>;  /*direction 0:in, 1:out*/
-			bias-pull-up = <00>;
+			bias-pull-up=<MTK_PUPD_SET_R1R0_00>;
 			input-enable;
 		};
 	};
@@ -961,7 +969,7 @@
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO60__FUNC_GPIO60>;
 			slew-rate = <0>;  /*direction 0:in, 1:out*/
-			bias-pull-up = <01>;
+			bias-pull-up=<MTK_PUPD_SET_R1R0_01>;
 			input-enable;
 		};
 	};
@@ -973,6 +981,7 @@
 	gpslna_pins_init: gpslna@0 {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO155__FUNC_GPIO155>;
+                        //#ifndef VENDOR_EDIT
                         //modify for: [GPS_LNA gpio's output direction is out]
                         /*
 			slew-rate = <0>;
@@ -1137,31 +1146,31 @@ gpio_goodix_irq_default: gpio_goodix_irq_default {
 gpio_goodix_clk_6mA: gpio_goodix_clk_6mA {
 				pins_cmd_dat {
 					pinmux = <PINMUX_GPIO20__FUNC_SPI0_A_CLK>;
-					drive-strength = <2>;
+					drive-strength = <1>;
 				};
 			};
 gpio_goodix_mosi_6mA: gpio_goodix_mosi_6mA {
 				pins_cmd_dat {
 					pinmux = <PINMUX_GPIO18__FUNC_SPI0_A_MO>;
-					drive-strength = <2>;
+					drive-strength = <1>;
 				};
 			};
 gpio_goodix_miso_6mA: gpio_goodix_miso_6mA {
 				pins_cmd_dat {
 					pinmux = <PINMUX_GPIO17__FUNC_SPI0_A_MI>;
-					drive-strength = <3>;
+					drive-strength = <1>;
 				};
 			};
 gpio_goodix_cs_6mA: gpio_goodix_cs_6mA {
 				pins_cmd_dat {
 					pinmux = <PINMUX_GPIO19__FUNC_SPI0_A_CSB>;
-					drive-strength = <2>;
+					drive-strength = <1>;
 				};
 			};
 gpio_goodix_cs_func: gpio_goodix_cs_func {
 				pins_cmd_dat {
 					pinmux = <PINMUX_GPIO19__FUNC_SPI0_A_CSB>;
-					drive-strength = <2>;
+					drive-strength = <1>;
 				};
 			};
 };
@@ -1195,11 +1204,11 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 };
 
 &odm {
-	phy_tuning {
+	mediatek_phy_tuning {
 		compatible = "mediatek,phy_tuning";
-		u2_vrt_ref = <6>;
-		u2_term_ref = <6>;
-		u2_enhance = <2>;
+		eye-vrt = <6>;
+		eye-term = <6>;
+		eye-rev6 = <2>;
 	};
 };
 

@@ -1,15 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (C) 2016 MediaTek Inc.
  */
+
 
 #include <linux/string.h>
 
@@ -127,7 +120,12 @@ s32 get_md_hrt_bw(void)
 #if IS_ENABLED(CONFIG_MACH_MT6853)
 	return 3344;
 #elif IS_ENABLED(CONFIG_MACH_MT6877)
-	return (3427*100/65+1700);
+    /*
+     * Reduce MD worst HRT BW for DISP layers .
+     * If there is disp underrun issue, we need to confirm
+     * whether to add MD var: 1700.
+     */
+    return (3427*100/65);
 #elif IS_ENABLED(CONFIG_MACH_MT6781)
 	return 1843;
 #else

@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/version.h>
 #include <linux/kernel.h>
@@ -881,9 +873,12 @@ static struct notifier_block thermal_idle_nfb = {
 };
 
 #ifdef CONFIG_OF
+void __iomem *rgu_base;
+
 int get_io_reg_base(void)
 {
 	struct device_node *node = NULL;
+	struct device_node *rgu_node = NULL;
 
 	node = of_find_compatible_node(NULL, NULL, "mediatek,therm_ctrl");
 	WARN_ON_ONCE(node == 0);
@@ -893,6 +888,14 @@ int get_io_reg_base(void)
 	}
 
 	/*tscpu_printk("[THERM_CTRL] thermal_base= 0x%px\n",thermal_base);*/
+
+	rgu_node = of_find_compatible_node(NULL, NULL, "mediatek,toprgu");
+	WARN_ON_ONCE(rgu_node == 0);
+	if (rgu_node) {
+		/* Setup IO addresses */
+		rgu_base = of_iomap(rgu_node, 0);
+	}
+	/*tscpu_printk("[THERM_CTRL] rgu_base = 0x%px\n",rgu_base);*/
 
 	/*get thermal irq num */
 	thermal_irq_number = irq_of_parse_and_map(node, 0);

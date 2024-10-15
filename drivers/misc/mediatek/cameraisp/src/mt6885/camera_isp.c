@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 /******************************************************************************
@@ -46,24 +38,32 @@
 #include "mtk_iommu_ext.h"
 #endif
 #include "mach/pseudo_m4u.h"
+#ifdef CONFIG_MACH_MT6893
 #include <clk-mt6885-pg.h>
+#endif
+#ifdef CONFIG_MACH_MT6885
+#include <clk-mt6885-pg.h>
+#endif
+
 
 /* MET: define to enable MET*/
-#define ISP_MET_READY
+//#define ISP_MET_READY
 
 /* #define EP_STAGE */
 //#define EP_STAGE
 #ifdef EP_STAGE
-#define EP_MARK_SMI /* disable SMI related for EP */
+//#define EP_MARK_SMI /* disable SMI related for EP */
 //#define DUMMY_INT   /* For early if load dont need to use camera */
 
 /* Clkmgr is not ready in early porting, en/disable clock  by hardcode */
 #define EP_NO_CLKMGR
 
 /* EP no need to adjust upper bound of kernel log count */
-//#define EP_NO_K_LOG_ADJUST
+#define EP_NO_K_LOG_ADJUST
 #endif
 #define ENABLE_TIMESYNC_HANDLE /* able/disable TimeSync related for EP */
+
+#define EP_NO_K_LOG_ADJUST
 
 #ifdef CONFIG_COMPAT
 /* 64 bit */
@@ -253,18 +253,19 @@ const struct ISR_TABLE IRQ_CB_TBL[ISP_IRQ_TYPE_AMOUNT] = {
  * Note!!! The order and member of .compatible must be the same with that in
  *  "ISP_DEV_NODE_ENUM" in camera_isp.h
  */
+
 static const struct of_device_id isp_of_ids[] = {
 	{
 		.compatible = "mediatek,camsys",
 	},
 	{
-		.compatible = "mediatek,camsys_rawa",
+		.compatible = "mediatek,camsys_a",
 	},
 	{
-		.compatible = "mediatek,camsys_rawb",
+		.compatible = "mediatek,camsys_b",
 	},
 	{
-		.compatible = "mediatek,camsys_rawc",
+		.compatible = "mediatek,camsys_c",
 	},
 	{
 		.compatible = "mediatek,cam1_inner",
@@ -399,7 +400,7 @@ static unsigned int sec_on;
 static unsigned int cq_recovery;
 
 #ifdef CONFIG_PM_SLEEP
-struct wakeup_source isp_wake_lock;
+struct wakeup_source *isp_wake_lock;
 #endif
 static int g_WaitLockCt;
 static int irq3a_wait_cnt = 1;
@@ -586,7 +587,6 @@ struct ISP_IRQ_ERR_WAN_CNT_STRUCT {
 };
 
 static int FirstUnusedIrqUserKey = 1;
-#define USERKEY_STR_LEN 128
 
 struct UserKeyInfo {
 	/* name for the user that register a userKey */
@@ -972,6 +972,7 @@ struct _isp_bk_reg_t {
 
 static struct _isp_bk_reg_t g_BkReg[ISP_IRQ_TYPE_AMOUNT];
 
+#ifndef EP_NO_CLKMGR
 static void cam_subsys_after_on(enum subsys_id sys_id)
 {
 /*
@@ -1041,6 +1042,7 @@ static struct pg_callbacks cam_clk_subsys_handle = {
 	.before_off = cam_subsys_before_off,
 	.debug_dump = cam_subsys_debug_dump,
 };
+#endif
 
 /* CAM_REG_TG_INTER_ST 0x3b3c, CAMSV_REG_TG_INTER_ST 0x016C */
 void __iomem *CAMX_REG_TG_INTER_ST(int reg_module)
@@ -2999,8 +3001,8 @@ static void ISP_EnableClock(bool En)
 #endif
 	}
 }
-extern void mtk_ccf_cam_debug(const char *str1, const char *str2,
-	const char *str3);
+//extern void mtk_ccf_cam_debug(const char *str1, const char *str2,
+	//const char *str3);
 
 /*******************************************************************************
  *
@@ -3027,7 +3029,7 @@ static inline void ISP_Reset(int module)
 		do_div(m_sec, 1000); /* usec */
 		m_usec = do_div(m_sec, 1000000); /* sec and usec */
 		while ((ISP_RD32(CAM_REG_CTL_SW_CTL(module)) & 0x2) != 0x2) {
-			LOG_DBG("CAM resetting... module:%d,0x%x\n", module,
+			LOG_INF("CAM resetting... module:%d,0x%x\n", module,
 				(unsigned int)ISP_RD32(
 				CAM_REG_CTL_SW_CTL(module)));
 			sec = ktime_get(); /* ns */
@@ -3061,7 +3063,7 @@ static inline void ISP_Reset(int module)
 					false, "camera_isp") != 0)
 					LOG_INF(
 					"ERR:smi_debug_bus_hang_detect");
-				mtk_ccf_cam_debug(NULL, NULL, NULL);
+				//mtk_ccf_cam_debug(NULL, NULL, NULL);
 				bDumped = MTRUE;
 				break;
 			}
@@ -3765,6 +3767,12 @@ static int ISP_WaitIrq(struct ISP_WAIT_IRQ_STRUCT *WaitIrq)
 	unsigned long long sec = 0;
 	unsigned long usec = 0;
 
+	if ((idx > 31) || (idx < 0)) {
+		LOG_NOTICE("Error: Invalid idx(%d),Status(0x%x)\n",
+			idx, WaitIrq->EventInfo.Status);
+		return -EFAULT;
+	}
+
 	/* do_gettimeofday(&time_getrequest); */
 	sec = cpu_clock(0);	  /* ns */
 	do_div(sec, 1000);	   /* usec */
@@ -4384,7 +4392,7 @@ static long ISP_ioctl(struct file *pFile, unsigned int Cmd, unsigned long Param)
 
 				} else {
 #ifdef CONFIG_PM_SLEEP
-					__pm_stay_awake(&isp_wake_lock);
+					__pm_stay_awake(isp_wake_lock);
 #endif
 					g_WaitLockCt++;
 
@@ -4402,7 +4410,7 @@ static long ISP_ioctl(struct file *pFile, unsigned int Cmd, unsigned long Param)
 
 				} else {
 #ifdef CONFIG_PM_SLEEP
-					__pm_relax(&isp_wake_lock);
+					__pm_relax(isp_wake_lock);
 #endif
 					LOG_DBG("wakelock disable!! cnt(%d)\n",
 						g_WaitLockCt);
@@ -5353,6 +5361,7 @@ static long ISP_ioctl(struct file *pFile, unsigned int Cmd, unsigned long Param)
 				g_ExposureNum[index] = cq0_note.exposureNum;
 			}
 		}
+
 		LOG_NOTICE("NOTE_CQTHR,CQ_BA(0x%x,0x%x,0x%x),exp(%d),cqCnt(%d),immTrigger(%d)",
 			g_cqBaseAddr[CAM_A][0], g_cqBaseAddr[CAM_B][0], g_cqBaseAddr[CAM_C][0],
 			cq0_note.exposureNum, cq0_note.cqCnt, immTrigger);
@@ -6605,7 +6614,7 @@ RESET:
 			//dump smi for debugging
 			if (smi_debug_bus_hang_detect(false, "camera_isp") != 0)
 				LOG_NOTICE("ERR:smi_debug_bus_hang_detect");
-			mtk_ccf_cam_debug(NULL, NULL, NULL);
+			//mtk_ccf_cam_debug(NULL, NULL, NULL);
 			break;
 		}
 		//add "regTGSt == 0" for workaround
@@ -6863,7 +6872,7 @@ static int ISP_release(struct inode *pInode, struct file *pFile)
 	if (g_WaitLockCt) {
 		LOG_INF("wakelock disable!! cnt(%d)\n", g_WaitLockCt);
 #ifdef CONFIG_PM_SLEEP
-		__pm_relax(&isp_wake_lock);
+		__pm_relax(isp_wake_lock);
 #endif
 		g_WaitLockCt = 0;
 	}
@@ -7454,7 +7463,7 @@ static int ISP_probe(struct platform_device *pDev)
 		}
 
 #ifdef CONFIG_PM_SLEEP
-		wakeup_source_init(&isp_wake_lock, "isp_lock_wakelock");
+		isp_wake_lock = wakeup_source_register(&pDev->dev, "isp_lock_wakelock");
 #endif
 
 #if (ISP_BOTTOMHALF_WORKQ == 1)
@@ -12870,6 +12879,13 @@ static void ISP_BH_Switch_Workqueue(struct work_struct *pWork)
 	unsigned long long  sec = 0, usec = 0, m_sec = 0, m_usec = 0;
 	unsigned long long  timeout = 500;/*0.5ms*/
 
+	spin_lock(&(IspInfo.SpinLockClock));
+	if (G_u4EnableClockCount == 0) {
+		spin_unlock(&(IspInfo.SpinLockClock));
+		LOG_NOTICE("G_u4EnableClockCount is 0, early return since camera is powered off");
+		return;
+	}
+	spin_unlock(&(IspInfo.SpinLockClock));
 
 	LOG_NOTICE("+ seamless switch REQ CQcnt(%d)", g_RequestBufCqCnt[irq_module]);
 

@@ -1,16 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * Power Delivery Policy Engine for SNK
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include "inc/pd_core.h"
@@ -84,6 +74,7 @@ void pe_snk_evaluate_capability_entry(struct pd_port *pd_port)
 	pd_handle_first_pd_command(pd_port);
 
 #ifdef OPLUS_FEATURE_CHG_BASIC
+/* add for pd Without E-Marker IC  */
 	pd_dpm_snk_evaluate_caps(pd_port);
 	pd_port->pe_data.explicit_contract = false;
 #else
@@ -166,7 +157,15 @@ void pe_snk_ready_entry(struct pd_port *pd_port)
 
 void pe_snk_hard_reset_entry(struct pd_port *pd_port)
 {
+	int rv = 0;
+	uint32_t chip_vid = 0;
+
 	pd_send_hard_reset(pd_port);
+
+	rv = tcpci_get_chip_vid(pd_port->tcpc, &chip_vid);
+
+	if (!rv && SOUTHCHIP_PD_VID == chip_vid)
+		pd_enable_timer(pd_port, PD_TIMER_HARD_RESET_COMPLETE);
 }
 
 void pe_snk_transition_to_default_entry(struct pd_port *pd_port)

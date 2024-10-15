@@ -40,7 +40,6 @@
 #endif
 
 #include <mt-plat/mtk_boot_common.h>
-#include <soc/oppo/oppo_project.h>
 static char bl_tb0[] = { 0x51, 0xff };
 extern int __attribute((weak)) tp_gesture_enable_flag(void) { return 0; };
 extern unsigned int __attribute((weak)) is_project(int project)  { return 0; }
@@ -681,7 +680,7 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 	return 0;
 }
 
-static int oppo_esd_backlight_check(void *dsi, dcs_write_gce cb,
+static int lcm_esd_backlight_check(void *dsi, dcs_write_gce cb,
 		void *handle)
 {
 	char bl_tb0[] = {0x51, 0x07, 0xff};
@@ -778,7 +777,7 @@ static int panel_ext_reset(struct drm_panel *panel, int on)
 static struct mtk_panel_funcs ext_funcs = {
 	.reset = panel_ext_reset,
 	.set_backlight_cmdq = lcm_setbacklight_cmdq,
-	.esd_backlight_recovery = oppo_esd_backlight_check,
+	.esd_backlight_recovery = lcm_esd_backlight_check,
 	.panel_poweron = lcm_panel_poweron,
 	.panel_poweroff = lcm_panel_poweroff,
 	.ext_param_set = mtk_panel_ext_param_set,

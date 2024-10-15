@@ -189,7 +189,7 @@ void f2fs_register_inmem_page(struct inode *inode, struct page *page)
 
 	f2fs_trace_pid(page);
 
-	f2fs_set_page_private(page, (unsigned long)ATOMIC_WRITTEN_PAGE);
+	set_page_private_atomic(page);
 
 	new = f2fs_kmem_cache_alloc(inmem_entry_slab, GFP_NOFS);
 
@@ -254,7 +254,7 @@ retry:
 				goto next;
 			}
 
-			err = f2fs_get_node_info(sbi, dn.nid, &ni);
+			err = f2fs_get_node_info(sbi, dn.nid, &ni, false);
 			if (err) {
 				f2fs_put_dnode(&dn);
 				return err;
@@ -272,9 +272,10 @@ next:
 		/* we don't need to invalidate this in the sccessful status */
 		if (drop || recover) {
 			ClearPageUptodate(page);
-			clear_cold_data(page);
+			clear_page_private_gcing(page);
 		}
-		f2fs_clear_page_private(page);
+		detach_page_private(page);
+		set_page_private(page, 0);
 		f2fs_put_page(page, 1);
 
 		list_del(&cur->list);
@@ -353,7 +354,7 @@ void f2fs_drop_inmem_page(struct inode *inode, struct page *page)
 	struct list_head *head = &fi->inmem_pages;
 	struct inmem_pages *cur = NULL;
 
-	f2fs_bug_on(sbi, !IS_ATOMIC_WRITTEN_PAGE(page));
+	f2fs_bug_on(sbi, !page_private_atomic(page));
 
 	mutex_lock(&fi->inmem_lock);
 	list_for_each_entry(cur, head, list) {
@@ -369,8 +370,11 @@ void f2fs_drop_inmem_page(struct inode *inode, struct page *page)
 	kmem_cache_free(inmem_entry_slab, cur);
 
 	ClearPageUptodate(page);
-	f2fs_clear_page_private(page);
+	clear_page_private_atomic(page);
 	f2fs_put_page(page, 0);
+
+	detach_page_private(page);
+	set_page_private(page, 0);
 
 	trace_f2fs_commit_inmem_page(page, INMEM_INVALIDATE);
 }
@@ -896,15 +900,8 @@ block_t f2fs_get_unusable_blocks(struct f2fs_sb_info *sbi)
 	mutex_unlock(&dirty_i->seglist_lock);
 
 	unusable = holes[DATA] > holes[NODE] ? holes[DATA] : holes[NODE];
-	if (unusable > ovp_holes) {
-		if (unusable - ovp_holes > sbi->user_block_count) {
-			f2fs_info(sbi, "ovp_holes:%u,unusable:%u,userblkcnt:%u",
-				ovp_holes, unusable, sbi->user_block_count);
-			f2fs_bug_on(sbi, 1);
-			return sbi->user_block_count;
-		}
+	if (unusable > ovp_holes)
 		return unusable - ovp_holes;
-	}
 	return 0;
 }
 
@@ -912,19 +909,11 @@ int f2fs_disable_cp_again(struct f2fs_sb_info *sbi, block_t unusable)
 {
 	int ovp_hole_segs =
 		(overprovision_segments(sbi) - reserved_segments(sbi));
-	if (unusable > F2FS_OPTION(sbi).unusable_cap) {
-		f2fs_err(sbi, " f2fs_disable_cp_again unusable > F2FS_OPTION(sbi).unusable_cap unusable:%d, F2FS_OPTION(sbi).unusable_cap:%u",
-				 unusable, F2FS_OPTION(sbi).unusable_cap);
-		f2fs_bug_on(sbi, 1);
+	if (unusable > F2FS_OPTION(sbi).unusable_cap)
 		return -EAGAIN;
-	}
 	if (is_sbi_flag_set(sbi, SBI_CP_DISABLED_QUICK) &&
-		dirty_segments(sbi) > ovp_hole_segs) {
-		f2fs_err(sbi, " f2fs_disable_cp_again dirty_segments(sbi) > ovp_hole_segs :dirty_segments(sbi):%llu ovp_hole_segs:%d",
-				dirty_segments(sbi), ovp_hole_segs);
-		f2fs_bug_on(sbi, 1);
+		dirty_segments(sbi) > ovp_hole_segs)
 		return -EAGAIN;
-		}
 	return 0;
 }
 
@@ -2249,6 +2238,7 @@ void f2fs_invalidate_blocks(struct f2fs_sb_info *sbi, block_t addr)
 		return;
 
 	invalidate_mapping_pages(META_MAPPING(sbi), addr, addr);
+	f2fs_invalidate_compress_page(sbi, addr);
 
 	/* add it into sit main buffer */
 	down_write(&sit_i->sentry_lock);
@@ -2332,9 +2322,7 @@ int f2fs_npages_for_summary_flush(struct f2fs_sb_info *sbi, bool for_ra)
  */
 struct page *f2fs_get_sum_page(struct f2fs_sb_info *sbi, unsigned int segno)
 {
-	if (unlikely(f2fs_cp_error(sbi)))
-		return ERR_PTR(-EIO);
-	return f2fs_get_meta_page_retry(sbi, GET_SUM_BLOCK(sbi, segno));
+	return f2fs_get_meta_page_nofail(sbi, GET_SUM_BLOCK(sbi, segno));
 }
 
 void f2fs_update_meta_page(struct f2fs_sb_info *sbi,
@@ -2606,11 +2594,7 @@ static void change_curseg(struct f2fs_sb_info *sbi, int type)
 	__next_free_blkoff(sbi, curseg, 0);
 
 	sum_page = f2fs_get_sum_page(sbi, new_segno);
-	if (IS_ERR(sum_page)) {
-		/* GC won't be able to use stale summary pages by cp_error */
-		memset(curseg->sum_blk, 0, SUM_ENTRY_SIZE);
-		return;
-	}
+	f2fs_bug_on(sbi, IS_ERR(sum_page));
 	sum_node = (struct f2fs_summary_block *)page_address(sum_page);
 	memcpy(curseg->sum_blk, sum_node, SUM_ENTRY_SIZE);
 	f2fs_put_page(sum_page, 1);
@@ -2694,7 +2678,7 @@ static void allocate_segment_by_default(struct f2fs_sb_info *sbi,
 	stat_inc_seg_type(sbi, curseg);
 }
 
-void allocate_segment_for_resize(struct f2fs_sb_info *sbi, int type,
+void f2fs_allocate_segment_for_resize(struct f2fs_sb_info *sbi, int type,
 					unsigned int start, unsigned int end)
 {
 	struct curseg_info *curseg = CURSEG_I(sbi, type);
@@ -3062,8 +3046,8 @@ static int __get_segment_type_6(struct f2fs_io_info *fio)
 	if (fio->type == DATA) {
 		struct inode *inode = fio->page->mapping->host;
 
-		if (is_cold_data(fio->page) || file_is_cold(inode) ||
-				f2fs_compressed_file(inode))
+		if (page_private_gcing(fio->page) || file_is_cold(inode) ||
+				f2fs_need_compress_data(inode))
 			return CURSEG_COLD_DATA;
 		if (file_is_hot(inode) ||
 				is_inode_flag_set(inode, FI_HOT_DATA) ||
@@ -3227,9 +3211,11 @@ static void do_write_page(struct f2fs_summary *sum, struct f2fs_io_info *fio)
 reallocate:
 	f2fs_allocate_data_block(fio->sbi, fio->page, fio->old_blkaddr,
 			&fio->new_blkaddr, sum, type, fio, true);
-	if (GET_SEGNO(fio->sbi, fio->old_blkaddr) != NULL_SEGNO)
+	if (GET_SEGNO(fio->sbi, fio->old_blkaddr) != NULL_SEGNO) {
 		invalidate_mapping_pages(META_MAPPING(fio->sbi),
 					fio->old_blkaddr, fio->old_blkaddr);
+		f2fs_invalidate_compress_page(fio->sbi, fio->old_blkaddr);
+	}
 
 	/* writeout dirty page into bdev */
 	f2fs_submit_page_write(fio);
@@ -3313,6 +3299,10 @@ int f2fs_inplace_write_data(struct f2fs_io_info *fio)
 			  __func__, segno);
 		return -EFSCORRUPTED;
 	}
+
+	if (fio->post_read)
+		invalidate_mapping_pages(META_MAPPING(sbi),
+					fio->new_blkaddr, fio->new_blkaddr);
 
 	stat_inc_inplace_blocks(fio->sbi);
 
@@ -3398,6 +3388,7 @@ void f2fs_do_replace_block(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
 	if (GET_SEGNO(sbi, old_blkaddr) != NULL_SEGNO) {
 		invalidate_mapping_pages(META_MAPPING(sbi),
 					old_blkaddr, old_blkaddr);
+		f2fs_invalidate_compress_page(sbi, old_blkaddr);
 		update_sit_entry(sbi, old_blkaddr, -1);
 	}
 
@@ -3474,10 +3465,16 @@ void f2fs_wait_on_block_writeback(struct inode *inode, block_t blkaddr)
 void f2fs_wait_on_block_writeback_range(struct inode *inode, block_t blkaddr,
 								block_t len)
 {
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
 	block_t i;
+
+	if (!f2fs_post_read_required(inode))
+		return;
 
 	for (i = 0; i < len; i++)
 		f2fs_wait_on_block_writeback(inode, blkaddr + i);
+
+	invalidate_mapping_pages(META_MAPPING(sbi), blkaddr, blkaddr + len - 1);
 }
 
 static int read_compacted_summaries(struct f2fs_sb_info *sbi)
@@ -3768,7 +3765,7 @@ int f2fs_lookup_journal_in_cursum(struct f2fs_journal *journal, int type,
 static struct page *get_current_sit_page(struct f2fs_sb_info *sbi,
 					unsigned int segno)
 {
-	return f2fs_get_meta_page(sbi, current_sit_addr(sbi, segno));
+	return f2fs_get_meta_page_nofail(sbi, current_sit_addr(sbi, segno));
 }
 
 static struct page *get_next_sit_page(struct f2fs_sb_info *sbi,
@@ -4619,8 +4616,16 @@ int __init f2fs_create_segment_manager_caches(void)
 			sizeof(struct inmem_pages));
 	if (!inmem_entry_slab)
 		goto destroy_sit_entry_set;
+#ifdef CONFIG_F2FS_FS_DEDUP
+	if (create_page_info_slab())
+		goto destroy_inmem_page_entry;
+#endif
 	return 0;
 
+#ifdef CONFIG_F2FS_FS_DEDUP
+destroy_inmem_page_entry:
+	kmem_cache_destroy(inmem_entry_slab);
+#endif
 destroy_sit_entry_set:
 	kmem_cache_destroy(sit_entry_set_slab);
 destroy_discard_cmd:
@@ -4637,4 +4642,7 @@ void f2fs_destroy_segment_manager_caches(void)
 	kmem_cache_destroy(discard_cmd_slab);
 	kmem_cache_destroy(discard_entry_slab);
 	kmem_cache_destroy(inmem_entry_slab);
+#ifdef CONFIG_F2FS_FS_DEDUP
+	destroy_page_info_slab();
+#endif
 }

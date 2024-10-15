@@ -1,15 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
+
 #include "imgsensor_cfg_table.h"
 #include <linux/platform_device.h>
 #include <linux/delay.h>
@@ -21,7 +14,6 @@
 #include <linux/workqueue.h>
 #include <linux/init.h>
 #include <linux/types.h>
-#include <soc/oplus/system/oplus_project.h>
 
 #undef CONFIG_MTK_SMI_EXT
 #ifdef CONFIG_MTK_SMI_EXT
@@ -37,6 +29,12 @@
 #ifdef CONFIG_COMPAT
 #include <linux/compat.h>
 #endif
+
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+#include <soc/oplus/system/oplus_project.h>
+#include "imgsensor_hwcfg_custom_v1.h"
+#include "imgsensor_eeprom.h"
+#endif //OPLUS_FEATURE_CAMERA_COMMON
 
 #ifdef CONFIG_MTK_CCU
 #include "ccu_inc.h"
@@ -55,6 +53,7 @@
 #include "imgsensor_proc.h"
 #include "imgsensor_clk.h"
 #include "imgsensor.h"
+
 #define PDAF_DATA_SIZE 4096
 
 #ifdef CONFIG_MTK_SMI_EXT
@@ -67,10 +66,6 @@ static int current_mmsys_clk = MMSYS_CLK_MEDIUM;
 #ifdef CONFIG_CAM_TEMPERATURE_WORKQUEUE
 static void cam_temperature_report_wq_routine(struct work_struct *);
 	struct delayed_work cam_temperature_wq;
-#endif
-
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-extern void oplus_chg_set_camera_status(bool val);
 #endif
 
 #define FEATURE_CONTROL_MAX_DATA_SIZE 128000
@@ -93,6 +88,7 @@ struct mutex imgsensor_mutex;
 
 DEFINE_MUTEX(pinctrl_mutex);
 DEFINE_MUTEX(oc_mutex);
+
 
 /************************************************************************
  * Profiling
@@ -124,13 +120,12 @@ void IMGSENSOR_PROFILE(struct timeval *ptv, char *tag) {}
 /************************************************************************
  * sensor function adapter
  ************************************************************************/
-#define IMGSENSOR_FUNCTION_ENTRY()    /*pr_info("[%s]:E\n",__FUNCTION__)*/
-#define IMGSENSOR_FUNCTION_EXIT()     /*pr_info("[%s]:X\n",__FUNCTION__)*/
+#define IMGSENSOR_FUNCTION_ENTRY()    /*PK_DBG("[%s]:E\n",__FUNCTION__)*/
+#define IMGSENSOR_FUNCTION_EXIT()     /*PK_DBG("[%s]:X\n",__FUNCTION__)*/
 struct IMGSENSOR_SENSOR *
 imgsensor_sensor_get_inst(enum IMGSENSOR_SENSOR_IDX idx)
 {
-	if (idx < IMGSENSOR_SENSOR_IDX_MIN_NUM ||
-	    idx >= IMGSENSOR_SENSOR_IDX_MAX_NUM)
+	if (idx >= IMGSENSOR_SENSOR_IDX_MAX_NUM)
 		return NULL;
 	else
 		return &pgimgsensor->sensor[idx];
@@ -199,7 +194,7 @@ imgsensor_sensor_open(struct IMGSENSOR_SENSOR *psensor)
 		    IMGSENSOR_HW_POWER_STATUS_ON);
 
 		if (ret != IMGSENSOR_RETURN_SUCCESS) {
-			pr_err("[%s]", __func__);
+			PK_DBG("[%s]", __func__);
 			return -EIO;
 		}
 		/* wait for power stable */
@@ -218,7 +213,7 @@ imgsensor_sensor_open(struct IMGSENSOR_SENSOR *psensor)
 			    psensor_inst->psensor_name,
 			    IMGSENSOR_HW_POWER_STATUS_OFF);
 
-			pr_err("SensorOpen fail");
+			PK_DBG("SensorOpen fail");
 		} else {
 			psensor_inst->state = IMGSENSOR_STATE_OPEN;
 #ifdef CONFIG_MTK_CCU
@@ -283,7 +278,7 @@ imgsensor_sensor_get_info(
 		    pSensorConfigData);
 
 		if (ret != ERROR_NONE)
-			pr_err("[%s] SensorGetInfo failed\n", __func__);
+			PK_DBG(" [%s]error : %d\n", __func__, ret);
 
 		imgsensor_mutex_unlock(psensor_inst);
 	}
@@ -314,7 +309,7 @@ imgsensor_sensor_get_resolution(
 
 		ret = psensor_func->SensorGetResolution(pSensorResolution);
 		if (ret != ERROR_NONE)
-			pr_err("[%s]\n", __func__);
+			PK_DBG(" [%s]error : %d\n", __func__, ret);
 
 		imgsensor_mutex_unlock(psensor_inst);
 	}
@@ -351,7 +346,7 @@ imgsensor_sensor_feature_control(
 		    pFeatureParaLen);
 
 		if (ret != ERROR_NONE)
-			pr_err("[%s]\n", __func__);
+			PK_DBG("[%s] %d\n", __func__, ret);
 
 		imgsensor_mutex_unlock(psensor_inst);
 	}
@@ -391,7 +386,7 @@ imgsensor_sensor_control(
 		    &sensor_config_data);
 
 		if (ret != ERROR_NONE)
-			pr_err("[%s]\n", __func__);
+			PK_DBG(" [%s]error : %d\n", __func__, ret);
 
 		imgsensor_mutex_unlock(psensor_inst);
 
@@ -428,7 +423,7 @@ imgsensor_sensor_close(struct IMGSENSOR_SENSOR *psensor)
 
 		ret = psensor_func->SensorClose();
 		if (ret != ERROR_NONE) {
-			pr_err("[%s]", __func__);
+			PK_DBG(" [%s]error : %d\n", __func__, ret);
 		} else {
 			psensor_inst->state = IMGSENSOR_STATE_CLOSE;
 			imgsensor_hw_power(&pgimgsensor->hw,
@@ -513,26 +508,20 @@ int imgsensor_set_driver(struct IMGSENSOR_SENSOR *psensor)
 	char *driver_name = NULL;
 
 	imgsensor_mutex_init(psensor_inst);
-	#ifdef OPLUS_FEATURE_CAMERA_COMMON
-	if (is_project(20761) || is_project(20762) || is_project(20764) || is_project(20766) || is_project(20767)) {
-		imgsensor_i2c_init(&psensor_inst->i2c_cfg,
-			imgsensor_custom_config_even[(unsigned int)psensor->inst.sensor_idx].i2c_dev);
-	} else if (is_project(0x2167A) || is_project(0x2167B) || is_project(0x2167C) || is_project(0x2167D)) {
-        imgsensor_i2c_init(&psensor_inst->i2c_cfg,
-            imgsensor_custom_config_even[(unsigned int)psensor->inst.sensor_idx].i2c_dev);
-	} else if (is_project(0x216AF) || is_project(0x216B0) || is_project(0x216B1)) {
-        imgsensor_i2c_init(&psensor_inst->i2c_cfg,
-            imgsensor_custom_config_even[(unsigned int)psensor->inst.sensor_idx].i2c_dev);
-	} else {
-		imgsensor_i2c_init(&psensor_inst->i2c_cfg,
-			imgsensor_custom_config[(unsigned int)psensor->inst.sensor_idx].i2c_dev);
-	}
-	#else
-	imgsensor_i2c_init(&psensor_inst->i2c_cfg,
-		imgsensor_custom_config[
-	(unsigned int)psensor->inst.sensor_idx].i2c_dev);
-	#endif /* OPLUS_FEATURE_CAMERA_COMMON */
 
+	#ifndef OPLUS_FEATURE_CAMERA_COMMON
+	imgsensor_i2c_init(&psensor_inst->i2c_cfg,
+	imgsensor_custom_config[
+	(unsigned int)psensor_inst->sensor_idx].i2c_dev);
+	#else //OPLUS_FEATURE_CAMERA_COMMON
+	Oplusimgsensor_i2c_init(psensor_inst);
+
+	pSensorList = Oplusimgsensor_Sensorlist();
+	if (pSensorList == NULL) {
+	    pSensorList = kdSensorList;
+	}
+
+	#endif //OPLUS_FEATURE_CAMERA_COMMON
 	imgsensor_i2c_filter_msg(&psensor_inst->i2c_cfg, true);
 
 	if (get_search_list) {
@@ -575,7 +564,7 @@ int imgsensor_set_driver(struct IMGSENSOR_SENSOR *psensor)
 
 
 
-	/*pr_debug("get_search_list %d,\n %d %d %d %d\n %d %d %d %d\n",
+	/*PK_DBG("get_search_list %d,\n %d %d %d %d\n %d %d %d %d\n",
 	 *   get_search_list,
 	 *   orderedSearchList[0],
 	 *   orderedSearchList[1],
@@ -587,7 +576,7 @@ int imgsensor_set_driver(struct IMGSENSOR_SENSOR *psensor)
 	 *   orderedSearchList[7]);
 	 */
 
-	/*pr_debug(" %d %d %d %d\n %d %d %d %d\n",
+	/*PK_DBG(" %d %d %d %d\n %d %d %d %d\n",
 	 *   orderedSearchList[8],
 	 *   orderedSearchList[9],
 	 *   orderedSearchList[10],
@@ -599,7 +588,7 @@ int imgsensor_set_driver(struct IMGSENSOR_SENSOR *psensor)
 	 */
 
 	for (i = 0; i < MAX_NUM_OF_SUPPORT_SENSOR; i++) {
-		/*pr_debug("orderedSearchList[%d]=%d\n",
+		/*PK_DBG("orderedSearchList[%d]=%d\n",
 		 *i, orderedSearchList[i]);
 		 */
 		if (orderedSearchList[i] == -1)
@@ -627,13 +616,13 @@ int imgsensor_set_driver(struct IMGSENSOR_SENSOR *psensor)
 					break;
 				}
 			} else {
-				pr_err(
+				PK_DBG(
 				    "ERROR:NULL g_pInvokeSensorFunc[%d][%d]\n",
 				    psensor->inst.sensor_idx,
 				    drv_idx);
 			}
 		} else {
-			pr_err("ERROR:NULL sensor list[%d]\n", drv_idx);
+			PK_DBG("ERROR:NULL sensor list[%d]\n", drv_idx);
 		}
 
 	}
@@ -658,13 +647,13 @@ static inline int adopt_CAMERA_HW_GetInfo(void *pBuf)
 	if (pSensorGetInfo == NULL ||
 	     pSensorGetInfo->pInfo == NULL ||
 	     pSensorGetInfo->pConfig == NULL) {
-		pr_debug("[CAMERA_HW] NULL arg.\n");
+		PK_DBG("[CAMERA_HW] NULL arg.\n");
 		return -EFAULT;
 	}
 
 	psensor = imgsensor_sensor_get_inst(pSensorGetInfo->SensorId);
 	if (psensor == NULL) {
-		pr_debug("[CAMERA_HW] NULL psensor.\n");
+		PK_DBG("[CAMERA_HW] NULL psensor.\n");
 		return -EFAULT;
 	}
 
@@ -678,7 +667,7 @@ static inline int adopt_CAMERA_HW_GetInfo(void *pBuf)
 	if (pInfo == NULL || pConfig == NULL) {
 		kfree(pInfo);
 		kfree(pConfig);
-		pr_err(" ioctl allocate mem failed\n");
+		PK_DBG(" ioctl allocate mem failed\n");
 		return -ENOMEM;
 	}
 
@@ -692,7 +681,7 @@ static inline int adopt_CAMERA_HW_GetInfo(void *pBuf)
 	    (void *)pInfo,
 	    sizeof(MSDK_SENSOR_INFO_STRUCT))) {
 
-		pr_err("[CAMERA_HW][info] ioctl copy to user failed\n");
+		PK_DBG("[CAMERA_HW][info] ioctl copy to user failed\n");
 		if (pInfo != NULL)
 			kfree(pInfo);
 		if (pConfig != NULL)
@@ -705,7 +694,7 @@ static inline int adopt_CAMERA_HW_GetInfo(void *pBuf)
 	    (void *)pConfig,
 	    sizeof(MSDK_SENSOR_CONFIG_STRUCT))) {
 
-		pr_debug("[CAMERA_HW][config] ioctl copy to user failed\n");
+		PK_DBG("[CAMERA_HW][config] ioctl copy to user failed\n");
 
 		if (pInfo != NULL)
 			kfree(pInfo);
@@ -749,7 +738,7 @@ MUINT32 Get_Camera_Temperature(
 		    (MUINT8 *)temp,
 		    (MUINT32 *)&FeatureParaLen);
 
-		pr_debug("senDevId(%d), temperature(%d)\n", senDevId, *temp);
+		PK_DBG("senDevId(%d), temperature(%d)\n", senDevId, *temp);
 
 		*valid &= ~SENSOR_TEMPERATURE_NOT_POWER_ON;
 
@@ -771,7 +760,7 @@ static void cam_temperature_report_wq_routine(
 	MUINT32 temp[4] = {0, 0, 0, 0};
 	MUINT32 ret = 0;
 
-	pr_debug("Temperature Meter Report.\n");
+	PK_DBG("Temperature Meter Report.\n");
 
 	/* Main cam */
 	ret = Get_Camera_Temperature(
@@ -783,7 +772,7 @@ static void cam_temperature_report_wq_routine(
 				DUAL_CAMERA_MAIN_SENSOR, valid[0], temp[0]);
 
 	if (ret != ERROR_NONE)
-		pr_err("Get Main cam temperature error(%d)!\n", ret);
+		PK_DBG("Get Main cam temperature error(%d)!\n", ret);
 
 	/* Sub cam */
 	ret = Get_Camera_Temperature(
@@ -795,7 +784,7 @@ static void cam_temperature_report_wq_routine(
 				DUAL_CAMERA_SUB_SENSOR, valid[1], temp[1]);
 
 	if (ret != ERROR_NONE)
-		pr_err("Get Sub cam temperature error(%d)!\n", ret);
+		PK_DBG("Get Sub cam temperature error(%d)!\n", ret);
 
 	/* Main2 cam */
 	ret = Get_Camera_Temperature(
@@ -807,7 +796,7 @@ static void cam_temperature_report_wq_routine(
 				DUAL_CAMERA_MAIN_2_SENSOR, valid[2], temp[2]);
 
 	if (ret != ERROR_NONE)
-		pr_err("Get Main2 cam temperature error(%d)!\n", ret);
+		PK_DBG("Get Main2 cam temperature error(%d)!\n", ret);
 
 	ret = Get_Camera_Temperature(
 	    DUAL_CAMERA_SUB_2_SENSOR,
@@ -818,7 +807,7 @@ static void cam_temperature_report_wq_routine(
 				DUAL_CAMERA_SUB_2_SENSOR, valid[3], temp[3]);
 
 	if (ret != ERROR_NONE)
-		pr_err("Get Sub2 cam temperature error(%d)!\n", ret);
+		PK_DBG("Get Sub2 cam temperature error(%d)!\n", ret);
 	schedule_delayed_work(&cam_temperature_wq, HZ);
 
 }
@@ -858,7 +847,7 @@ static inline int adopt_CAMERA_HW_GetInfo2(void *pBuf)
 		return -EFAULT;
 	}
 
-	pr_debug("[%s]Entry%d\n", __func__, pSensorGetInfo->SensorId);
+	PK_DBG("[%s]Entry%d\n", __func__, pSensorGetInfo->SensorId);
 
 	pInfo =    kzalloc(sizeof(MSDK_SENSOR_INFO_STRUCT), GFP_KERNEL);
 	pConfig =  kzalloc(sizeof(MSDK_SENSOR_CONFIG_STRUCT), GFP_KERNEL);
@@ -882,7 +871,7 @@ static inline int adopt_CAMERA_HW_GetInfo2(void *pBuf)
 		pConfig4 == NULL ||
 		pSensorInfo == NULL ||
 		psensorResolution == NULL) {
-		pr_err(" ioctl allocate mem failed\n");
+		PK_DBG(" ioctl allocate mem failed\n");
 		ret = -EFAULT;
 		goto IMGSENSOR_GET_INFO_RETURN;
 	}
@@ -1085,7 +1074,7 @@ static inline int adopt_CAMERA_HW_GetInfo2(void *pBuf)
 	    (void *)(pSensorInfo),
 	    sizeof(ACDK_SENSOR_INFO2_STRUCT))) {
 
-		pr_debug("[CAMERA_HW][info] ioctl copy to user failed\n");
+		PK_DBG("[CAMERA_HW][info] ioctl copy to user failed\n");
 		ret = -EFAULT;
 		goto IMGSENSOR_GET_INFO_RETURN;
 	}
@@ -1093,7 +1082,7 @@ static inline int adopt_CAMERA_HW_GetInfo2(void *pBuf)
 	/* Step2 : Get Resolution */
 	imgsensor_sensor_get_resolution(psensor, psensorResolution);
 
-	pr_debug(
+	PK_DBG(
 		"[CAMERA_HW][Pre]w=0x%x, h = 0x%x\n, [Full]w=0x%x, h = 0x%x\n, [VD]w=0x%x, h = 0x%x\n",
 				psensorResolution->SensorPreviewWidth,
 				psensorResolution->SensorPreviewHeight,
@@ -1104,7 +1093,7 @@ static inline int adopt_CAMERA_HW_GetInfo2(void *pBuf)
 
 	if (pSensorGetInfo->SensorId <= last_id) {
 		memset(mtk_ccm_name, 0, camera_info_size);
-		pr_debug("memset ok");
+		PK_DBG("memset ok");
 	}
 	last_id = pSensorGetInfo->SensorId;
 
@@ -1199,7 +1188,7 @@ static inline int adopt_CAMERA_HW_GetInfo2(void *pBuf)
 	    (void *)psensorResolution,
 	    sizeof(MSDK_SENSOR_RESOLUTION_INFO_STRUCT))) {
 
-		pr_debug("[CAMERA_HW][Resolution] ioctl copy to user failed\n");
+		PK_DBG("[CAMERA_HW][Resolution] ioctl copy to user failed\n");
 		ret = -EFAULT;
 		goto IMGSENSOR_GET_INFO_RETURN;
 	}
@@ -1233,18 +1222,158 @@ static inline int adopt_CAMERA_HW_Control(void *pBuf)
 
 	pSensorCtrl = (struct ACDK_SENSOR_CONTROL_STRUCT *)pBuf;
 	if (pSensorCtrl == NULL) {
-		pr_err("[%s] NULL arg.\n", __func__);
+		PK_DBG("[%s] NULL arg.\n", __func__);
 		return -EFAULT;
 	}
 
 	psensor = imgsensor_sensor_get_inst(pSensorCtrl->InvokeCamera);
 	if (psensor == NULL) {
-		pr_err("[%s] NULL psensor.\n", __func__);
+		PK_DBG("[%s] NULL psensor.\n", __func__);
 		return -EFAULT;
 	}
 
 	ret = imgsensor_sensor_control(psensor, pSensorCtrl->ScenarioId);
 
+	return ret;
+} /* adopt_CAMERA_HW_Control */
+
+static inline int check_length_of_para(
+	enum ACDK_SENSOR_FEATURE_ENUM FeatureId, unsigned int length)
+{
+	int ret = 0;
+
+	switch (FeatureId) {
+	case SENSOR_FEATURE_OPEN:
+	case SENSOR_FEATURE_CLOSE:
+	case SENSOR_FEATURE_CHECK_IS_ALIVE:
+		break;
+	case SENSOR_FEATURE_SET_DRIVER:
+	case SENSOR_FEATURE_GET_LENS_DRIVER_ID:
+	case SENSOR_FEATURE_SET_FRAMERATE:
+	case SENSOR_FEATURE_SET_HDR:
+	case SENSOR_FEATURE_SET_PDAF:
+	{
+		if (length != 4)
+			ret = -EFAULT;
+	}
+		break;
+	case SENSOR_FEATURE_SET_ESHUTTER:
+	case SENSOR_FEATURE_SET_GAIN:
+	case SENSOR_FEATURE_SET_I2C_BUF_MODE_EN:
+	case SENSOR_FEATURE_SET_SHUTTER_BUF_MODE:
+	case SENSOR_FEATURE_SET_GAIN_BUF_MODE:
+	case SENSOR_FEATURE_SET_VIDEO_MODE:
+	case SENSOR_FEATURE_SET_AF_WINDOW:
+	case SENSOR_FEATURE_SET_AUTO_FLICKER_MODE:
+	case SENSOR_FEATURE_GET_EV_AWB_REF:
+	case SENSOR_FEATURE_GET_SHUTTER_GAIN_AWB_GAIN:
+	case SENSOR_FEATURE_GET_EXIF_INFO:
+	case SENSOR_FEATURE_GET_DELAY_INFO:
+	case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE:
+	case SENSOR_FEATURE_SET_OB_LOCK:
+	case SENSOR_FEATURE_SET_SENSOR_OTP_AWB_CMD:
+	case SENSOR_FEATURE_SET_SENSOR_OTP_LSC_CMD:
+	case SENSOR_FEATURE_GET_TEMPERATURE_VALUE:
+	case SENSOR_FEATURE_GET_AE_FLASHLIGHT_INFO:
+	case SENSOR_FEATURE_GET_TRIGGER_FLASHLIGHT_INFO:
+	case SENSOR_FEATURE_SET_YUV_3A_CMD:
+	case SENSOR_FEATURE_SET_STREAMING_SUSPEND:
+	case SENSOR_FEATURE_SET_STREAMING_RESUME:
+	case SENSOR_FEATURE_GET_PERIOD:
+	case SENSOR_FEATURE_GET_PIXEL_CLOCK_FREQ:
+	{
+		if (length != 8)
+			ret = -EFAULT;
+	}
+		break;
+	case SENSOR_FEATURE_SET_DUAL_GAIN:
+	case SENSOR_FEATURE_SET_YUV_CMD:
+	case SENSOR_FEATURE_GET_AE_AWB_LOCK_INFO:
+	case SENSOR_FEATURE_SET_MAX_FRAME_RATE_BY_SCENARIO:
+	case SENSOR_FEATURE_GET_DEFAULT_FRAME_RATE_BY_SCENARIO:
+	case SENSOR_FEATURE_GET_CROP_INFO:
+	case SENSOR_FEATURE_GET_VC_INFO:
+	case SENSOR_FEATURE_GET_PDAF_INFO:
+	case SENSOR_FEATURE_GET_SENSOR_PDAF_CAPACITY:
+	case SENSOR_FEATURE_GET_SENSOR_HDR_CAPACITY:
+	case SENSOR_FEATURE_SET_SHUTTER_FRAME_TIME:
+	case SENSOR_FEATURE_SET_PDFOCUS_AREA:
+	case SENSOR_FEATURE_GET_PDAF_REG_SETTING:
+	case SENSOR_FEATURE_SET_PDAF_REG_SETTING:
+	{
+		if (length != 16)
+			ret = -EFAULT;
+	}
+		break;
+	case SENSOR_FEATURE_SET_IHDR_SHUTTER_GAIN:
+	case SENSOR_FEATURE_SET_HDR_SHUTTER:
+	case SENSOR_FEATURE_GET_PDAF_DATA:
+	case SENSOR_FEATURE_GET_4CELL_DATA:
+	case SENSOR_FEATURE_GET_MIPI_PIXEL_RATE:
+	case SENSOR_FEATURE_GET_PIXEL_RATE:
+	{
+		if (length != 24)
+			ret = -EFAULT;
+	}
+		break;
+	case SENSOR_FEATURE_SET_SENSOR_SYNC:
+	case SENSOR_FEATURE_SET_ESHUTTER_GAIN:
+	{
+		if (length != 32)
+			ret = -EFAULT;
+	}
+		break;
+	case SENSOR_FEATURE_SET_CALIBRATION_DATA:
+	{
+		if (length !=
+			sizeof(struct SET_SENSOR_CALIBRATION_DATA_STRUCT))
+			ret = -EFAULT;
+	}
+		break;
+	case SENSOR_FEATURE_SET_AWB_GAIN:
+	{
+		if (length !=
+			sizeof(struct SET_SENSOR_AWB_GAIN))
+			ret = -EFAULT;
+	}
+		break;
+	case SENSOR_FEATURE_SET_REGISTER:
+	case SENSOR_FEATURE_GET_REGISTER:
+	{
+
+		if (length !=
+			sizeof(MSDK_SENSOR_REG_INFO_STRUCT))
+			ret = -EFAULT;
+	}
+		break;
+	/* begin of legacy feature control; Do nothing */
+	case SENSOR_FEATURE_SET_ISP_MASTER_CLOCK_FREQ:
+	case SENSOR_FEATURE_SET_CCT_REGISTER:
+	case SENSOR_FEATURE_SET_ENG_REGISTER:
+	case SENSOR_FEATURE_SET_ITEM_INFO:
+	case SENSOR_FEATURE_GET_ITEM_INFO:
+	case SENSOR_FEATURE_GET_ENG_INFO:
+	case SENSOR_FEATURE_MOVE_FOCUS_LENS:
+	case SENSOR_FEATURE_SET_AE_WINDOW:
+	case SENSOR_FEATURE_SET_MIN_MAX_FPS:
+	case SENSOR_FEATURE_GET_RESOLUTION:
+	case SENSOR_FEATURE_GET_REGISTER_DEFAULT:
+	case SENSOR_FEATURE_GET_CONFIG_PARA:
+	case SENSOR_FEATURE_GET_GROUP_COUNT:
+	case SENSOR_FEATURE_CAMERA_PARA_TO_SENSOR:
+	case SENSOR_FEATURE_SENSOR_TO_CAMERA_PARA:
+	case SENSOR_FEATURE_SINGLE_FOCUS_MODE:
+	case SENSOR_FEATURE_CANCEL_AF:
+	case SENSOR_FEATURE_CONSTANT_AF:
+	/* end of legacy feature control */
+	default:
+		break;
+	}
+	if (ret != 0)
+		pr_err(
+			"check length failed, feature ctrl id = %d, length = %d\n",
+			FeatureId,
+			length);
 	return ret;
 } /* adopt_CAMERA_HW_Control */
 
@@ -1270,13 +1399,13 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 	pFeatureCtrl = (struct ACDK_SENSOR_FEATURECONTROL_STRUCT *)pBuf;
 	if (pFeatureCtrl  == NULL) {
-		pr_err(" NULL arg.\n");
+		PK_DBG(" NULL arg.\n");
 		return -EFAULT;
 	}
 
 	psensor = imgsensor_sensor_get_inst(pFeatureCtrl->InvokeCamera);
 	if (psensor == NULL) {
-		pr_err("[%s] NULL psensor.\n", __func__);
+		PK_DBG("[%s] NULL psensor.\n", __func__);
 		return -EFAULT;
 	}
 
@@ -1288,19 +1417,23 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 	} else {
 		if (pFeatureCtrl->pFeaturePara == NULL ||
 		    pFeatureCtrl->pFeatureParaLen == NULL) {
-			pr_err(" NULL arg.\n");
+			PK_DBG(" NULL arg.\n");
 			return -EFAULT;
 		}
 		if (copy_from_user((void *)&FeatureParaLen,
 				(void *) pFeatureCtrl->pFeatureParaLen,
 				sizeof(unsigned int))) {
 
-			pr_err(" ioctl copy from user failed\n");
+			PK_DBG(" ioctl copy from user failed\n");
 			return -EFAULT;
 		}
 		if (!FeatureParaLen ||
 			FeatureParaLen > FEATURE_CONTROL_MAX_DATA_SIZE)
 			return -EINVAL;
+		ret = check_length_of_para(pFeatureCtrl->FeatureId,
+							FeatureParaLen);
+		if (ret != 0)
+			return ret;
 
 		pFeaturePara = kmalloc(FeatureParaLen, GFP_KERNEL);
 		if (pFeaturePara == NULL)
@@ -1388,6 +1521,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 	case SENSOR_FEATURE_GET_SENSOR_PDAF_CAPACITY:
 	case SENSOR_FEATURE_GET_SENSOR_HDR_CAPACITY:
 	case SENSOR_FEATURE_GET_MIPI_PIXEL_RATE:
+	case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
 	case SENSOR_FEATURE_GET_PIXEL_RATE:
 	case SENSOR_FEATURE_SET_PDAF:
 	case SENSOR_FEATURE_SET_SHUTTER_FRAME_TIME:
@@ -1402,20 +1536,20 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void *) pFeatureCtrl->pFeaturePara,
 		    FeatureParaLen)) {
 			kfree(pFeaturePara);
-			pr_err(
+			PK_DBG(
 			    "[CAMERA_HW][pFeaturePara] ioctl copy from user failed\n");
 			return -EFAULT;
 		}
 		break;
 	case SENSOR_FEATURE_SET_SENSOR_SYNC:
 	case SENSOR_FEATURE_SET_ESHUTTER_GAIN:
-		pr_debug("[kd_sensorlist]enter kdSetExpGain\n");
+		PK_DBG("[kd_sensorlist]enter kdSetExpGain\n");
 		if (copy_from_user(
 		    (void *)pFeaturePara,
 		    (void *) pFeatureCtrl->pFeaturePara,
 		    FeatureParaLen)) {
 			kfree(pFeaturePara);
-			pr_err(
+			PK_DBG(
 			    "[CAMERA_HW][pFeaturePara] ioctl copy from user failed\n");
 			return -EFAULT;
 		}
@@ -1471,6 +1605,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 	case SENSOR_FEATURE_GET_SENSOR_PDAF_CAPACITY:
 	case SENSOR_FEATURE_GET_SENSOR_HDR_CAPACITY:
 	case SENSOR_FEATURE_GET_MIPI_PIXEL_RATE:
+	case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
 	case SENSOR_FEATURE_GET_PIXEL_RATE:
 	{
 		MUINT32 *pValue = NULL;
@@ -1478,7 +1613,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (unsigned long long *)pFeaturePara;
 
 		if (FeatureParaLen < 2 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
+			PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
 			kfree(pFeaturePara);
 			return -EINVAL;
 		}
@@ -1486,7 +1621,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		pValue = kmalloc(sizeof(MUINT32), GFP_KERNEL);
 		if (pValue == NULL) {
 			kfree(pFeaturePara);
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			return -ENOMEM;
 		}
 
@@ -1537,7 +1672,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (unsigned long long *)pFeaturePara;
 
 		if (FeatureParaLen < 2 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
+			PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
 			kfree(pFeaturePara);
 			return -EINVAL;
 		}
@@ -1546,7 +1681,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		pValue1 = kmalloc(sizeof(MUINT32), GFP_KERNEL);
 
 		if (pValue0 == NULL || pValue1 == NULL) {
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			kfree(pValue0);
 			kfree(pValue1);
 			kfree(pFeaturePara);
@@ -1579,7 +1714,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		usr_ptr = (void *)(uintptr_t)(*(pFeaturePara_64));
 
 		if (FeatureParaLen < 1 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
+			PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
 			kfree(pFeaturePara);
 			return -EINVAL;
 		}
@@ -1590,7 +1725,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 		if (pAeAwbRef == NULL) {
 			kfree(pFeaturePara);
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			return -ENOMEM;
 		}
 		memset(
@@ -1610,7 +1745,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void __user *)usr_ptr,
 		    (void *)pAeAwbRef,
 		    sizeof(struct SENSOR_AE_AWB_REF_STRUCT))) {
-			pr_debug("[CAMERA_HW]ERROR: copy_to_user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy_to_user fail\n");
 		}
 		kfree(pAeAwbRef);
 		*(pFeaturePara_64) = (uintptr_t)usr_ptr;
@@ -1626,7 +1761,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64 + 1));
 
 		if (FeatureParaLen < 2 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
+			PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
 			kfree(pFeaturePara);
 			return -EINVAL;
 		}
@@ -1637,7 +1772,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 		if (pCrop == NULL) {
 			kfree(pFeaturePara);
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			return -ENOMEM;
 		}
 		memset(pCrop, 0x0, sizeof(struct SENSOR_WINSIZE_INFO_STRUCT));
@@ -1654,7 +1789,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void *)pCrop,
 		    sizeof(struct SENSOR_WINSIZE_INFO_STRUCT))) {
 
-			pr_debug("[CAMERA_HW]ERROR: copy_to_user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy_to_user fail\n");
 		}
 		kfree(pCrop);
 		*(pFeaturePara_64 + 1) = (uintptr_t)usr_ptr;
@@ -1670,7 +1805,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64 + 1));
 
 		if (FeatureParaLen < 2 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
+			PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
 			kfree(pFeaturePara);
 			return -EINVAL;
 		}
@@ -1680,7 +1815,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    GFP_KERNEL);
 
 		if (pVcInfo == NULL) {
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			kfree(pFeaturePara);
 			return -ENOMEM;
 		}
@@ -1697,7 +1832,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void __user *)usr_ptr,
 		    (void *)pVcInfo,
 		    sizeof(struct SENSOR_VC_INFO_STRUCT))) {
-			pr_debug("[CAMERA_HW]ERROR: copy_to_user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy_to_user fail\n");
 		}
 		kfree(pVcInfo);
 		*(pFeaturePara_64 + 1) = (uintptr_t)usr_ptr;
@@ -1713,7 +1848,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64 + 1));
 
 		if (FeatureParaLen < 2 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
+			PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
 			kfree(pFeaturePara);
 			return -EINVAL;
 		}
@@ -1724,7 +1859,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 		if (pPdInfo == NULL) {
 			kfree(pFeaturePara);
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			return -ENOMEM;
 		}
 		memset(pPdInfo, 0x0, sizeof(struct SET_PD_BLOCK_INFO_T));
@@ -1740,7 +1875,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void __user *)usr_ptr,
 		    (void *)pPdInfo,
 		    sizeof(struct SET_PD_BLOCK_INFO_T))) {
-			pr_debug("[CAMERA_HW]ERROR: copy_to_user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy_to_user fail\n");
 		}
 		kfree(pPdInfo);
 		*(pFeaturePara_64 + 1) = (uintptr_t)usr_ptr;
@@ -1758,20 +1893,20 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void *)(uintptr_t) (*(pFeaturePara_64 + 1));
 
 		if (FeatureParaLen < 2 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
+			PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
 			kfree(pFeaturePara);
 			return -EINVAL;
 		}
 
 		if (u4RegLen > PDAF_DATA_SIZE) {
 			kfree(pFeaturePara);
-			pr_debug("check: u4RegLen > PDAF_DATA_SIZE\n");
+			PK_DBG("check: u4RegLen > PDAF_DATA_SIZE\n");
 			return -EINVAL;
 		}
 		pReg = kmalloc_array(u4RegLen, sizeof(kal_uint8), GFP_KERNEL);
 		if (pReg == NULL) {
 			kfree(pFeaturePara);
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			return -ENOMEM;
 		}
 
@@ -1781,7 +1916,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void *)pReg,
 		    (void *)usr_ptr_Reg,
 		    sizeof(kal_uint8)*u4RegLen)) {
-			pr_err("[CAMERA_HW]ERROR: copy from user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy from user fail\n");
 		}
 
 		ret = imgsensor_sensor_feature_control(
@@ -1794,7 +1929,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void __user *)usr_ptr_Reg,
 		    (void *)pReg,
 		    sizeof(kal_uint8)*u4RegLen)) {
-			pr_debug("[CAMERA_HW]ERROR: copy_to_user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy_to_user fail\n");
 		}
 		kfree(pReg);
 	}
@@ -1812,7 +1947,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		pApWindows = kmalloc(sizeof(MUINT32) * 6, GFP_KERNEL);
 		if (pApWindows == NULL) {
 			kfree(pFeaturePara);
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			return -ENOMEM;
 		}
 		memset(pApWindows, 0x0, sizeof(MUINT32) * 6);
@@ -1822,7 +1957,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void *)pApWindows,
 		    (void *)usr_ptr,
 		    sizeof(MUINT32) * 6)) {
-			pr_err("[CAMERA_HW]ERROR: copy from user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy from user fail\n");
 		}
 
 		ret = imgsensor_sensor_feature_control(
@@ -1845,7 +1980,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		usr_ptr =  (void *)(uintptr_t) (*(pFeaturePara_64));
 
 		if (FeatureParaLen < 1 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
+			PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
 			kfree(pFeaturePara);
 			return -EINVAL;
 		}
@@ -1856,7 +1991,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 		if (pExif == NULL) {
 			kfree(pFeaturePara);
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			return -ENOMEM;
 		}
 		memset(pExif, 0x0, sizeof(struct SENSOR_EXIF_INFO_STRUCT));
@@ -1872,7 +2007,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void __user *)usr_ptr,
 		    (void *)pExif,
 		    sizeof(struct SENSOR_EXIF_INFO_STRUCT))) {
-			pr_debug("[CAMERA_HW]ERROR: copy_to_user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy_to_user fail\n");
 		}
 		kfree(pExif);
 		*(pFeaturePara_64) = (uintptr_t)usr_ptr;
@@ -1888,11 +2023,11 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 		usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64));
 
-		if (FeatureParaLen < 1 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
-			kfree(pFeaturePara);
-			return -EINVAL;
-		}
+			if (FeatureParaLen < 1 * sizeof(unsigned long long)) {
+				PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
+				kfree(pFeaturePara);
+				return -EINVAL;
+			}
 
 		pCurAEAWB = kmalloc(
 		    sizeof(struct SENSOR_AE_AWB_CUR_STRUCT),
@@ -1900,7 +2035,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 		if (pCurAEAWB == NULL) {
 			kfree(pFeaturePara);
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			return -ENOMEM;
 		}
 		memset(
@@ -1922,7 +2057,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void __user *)usr_ptr,
 		    (void *)pCurAEAWB,
 		    sizeof(struct SENSOR_AE_AWB_CUR_STRUCT))) {
-			pr_debug("[CAMERA_HW]ERROR: copy_to_user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy_to_user fail\n");
 		}
 		kfree(pCurAEAWB);
 		*(pFeaturePara_64) = (uintptr_t)usr_ptr;
@@ -1937,11 +2072,11 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 		usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64));
 
-		if (FeatureParaLen < 1 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
-			kfree(pFeaturePara);
-			return -EINVAL;
-		}
+			if (FeatureParaLen < 1 * sizeof(unsigned long long)) {
+				PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
+				kfree(pFeaturePara);
+				return -EINVAL;
+			}
 
 		pDelayInfo = kmalloc(
 		    sizeof(struct SENSOR_DELAY_INFO_STRUCT),
@@ -1949,7 +2084,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 		if (pDelayInfo == NULL) {
 			kfree(pFeaturePara);
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			return -ENOMEM;
 		}
 		memset(
@@ -1969,7 +2104,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void __user *)usr_ptr,
 		    (void *)pDelayInfo,
 		    sizeof(struct SENSOR_DELAY_INFO_STRUCT))) {
-			pr_debug("[CAMERA_HW]ERROR: copy_to_user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy_to_user fail\n");
 		}
 		kfree(pDelayInfo);
 		*(pFeaturePara_64) = (uintptr_t)usr_ptr;
@@ -1985,11 +2120,11 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 		usr_ptr = (void *)(uintptr_t) (*(pFeaturePara_64));
 
-		if (FeatureParaLen < 1 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
-			kfree(pFeaturePara);
-			return -EINVAL;
-		}
+			if (FeatureParaLen < 1 * sizeof(unsigned long long)) {
+				PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
+				kfree(pFeaturePara);
+				return -EINVAL;
+			}
 
 		pFlashInfo = kmalloc(
 		    sizeof(struct SENSOR_FLASHLIGHT_AE_INFO_STRUCT),
@@ -1997,7 +2132,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 		if (pFlashInfo == NULL) {
 			kfree(pFeaturePara);
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			return -ENOMEM;
 		}
 		memset(
@@ -2017,7 +2152,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void __user *)usr_ptr,
 		    (void *)pFlashInfo,
 		    sizeof(struct SENSOR_FLASHLIGHT_AE_INFO_STRUCT))) {
-			pr_debug("[CAMERA_HW]ERROR: copy_to_user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy_to_user fail\n");
 		}
 		kfree(pFlashInfo);
 		*(pFeaturePara_64) = (uintptr_t)usr_ptr;
@@ -2033,15 +2168,15 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		usr_ptr = (void *)(uintptr_t)(*(pFeaturePara_64 + 1));
 		buf_size = (kal_uint32) (*(pFeaturePara_64 + 2));
 
-		if (FeatureParaLen < 3 * sizeof(unsigned long long)) {
-			pr_debug("FeatureParaLen is too small %d\n", FeatureParaLen);
-			kfree(pFeaturePara);
-			return -EINVAL;
-		}
+			if (FeatureParaLen < 3 * sizeof(unsigned long long)) {
+				PK_DBG("FeatureParaLen is too small %d\n", FeatureParaLen);
+				kfree(pFeaturePara);
+				return -EINVAL;
+			}
 
 		if (buf_size > PDAF_DATA_SIZE) {
 			kfree(pFeaturePara);
-			pr_debug("check: buf_size > PDAF_DATA_SIZE\n");
+			PK_DBG("check: buf_size > PDAF_DATA_SIZE\n");
 			return -EINVAL;
 		}
 		pPdaf_data = kmalloc(
@@ -2050,7 +2185,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 
 		if (pPdaf_data == NULL) {
 			kfree(pFeaturePara);
-			pr_err(" ioctl allocate mem failed\n");
+			PK_DBG(" ioctl allocate mem failed\n");
 			return -ENOMEM;
 		}
 		memset(pPdaf_data, 0xff, sizeof(char) * PDAF_DATA_SIZE);
@@ -2069,7 +2204,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    (void __user *)usr_ptr,
 		    (void *)pPdaf_data,
 		    buf_size)) {
-			pr_debug("[CAMERA_HW]ERROR: copy_to_user fail\n");
+			PK_DBG("[CAMERA_HW]ERROR: copy_to_user fail\n");
 		}
 		kfree(pPdaf_data);
 		*(pFeaturePara_64 + 1) = (uintptr_t) usr_ptr;
@@ -2084,7 +2219,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 			if (usr_ptr) {
 				if (FeatureParaLen < 2 * sizeof(unsigned long long)) {
 					pr_debug("FeatureParaLen is too small %d\n",
-						FeatureParaLen);
+					FeatureParaLen);
 					kfree(pFeaturePara);
 					return -EINVAL;
 				}
@@ -2106,10 +2241,10 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 					pr_debug("[CAMERA_HW]ERROR: copy_from_user fail\n");
 				}
 				//pr_debug("%x %x %x %x",
-				//	pData->COLOR_R, pData->COLOR_Gr,
-				//	pData->COLOR_Gb, pData->COLOR_B);
+				//pData->COLOR_R, pData->COLOR_Gr,
+				//pData->COLOR_Gb, pData->COLOR_B);
 				if (pFeaturePara_64 != NULL)
-					*(pFeaturePara_64 + 1) = (uintptr_t) pData;
+					*(pFeaturePara_64 + 1) = (uintptr_t)pData;
 			}
 			ret = imgsensor_sensor_feature_control(psensor,
 					pFeatureCtrl->FeatureId,
@@ -2145,13 +2280,15 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 				pFeatureCtrl->InvokeCamera,
 				__current);
 		} else {
-			pr_debug(
+			PK_DBG(
 				"%s, set drive current by pinctrl was not supported\n",
 				__func__);
 		}
 		break;
 	}
 	case SENSOR_FEATURE_SET_I2C_BUF_MODE_EN:
+		imgsensor_i2c_buffer_mode(
+		    (*(unsigned long long *)pFeaturePara));
 
 		break;
 	case SENSOR_FEATURE_SET_ESHUTTER:
@@ -2177,6 +2314,13 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 	case SENSOR_FEATURE_SET_SENSOR_SYNC_MODE:
 		break;
 	/* copy to user */
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	case SENSOR_FEATURE_GET_EEPROM_COMDATA:
+	{
+		enum IMGSENSOR_SENSOR_IDX sensor_idx = psensor->inst.sensor_idx;
+		ret = Eeprom_Control(sensor_idx, pFeatureCtrl->FeatureId,(unsigned char *)pFeaturePara, 0);
+	}
+#endif/* OPLUS_FEATURE_CAMERA_COMMON */
 	case SENSOR_FEATURE_SET_DRIVER:
 	case SENSOR_FEATURE_GET_EV_AWB_REF:
 	case SENSOR_FEATURE_GET_SHUTTER_GAIN_AWB_GAIN:
@@ -2223,6 +2367,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 	case SENSOR_FEATURE_GET_SENSOR_PDAF_CAPACITY:
 	case SENSOR_FEATURE_GET_SENSOR_HDR_CAPACITY:
 	case SENSOR_FEATURE_GET_MIPI_PIXEL_RATE:
+	case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
 	case SENSOR_FEATURE_GET_PIXEL_RATE:
 	case SENSOR_FEATURE_SET_ISO:
 	case SENSOR_FEATURE_SET_PDAF:
@@ -2238,7 +2383,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		    FeatureParaLen)) {
 
 			kfree(pFeaturePara);
-			pr_debug(
+			PK_DBG(
 			    "[CAMERA_HW][pSensorRegData] ioctl copy to user failed\n");
 			return -EFAULT;
 		}
@@ -2254,7 +2399,7 @@ static inline int adopt_CAMERA_HW_FeatureControl(void *pBuf)
 	    (void *)&FeatureParaLen,
 	    sizeof(unsigned int))) {
 
-		pr_debug(
+		PK_DBG(
 		    "[CAMERA_HW][pFeatureParaLen] ioctl copy to user failed\n");
 
 		return -EFAULT;
@@ -2426,7 +2571,7 @@ imgsensor_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		struct COMPAT_IMGSENSOR_GET_CONFIG_INFO_STRUCT __user *data32;
 		struct IMGSENSOR_GET_CONFIG_INFO_STRUCT __user *data;
 		int err;
-		/*pr_debug("CAOMPAT_KDIMGSENSORIOC_X_GETINFO E\n"); */
+		/*PK_DBG("CAOMPAT_KDIMGSENSORIOC_X_GETINFO E\n"); */
 
 		data32 = compat_ptr(arg);
 		data = compat_alloc_user_space(sizeof(*data));
@@ -2445,7 +2590,7 @@ imgsensor_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = compat_put_acdk_sensor_getinfo_struct(data32, data);
 
 		if (err != 0)
-			pr_debug(
+			PK_DBG(
 			    "[CAMERA SENSOR] compat_put_acdk_sensor_getinfo_struct failed\n");
 		return ret;
 	}
@@ -2455,7 +2600,7 @@ imgsensor_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		struct ACDK_SENSOR_FEATURECONTROL_STRUCT __user *data;
 		int err;
 
-		/* pr_debug("CAOMPAT_KDIMGSENSORIOC_X_FEATURECONCTROL\n"); */
+		/* PK_DBG("CAOMPAT_KDIMGSENSORIOC_X_FEATURECONCTROL\n"); */
 
 		data32 = compat_ptr(arg);
 		data = compat_alloc_user_space(sizeof(*data));
@@ -2479,7 +2624,7 @@ imgsensor_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		    data);
 
 		if (err != 0)
-			pr_err(
+			PK_DBG(
 			    "[CAMERA SENSOR] compat_put_acdk_sensor_getinfo_struct failed\n");
 		return ret;
 	}
@@ -2489,7 +2634,7 @@ imgsensor_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		struct ACDK_SENSOR_CONTROL_STRUCT __user *data;
 		int err;
 
-		pr_debug("[CAMERA SENSOR] CAOMPAT_KDIMGSENSORIOC_X_CONTROL\n");
+		PK_DBG("[CAMERA SENSOR] CAOMPAT_KDIMGSENSORIOC_X_CONTROL\n");
 
 		data32 = compat_ptr(arg);
 		data = compat_alloc_user_space(sizeof(*data));
@@ -2507,7 +2652,7 @@ imgsensor_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = compat_put_acdk_sensor_control_struct(data32, data);
 
 		if (err != 0)
-			pr_err(
+			PK_DBG(
 			    "[CAMERA SENSOR] compat_put_acdk_sensor_getinfo_struct failed\n");
 		return ret;
 	}
@@ -2517,7 +2662,7 @@ imgsensor_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		struct IMAGESENSOR_GETINFO_STRUCT __user *data;
 		int err;
 
-		pr_debug("[CAMERA SENSOR] CAOMPAT_KDIMGSENSORIOC_X_GETINFO2\n");
+		PK_DBG("[CAMERA SENSOR] CAOMPAT_KDIMGSENSORIOC_X_GETINFO2\n");
 
 		data32 = compat_ptr(arg);
 		data = compat_alloc_user_space(sizeof(*data));
@@ -2535,7 +2680,7 @@ imgsensor_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = compat_put_imagesensor_getinfo_struct(data32, data);
 
 		if (err != 0)
-			pr_err(
+			PK_DBG(
 			    "[CAMERA SENSOR] compat_put_acdk_sensor_getinfo_struct failed\n");
 		return ret;
 	}
@@ -2565,7 +2710,7 @@ static long imgsensor_ioctl(
 		pBuff = kmalloc(_IOC_SIZE(a_u4Command), GFP_KERNEL);
 		if (pBuff == NULL) {
 			/*
-			 * pr_debug("[CAMERA SENSOR] ioctl allocate
+			 * PK_DBG("[CAMERA SENSOR] ioctl allocate
 			 * mem failed\n");
 			 */
 			i4RetValue = -ENOMEM;
@@ -2577,11 +2722,7 @@ static long imgsensor_ioctl(
 			    pBuff,
 			    (void *)a_u4Param,
 			    _IOC_SIZE(a_u4Command))) {
-
-				kfree(pBuff);
-				//0825
-				pBuff = NULL;
-				pr_debug(
+				PK_DBG(
 				    "[CAMERA SENSOR] ioctl copy from user failed\n");
 				i4RetValue =  -EFAULT;
 				goto CAMERA_HW_Ioctl_EXIT;
@@ -2617,7 +2758,7 @@ static long imgsensor_ioctl(
 #define ISP_CLK_MEDIUM 364
 #define ISP_CLK_HIGH   490
 #ifdef CONFIG_MTK_SMI_EXT
-		pr_debug(
+		PK_DBG(
 		"KDIMGSENSORIOC_X_GET_ISP_CLK current_mmsys_clk=%d\n",
 		current_mmsys_clk);
 
@@ -2664,7 +2805,7 @@ static long imgsensor_ioctl(
 		i4RetValue = 0;
 		break;
 	default:
-		pr_debug("No such command %d\n", a_u4Command);
+		PK_DBG("No such command %d\n", a_u4Command);
 		i4RetValue = -EPERM;
 		goto CAMERA_HW_Ioctl_EXIT;
 		break;
@@ -2674,13 +2815,11 @@ static long imgsensor_ioctl(
 		    copy_to_user((void __user *) a_u4Param,
 						  pBuff,
 						_IOC_SIZE(a_u4Command))) {
-		kfree(pBuff);
-		//0825
-		pBuff = NULL;
-		pr_debug("[CAMERA SENSOR] ioctl copy to user failed\n");
+		PK_DBG("[CAMERA SENSOR] ioctl copy to user failed\n");
 		i4RetValue =  -EFAULT;
 		goto CAMERA_HW_Ioctl_EXIT;
 	}
+
 CAMERA_HW_Ioctl_EXIT:
 	if (pBuff != NULL) {
 		kfree(pBuff);
@@ -2697,11 +2836,6 @@ static int imgsensor_open(struct inode *a_pstInode, struct file *a_pstFile)
 		imgsensor_clk_enable_all(&pgimgsensor->clk);
 
 	atomic_inc(&pgimgsensor->imgsensor_open_cnt);
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-	if(atomic_read(&pgimgsensor->imgsensor_open_cnt) > 0) {
-		oplus_chg_set_camera_status(true);
-	}
-#endif
 	pr_info(
 	    "%s %d\n",
 	    __func__,
@@ -2732,13 +2866,6 @@ static int imgsensor_release(struct inode *a_pstInode, struct file *a_pstFile)
 		imgsensor_dfs_ctrl(DFS_RELEASE, NULL);
 #endif
 	}
-
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-	if(atomic_read(&pgimgsensor->imgsensor_open_cnt) == 0) {
-		oplus_chg_set_camera_status(false);
-	}
-#endif
-
 	pr_info(
 	    "%s %d\n",
 	    __func__,
@@ -2764,7 +2891,7 @@ static inline int imgsensor_driver_register(void)
 	dev_t dev_no = MKDEV(IMGSENSOR_DEVICE_NNUMBER, 0);
 
 	if (alloc_chrdev_region(&dev_no, 0, 1, IMGSENSOR_DEV_NAME)) {
-		pr_debug("[CAMERA SENSOR] Allocate device no failed\n");
+		PK_DBG("[CAMERA SENSOR] Allocate device no failed\n");
 
 		return -EAGAIN;
 	}
@@ -2773,7 +2900,7 @@ static inline int imgsensor_driver_register(void)
 	gpimgsensor_cdev = cdev_alloc();
 	if (gpimgsensor_cdev ==  NULL) {
 		unregister_chrdev_region(dev_no, 1);
-		pr_debug("[CAMERA SENSOR] Allocate mem for kobject failed\n");
+		PK_DBG("[CAMERA SENSOR] Allocate mem for kobject failed\n");
 		return -ENOMEM;
 	}
 
@@ -2784,7 +2911,7 @@ static inline int imgsensor_driver_register(void)
 
 	/* Add to system */
 	if (cdev_add(gpimgsensor_cdev, dev_no, 1)) {
-		pr_debug("Attatch file operation failed\n");
+		PK_DBG("Attatch file operation failed\n");
 		unregister_chrdev_region(dev_no, 1);
 		return -EAGAIN;
 	}
@@ -2793,7 +2920,7 @@ static inline int imgsensor_driver_register(void)
 	if (IS_ERR(gpimgsensor_class)) {
 		int ret = PTR_ERR(gpimgsensor_class);
 
-		pr_debug("Unable to create class, err = %d\n", ret);
+		PK_DBG("Unable to create class, err = %d\n", ret);
 		return ret;
 	}
 
@@ -2822,7 +2949,7 @@ static inline void imgsensor_driver_unregister(void)
 #ifdef CONFIG_MTK_SMI_EXT
 int mmsys_clk_change_cb(int ori_clk_mode, int new_clk_mode)
 {
-	/*pr_debug("mmsys_clk_change_cb ori:%d, new:%d, current_mmsys_clk %d\n",
+	/*PK_DBG("mmsys_clk_change_cb ori:%d, new:%d, current_mmsys_clk %d\n",
 	 *		ori_clk_mode,
 	 *		new_clk_mode,
 	 *		current_mmsys_clk);
@@ -2836,12 +2963,15 @@ static int imgsensor_probe(struct platform_device *pdev)
 {
 	/* Register char driver */
 	if (imgsensor_driver_register()) {
-		pr_err("[CAMERA_HW] register char device failed!\n");
+		PK_DBG("[CAMERA_HW] register char device failed!\n");
 		return -1;
 	}
 
 	gpimgsensor_hw_platform_device = pdev;
 
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	oplus_imgsensor_hwcfg();
+	#endif //OPLUS_FEATURE_CAMERA_COMMON
 #ifndef CONFIG_FPGA_EARLY_PORTING
 	imgsensor_clk_init(&pgimgsensor->clk);
 #endif
@@ -2910,7 +3040,7 @@ static int __init imgsensor_init(void)
 	pr_info("[camerahw_probe] start\n");
 
 	if (platform_driver_register(&gimgsensor_platform_driver)) {
-		pr_err("failed to register CAMERA_HW driver\n");
+		PK_DBG("failed to register CAMERA_HW driver\n");
 		return -ENODEV;
 	}
 
@@ -2943,7 +3073,7 @@ static void __exit imgsensor_exit(void)
 	platform_driver_unregister(&gimgsensor_platform_driver);
 }
 
-module_init(imgsensor_init);
+late_initcall(imgsensor_init);
 module_exit(imgsensor_exit);
 
 MODULE_DESCRIPTION("image sensor driver");

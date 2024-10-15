@@ -48,6 +48,11 @@ struct mtk_eint_xt {
 	int (*get_gpio_state)(void *data, unsigned long eint_n);
 	int (*set_gpio_as_eint)(void *data, unsigned long eint_n);
 };
+struct mtk_eint_timer {
+	spinlock_t lock;
+	struct irq_data *data;
+	struct timer_list eint_timer;
+};
 
 struct mtk_eint {
 	struct device *dev;
@@ -68,9 +73,10 @@ struct mtk_eint {
 	const struct mtk_eint_xt *gpio_xlate;
 
 	/* Used to support SW debounce */
-	struct timer_list *eint_timers;
+	struct mtk_eint_timer *eint_timers;
 	int *eint_sw_debounce_en;
 	u32 *eint_sw_debounce;
+
 };
 
 #if IS_ENABLED(CONFIG_EINT_MTK)
@@ -97,14 +103,13 @@ static inline int mtk_eint_do_resume(struct mtk_eint *eint)
 	return -EOPNOTSUPP;
 }
 
-static inline int mtk_eint_set_debounce(struct mtk_eint *eint,
-	unsigned long eint_n, unsigned int debounce)
+static inline int mtk_eint_set_debounce(struct mtk_eint *eint, unsigned long eint_n,
+			  unsigned int debounce)
 {
 	return -EOPNOTSUPP;
 }
 
-static inline int mtk_eint_find_irq(struct mtk_eint *eint,
-	unsigned long eint_n)
+static inline int mtk_eint_find_irq(struct mtk_eint *eint, unsigned long eint_n)
 {
 	return -EOPNOTSUPP;
 }

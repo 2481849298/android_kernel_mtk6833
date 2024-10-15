@@ -21,11 +21,14 @@
 #include "mclk/mclk.h"
 #include "regulator/regulator.h"
 #include "gpio/gpio.h"
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #include <soc/oplus/device_info.h>
-
 //#include <linux/of_gpio.h>
 #include <linux/gpio.h>
+
+#ifdef CONFIG_LDO_AW37004
+#include "../../../aw37004/aw37004.h"
+#endif
 
 #define  OPLUS_SUPPORT_CAMERA_NUMMAX        (6)
 #define  OPLUS_STEREO_LENGTH_QCOMHEADER     (128)
@@ -33,6 +36,7 @@
 #define  OPLUS_CAMCOMDATA_LENS              (40)
 #define  OPLUS_CAMMODULEINFO_LENS           (8)
 #define  OPLUS_CAMERASN_LENS                (20)
+#define  OPLUS_CAMERASN_LENS_23            (23)
 #define  OPLUS_CAMAFCODE_LENS               (8)
 
 #define DEVICE_MANUFACUTRE_NA           "None"
@@ -57,6 +61,12 @@
 #define IMGSENSOR_MODULE_ID_AAC         0x1F
 #define OPLUS_CHECK_IS_SYSTEM_CAM       0xFFFF
 
+#define PMIC_AVDD_VOLTAGE_MV_1100       (1100)
+#define PMIC_AVDD_VOLTAGE_MV_1200       (1200)
+#define PMIC_AVDD_VOLTAGE_MV_1300       (1300)
+#define PMIC_AVDD_VOLTAGE_MV_2800       (2800)
+#define PMIC_AVDD_VOLTAGE_MV_2900       (2900)
+
 enum IMGSENSOR_POWER_ACTION_INDEX {
     IMGSENSOR_POWER_ACTION_EVENT_START = 0,
     IMGSENSOR_POWER_ACTION_AFNOSISE_ADD_19551,
@@ -68,6 +78,22 @@ enum IMGSENSOR_POWER_ACTION_INDEX {
     IMGSENSOR_POWER_EXTERNLDO_ENABLE_INDEX,
 
     IMGSENSOR_POWER_ACTION_EVENT_MAX,
+};
+
+enum wl2868c_ldo_num {
+    WL2868C_LDO1 = 1,
+    WL2868C_LDO2,
+    WL2868C_LDO3,
+    WL2868C_LDO4,
+    WL2868C_LDO5,
+    WL2868C_LDO6,
+    WL2868C_LDO7,
+};
+
+enum FAN_53870_PMIC_STATUS{
+    FAN_53870_PMIC_FAILED = -1,
+    FAN_53870_PMIC_OFF,
+    FAN_53870_PMIC_ON,
 };
 
 struct IMGSENSOR_EEPROM_MODULE_INFO {
@@ -141,13 +167,13 @@ extern struct IMGSENSOR_SENSOR_LIST gimgsensor_sensor_list_21881[];
 
 extern struct CAMERA_DEVICE_INFO gImgEepromInfo_21881;
 #endif
+extern struct IMGSENSOR_HW_POWER_SEQ *oplus_sensor_power_on_sequence;
 extern struct IMGSENSOR_HW_POWER_SEQ *oplus_sensor_power_sequence;
 extern struct IMGSENSOR_HW_CFG *oplus_imgsensor_custom_config;
 extern struct IMGSENSOR_SENSOR_LIST *oplus_gimgsensor_sensor_list;
 extern struct CAMERA_DEVICE_INFO gImgEepromInfo;
 extern void oplus_imgsensor_hwcfg(void);
-
-
+extern void oplus_imgsensor_delay_set(struct IMGSENSOR_HW_POWER_INFO *ppwr_info, struct IMGSENSOR_HW_POWER_SEQ *ppwr_seq);
 #ifdef SENSOR_PLATFORM_5G_A
 extern struct IMGSENSOR_HW_POWER_SEQ *oplus_platform_power_sequence;
 #endif
@@ -158,6 +184,11 @@ extern struct IMGSENSOR_HW_POWER_SEQ *oplus_platform_power_sequence;
 
 #ifdef SENSOR_PLATFORM_5G_B
 extern struct IMGSENSOR_HW_POWER_SEQ *oplus_platform_power_sequence;
+#endif
+
+#ifdef CONFIG_LDO_AW37004
+extern int aw37004_camera_power_up(int out_iotype);
+extern int aw37004_camera_power_down(int out_iotype);
 #endif
 
 extern int pmic_ldo_get_type(void);

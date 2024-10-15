@@ -97,6 +97,7 @@ lcm_util.dsi_dcs_read_lcm_reg_v2(cmd, buffer, buffer_size)
 /*extern unsigned int esd_recovery_backlight_level;*/
 extern int gesture_flag;
 extern int tp_gesture_enable_flag(void);
+extern int shut_down_flag;
 /*extern void ili_resume_by_ddi(void);*/
 /*extern void core_config_sleep_ctrl(bool out);*/
 
@@ -400,6 +401,8 @@ static void lcm_get_params(struct LCM_PARAMS *params)
 	params->dsi.horizontal_sync_active_dyn = 4;
 	params->dsi.horizontal_backporch_dyn = 30;
 	params->dsi.data_rate_dyn = 720;
+	params->lcd_serial_number = 1;
+
 #ifndef CONFIG_FPGA_EARLY_PORTING
 #if (LCM_DSI_CMD_MODE)
 	params->dsi.PLL_CLOCK = 360;	/* this value must be in MTK suggested table */
@@ -446,7 +449,7 @@ static void lcm_init_power(void)
 static void lcm_suspend_power(void)
 {
 	pr_debug("lcm_suspend_power\n");
-	if (!tp_gesture_enable_flag()) {
+	if ((!shut_down_flag) && (!tp_gesture_enable_flag())) {
 		printk("lcm_tp_suspend_power_on\n");
 		SET_LCM_VSN_PIN(0);
 		MDELAY(2);
@@ -522,36 +525,36 @@ static struct LCM_setting_table lcm_dimming_off_setting[] = {
 
 static struct LCM_setting_table set_cabc_off[] = {
 	{ 0x53, 0x01, {0x2C} },
-    {REGFLAG_DELAY, 20, {} },
+    {REGFLAG_DELAY, 1, {} },
     { 0x55, 0x01, {0x00} },
-    {REGFLAG_DELAY, 20, {} },
+    {REGFLAG_DELAY, 1, {} },
     /*{ 0x53, 0x01, {0x24} },*/
 	{ REGFLAG_END_OF_TABLE, 0x00, {} }
 };
 
 static struct LCM_setting_table set_cabc_ui[] = {
 	{ 0x53, 0x01, {0x2C} },
-    {REGFLAG_DELAY, 20, {} },
+    {REGFLAG_DELAY, 1, {} },
     { 0x55, 0x01, {0x01} },
-    {REGFLAG_DELAY, 20, {} },
+    {REGFLAG_DELAY, 1, {} },
     /*{ 0x53, 0x01, {0x24} },*/
 	{ REGFLAG_END_OF_TABLE, 0x00, {} }
 };
 
 static struct LCM_setting_table set_cabc_still[] = {
 	{ 0x53, 0x01, {0x2C} },
-    {REGFLAG_DELAY, 20, {} },
+    {REGFLAG_DELAY, 1, {} },
     { 0x55, 0x01, {0x02} },
-    {REGFLAG_DELAY, 20, {} },
+    {REGFLAG_DELAY, 1, {} },
     /*{ 0x53, 0x01, {0x24} },*/
 	{ REGFLAG_END_OF_TABLE, 0x00, {} }
 };
 
 static struct LCM_setting_table set_cabc_move[] = {
 	{ 0x53, 0x01, {0x2C} },
-    {REGFLAG_DELAY, 20, {} },
+    {REGFLAG_DELAY, 1, {} },
     { 0x55, 0x01, {0x03} },
-    {REGFLAG_DELAY, 20, {} },
+    {REGFLAG_DELAY, 1, {} },
     /*{ 0x53, 0x01, {0x24} },*/
 	{ REGFLAG_END_OF_TABLE, 0x00, {} }
 };

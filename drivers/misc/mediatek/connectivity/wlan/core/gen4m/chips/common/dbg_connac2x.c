@@ -1560,6 +1560,57 @@ static void connac2x_print_wtbl_info(
 	}
 }
 
+void connac2x_get_rssi_from_wtbl(
+	struct ADAPTER *prAdapter, uint32_t u4Index,
+	int32_t *pi4Rssi0, int32_t *pi4Rssi1,
+	int32_t *pi4Rssi2, int32_t *pi4Rssi3
+)
+{
+	struct GLUE_INFO *prGlueInfo = NULL;
+	struct mt66xx_chip_info *prChipInfo;
+	uint8_t u1Dw30Rssi = 1;
+	struct CMD_ACCESS_REG rCmdAccessReg = {0};
+	uint32_t rStatus;
+	uint32_t u4BufLen = 0;
+
+	prGlueInfo = prAdapter->prGlueInfo;
+	prChipInfo = prAdapter->chip_info;
+	DBGLOG(REQ, INFO, "WTBL : index = %d\n", u4Index);
+
+	if (WTBL_VER < 3 && wlanGetEcoVersion(prAdapter) < ECO_VER_2)
+		u1Dw30Rssi = 0;
+
+	if (u1Dw30Rssi > 0) {
+		rCmdAccessReg.u4Address = CONNAC2X_LWTBL_IDX2BASE(
+			prChipInfo->u4LmacWtblDUAddr, u4Index, 30);
+	} else {
+		rCmdAccessReg.u4Address = CONNAC2X_LWTBL_IDX2BASE(
+			prChipInfo->u4LmacWtblDUAddr, u4Index, 29);
+	}
+
+	rStatus = kalIoctl(prGlueInfo, wlanoidQueryMcrRead,
+			   &rCmdAccessReg, sizeof(rCmdAccessReg),
+			   TRUE, TRUE, TRUE, &u4BufLen);
+	if (rStatus == WLAN_STATUS_SUCCESS) {
+		if (pi4Rssi0 != NULL)
+			*pi4Rssi0 = RCPI_TO_dBm((rCmdAccessReg.u4Data &
+				CONNAC2X_WTBL_RESP_RCPI0_MASK) >>
+				CONNAC2X_WTBL_RESP_RCPI0_OFFSET);
+		if (pi4Rssi1 != NULL)
+			*pi4Rssi1 = RCPI_TO_dBm((rCmdAccessReg.u4Data &
+				CONNAC2X_WTBL_RESP_RCPI1_MASK) >>
+				CONNAC2X_WTBL_RESP_RCPI1_OFFSET);
+		if (pi4Rssi2 != NULL)
+			*pi4Rssi2 = RCPI_TO_dBm((rCmdAccessReg.u4Data &
+				CONNAC2X_WTBL_RESP_RCPI2_MASK) >>
+				CONNAC2X_WTBL_RESP_RCPI2_OFFSET);
+		if (pi4Rssi3 != NULL)
+			*pi4Rssi3 = RCPI_TO_dBm((rCmdAccessReg.u4Data &
+				CONNAC2X_WTBL_RESP_RCPI3_MASK) >>
+				CONNAC2X_WTBL_RESP_RCPI3_OFFSET);
+	}
+}
+
 int32_t connac2x_show_wtbl_info(
 	struct ADAPTER *prAdapter,
 	uint32_t u4Index,
@@ -1678,7 +1729,7 @@ int32_t connac2x_show_umac_wtbl_info(
 		| puwtbl->serial_no.wtbl_d0.field.pn0);
 	/* UMAC WTBL DW 0,1 */
 	LOGBUF(pcCommand, i4TotalLen, i4BytesWritten,
-		"UWTBL DW 0,1\n\tpn:%d\n\tcom_sn:%d\n",
+		"UWTBL DW 0,1\n\tpn:%llu\n\tcom_sn:%u\n",
 		pn,
 		puwtbl->serial_no.wtbl_d1.field.com_sn);
 
@@ -1972,7 +2023,7 @@ int32_t connac2x_show_stat_info(
 	uint8_t ucRaTableNum = sizeof(RATE_TBLE) / sizeof(char *);
 	uint8_t ucRaStatusNum = sizeof(RA_STATUS_TBLE) / sizeof(char *);
 	uint8_t ucBssIndex = AIS_DEFAULT_INDEX;
-	struct PARAM_LINK_SPEED_EX rLinkSpeed;
+	struct PARAM_LINK_SPEED_EX rLinkSpeed = {0};
 
 #if 0
 	uint8_t ucRaLtModeNum = sizeof(LT_MODE_TBLE) / sizeof(char *);
@@ -2935,7 +2986,7 @@ void connac2x_show_wfdma_glo_info(
 	uint32_t idx;
 	uint32_t u4hostBaseCrAddr;
 	uint32_t u4DmaCfgCrAddr = 0;
-	union WPDMA_GLO_CFG_STRUCT GloCfgValue;
+	union WPDMA_GLO_CFG_STRUCT GloCfgValue = {0};
 
 	for (idx = 0; idx < u4DmaNum; idx++) {
 		if (enum_wfdma_type == WFDMA_TYPE_HOST)
@@ -3318,10 +3369,19 @@ void connac2x_show_wfdma_info(IN struct ADAPTER *prAdapter)
 	struct mt66xx_chip_info *prChipInfo;
 	struct SW_WFDMA_INFO *prSwWfdmaInfo;
 	uint32_t u4DmaNum = 1;
+#if CFG_MTK_MDDP_SUPPORT
+	struct CHIP_DBG_OPS *prDbgOps = NULL;
+#endif
 
-	prChipInfo = prAdapter->chip_info;
+	glGetChipInfo((void **)&prChipInfo);
+	if (!prChipInfo)
+		return;
+
 	prBusInfo = prChipInfo->bus_info;
 	prSwWfdmaInfo = &prBusInfo->rSwWfdmaInfo;
+#if CFG_MTK_MDDP_SUPPORT
+	prDbgOps = prChipInfo->prDebugOps;
+#endif
 
 	if (prSwWfdmaInfo->rOps.dumpDebugLog)
 		prSwWfdmaInfo->rOps.dumpDebugLog(prAdapter->prGlueInfo);
@@ -3343,7 +3403,8 @@ void connac2x_show_wfdma_info(IN struct ADAPTER *prAdapter)
 
 	connac2xDumpPPDebugCr(prAdapter);
 #if CFG_MTK_MDDP_SUPPORT
-	mddpNotifyDumpDebugInfo();
+	if (prDbgOps && prDbgOps->mddp_notify_dump_debug_info)
+		prDbgOps->mddp_notify_dump_debug_info();
 #endif
 }
 
@@ -4190,6 +4251,12 @@ int connac2x_get_rx_rate_info(IN struct ADAPTER *prAdapter,
 		u4RxVector1 = prAdapter->arStaRec[ucStaIdx].u4RxVector1;
 		u4RxVector2 = prAdapter->arStaRec[ucStaIdx].u4RxVector2;
 
+		if ((u4RxVector0 == 0) || (u4RxVector1 == 0) ||
+			(u4RxVector2 == 0)) {
+			DBGLOG_LIMITED(SW4, WARN,
+					"RxVector1 or RxVector2 is 0\n");
+			return -1;
+		}
 	} else {
 		DBGLOG(SW4, ERROR, "wlanGetStaIdxByWlanIdx fail\n");
 		return -1;

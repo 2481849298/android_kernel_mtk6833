@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
-
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2021 MediaTek Inc.
+*/
 
 #include <mt-plat/upmu_common.h>
 
@@ -17,10 +9,6 @@
 #include <linux/io.h>
 #include <linux/of_address.h>
 #include "include/pmic.h"
-
-#ifdef CONFIG_OPLUS_CHARGER_MTK6885
-#include <mach/upmu_hw.h>
-#endif
 
 void PMIC_INIT_SETTING_V1(void)
 {
@@ -38,10 +26,6 @@ void PMIC_INIT_SETTING_V1(void)
 		, chip_version, is_battery_remove, is_wdt_reboot_pmic);
 
 	PMIC_LP_INIT_SETTING();
-#ifdef CONFIG_OPLUS_CHARGER_MTK6885
-	/* close the vio18 of low power mode */
-	pmic_config_interface(MT6359_LDO_VIO18_CON1, 0, PMIC_RG_LDO_VIO18_OP_MODE_MASK, PMIC_RG_LDO_VIO18_OP_MODE_SHIFT);
-#endif
 /*****************************************************
  * below programming is used for MD setting
  *****************************************************/

@@ -1159,13 +1159,13 @@ static void hdr_write_dual_shutter(kal_uint16 le, kal_uint16 se)
 	write_cmos_sensor(0x380f, (imgsensor.frame_length >> 1) & 0xFE);
 	/* Long exposure */
 	if (le != 0) {
-		write_cmos_sensor(0x3500, (le >> 16) & 0xFF);
+		write_cmos_sensor(0x3500, 0x00);
 		write_cmos_sensor(0x3501, (le >> 8) & 0xFF);
 		write_cmos_sensor(0x3502, (le) & 0xFE);
 	}
 	/* Muddle exposure */
 	if (se != 0) {
-		write_cmos_sensor(0x3540, (se >> 16) & 0xFF);
+		write_cmos_sensor(0x3540, 0x00);
 		write_cmos_sensor(0x3541, (se >> 8) & 0xFF);
 		write_cmos_sensor(0x3542, (se) & 0xFE);
 	}

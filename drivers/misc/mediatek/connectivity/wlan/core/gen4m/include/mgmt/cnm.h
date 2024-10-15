@@ -219,11 +219,12 @@ enum ENUM_CNM_OPMODE_REQ_T {
 	CNM_OPMODE_REQ_DBDC_SCAN  = 2,
 	CNM_OPMODE_REQ_COEX       = 3,
 	CNM_OPMODE_REQ_SMARTGEAR  = 4,
-	CNM_OPMODE_REQ_SMARTGEAR_1T2R  = 5,
-	CNM_OPMODE_REQ_ANT_CTRL_1T2R   = 6,
-	CNM_OPMODE_REQ_COANT      = 7,
-	CNM_OPMODE_REQ_NUM        = 8,
-	CNM_OPMODE_REQ_MAX_CAP    = 9 /* just for coding */
+	CNM_OPMODE_REQ_USER_CONFIG     = 5,
+	CNM_OPMODE_REQ_SMARTGEAR_1T2R  = 6,
+	CNM_OPMODE_REQ_ANT_CTRL_1T2R   = 7,
+	CNM_OPMODE_REQ_COANT      = 8,
+	CNM_OPMODE_REQ_NUM        = 9,
+	CNM_OPMODE_REQ_MAX_CAP    = 10 /* just for coding */
 };
 
 
@@ -331,6 +332,9 @@ uint8_t cnmGetBssMaxBw(struct ADAPTER *prAdapter, uint8_t ucBssIndex);
 
 uint8_t cnmGetBssMaxBwToChnlBW(struct ADAPTER *prAdapter, uint8_t ucBssIndex);
 
+uint8_t cnmOpModeGetMaxBw(IN struct ADAPTER *prAdapter,
+	IN struct BSS_INFO *prBssInfo);
+
 struct BSS_INFO *cnmGetBssInfoAndInit(struct ADAPTER *prAdapter,
 	enum ENUM_NETWORK_TYPE eNetworkType, u_int8_t fgIsP2pDevice);
 
@@ -408,6 +412,7 @@ void cnmOpmodeEventHandler(
 u_int8_t cnmP2pIsActive(IN struct ADAPTER *prAdapter);
 
 struct BSS_INFO *cnmGetP2pBssInfo(IN struct ADAPTER *prAdapter);
+struct BSS_INFO *cnmGetSapGoBssInfo(IN struct ADAPTER *prAdapter);
 
 bool cnmIsMccMode(IN struct ADAPTER *prAdapter);
 

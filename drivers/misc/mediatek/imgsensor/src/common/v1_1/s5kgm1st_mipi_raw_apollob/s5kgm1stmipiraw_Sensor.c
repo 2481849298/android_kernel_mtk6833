@@ -54,7 +54,7 @@
 #endif
 
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 static bool IsProject_2070C = false ;
 #define  MIPI_PIXEL_RATE_2070C  457600000
 #endif

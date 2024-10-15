@@ -48,8 +48,13 @@
 #include "s5kgm1stmipiraw_Sensor.h"
 //#include "imgsensor_common.h"
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 
-#include <soc/oppo/oppo_project.h>
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+#include <soc/oplus/system/oplus_project.h>
+#endif
 
 /***************Modify Following Strings for Debug**********************/
 #define PFX "gm1st_camera_sensor"
@@ -58,12 +63,14 @@
 #define LOG_INF(format, args...) pr_debug(PFX "[%s] " format, __func__, ##args)
 #define LOG_ERR(format, args...) pr_err(PFX "[%s] " format, __func__, ##args)
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define DEVICE_VERSION_GM1ST	 "gm1st"
 extern void register_imgsensor_deviceinfo(char *name, char *version, u8 module_id);
 //static kal_uint8 deviceInfo_register_value = 0x00;
 static kal_uint32 streaming_control(kal_bool enable);
 #define MODULE_ID_OFFSET 0x0000
 #define I2C_BUFFER_LEN 225	/* trans# max is 255, each 3 bytes */
+#endif
 
 static kal_uint16 table_write_cmos_sensor(kal_uint16 *para, kal_uint32 len);
 static bool bNeedSetNormalMode = KAL_FALSE;
@@ -370,6 +377,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info_binning =
     .i4Crop = { {0,0}, {0, 0}, {0, 0}, {80, 420}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
 };
 #if 0
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 static kal_uint16 read_module_id(void)
 {
 	kal_uint16 get_byte=0;
@@ -381,6 +389,7 @@ static kal_uint16 read_module_id(void)
 	return get_byte;
 
 }
+#endif
 #endif
 static kal_uint16 read_cmos_sensor(kal_uint32 addr)
 {

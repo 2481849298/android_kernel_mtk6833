@@ -665,7 +665,7 @@ void asicPdmaIntMaskConfig(struct GLUE_INFO *prGlueInfo,
 {
 	struct BUS_INFO *prBusInfo =
 			prGlueInfo->prAdapter->chip_info->bus_info;
-	union WPDMA_INT_MASK IntMask;
+	union WPDMA_INT_MASK IntMask = {0};
 
 	kalDevRegRead(prGlueInfo, WPDMA_INT_MSK, &IntMask.word);
 
@@ -1693,6 +1693,7 @@ void asicRxProcessRxvforMSP(IN struct ADAPTER *prAdapter,
 	}
 	prGroup3 =
 		(struct HW_MAC_RX_STS_GROUP_3 *)prRetSwRfb->prRxStatusGroup3;
+
 	if (prRetSwRfb->ucGroupVLD & BIT(RX_GROUP_VLD_3)) {
 		prAdapter->arStaRec[
 			prRetSwRfb->ucStaRecIdx].u4RxVector0 =
@@ -1817,7 +1818,7 @@ void asicRxPerfIndProcessRXV(IN struct ADAPTER *prAdapter,
 
 	prGlueInfo = prAdapter->prGlueInfo;
 	status = wlanGetRxRate(prGlueInfo, ucBssIndex, &u4PhyRate, NULL,
-		&rRateInfo);
+			&rRateInfo);
 	/* ucRate(500kbs) = u4PhyRate(100kbps) */
 	if (status < 0 || u4PhyRate == 0)
 		return;
@@ -1828,12 +1829,11 @@ void asicRxPerfIndProcessRXV(IN struct ADAPTER *prAdapter,
 	ucRCPI0 = HAL_RX_STATUS_GET_RCPI0(prRxStatusGroup3);
 	ucRCPI1 = HAL_RX_STATUS_GET_RCPI1(prRxStatusGroup3);
 
-
 	/* Record peak rate to Traffic Indicator*/
 	if (u2Rate > prGlueInfo->PerfIndCache.u2CurRxRate[ucBssIndex]) {
 		prGlueInfo->PerfIndCache.u2CurRxRate[ucBssIndex] = u2Rate;
 		prGlueInfo->PerfIndCache.ucCurRxNss[ucBssIndex] =
-					rRateInfo.u4Nss;
+								rRateInfo.u4Nss;
 		prGlueInfo->PerfIndCache.ucCurRxRCPI0[ucBssIndex] = ucRCPI0;
 		prGlueInfo->PerfIndCache.ucCurRxRCPI1[ucBssIndex] = ucRCPI1;
 	}

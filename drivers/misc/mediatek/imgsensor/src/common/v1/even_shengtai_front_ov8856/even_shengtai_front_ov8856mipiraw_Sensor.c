@@ -45,7 +45,7 @@
 #include "kd_imgsensor_errcode.h"
 //#include <linux/hardware_info.h>
 #include "even_shengtai_front_ov8856mipiraw_Sensor.h"
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 
 #define PFX "EVEN_SHENGTAI_FRONT_OV8856"
 

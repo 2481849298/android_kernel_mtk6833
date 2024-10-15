@@ -101,6 +101,7 @@
 
 #define AIS_JOIN_CH_GRANT_THRESHOLD         10
 #define AIS_JOIN_CH_REQUEST_INTERVAL        4000
+#define AIS_JOIN_CNM_SAPGO_INTERVAL         500
 #define AIS_SCN_DONE_TIMEOUT_SEC            15 /* 15 for 2.4G + 5G */	/* 5 */
 #define AIS_SCN_REPORT_SEQ_NOT_SET          (0xFFFF)
 
@@ -345,6 +346,9 @@ struct MSG_AIS_BSS_TRANSITION {
 void aisInitializeConnectionSettings(IN struct ADAPTER
 		*prAdapter, IN struct REG_INFO *prRegInfo,
 		IN uint8_t ucBssIndex);
+
+void aisInitializeConnectionRsnInfo(IN struct ADAPTER
+		*prAdapter, IN uint8_t ucBssIndex);
 
 void aisFsmInit(IN struct ADAPTER *prAdapter, uint8_t ucBssIndex);
 

@@ -38,6 +38,9 @@
 
 
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 
 /****************************Modify Following Strings for Debug****************************/
 #define PFX "GC02M1_camera_sensor"
@@ -46,8 +49,10 @@
 
 #define LOG_INF(format, args...)    pr_debug(PFX "[%s] " format, __FUNCTION__, ##args)
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define DEVICE_VERSION_GC02M1    "gc02m1"
 #define USE_BURST_MODE
+#endif
 static uint8_t deviceInfo_register_value = 0;
 
 static DEFINE_SPINLOCK(imgsensor_drv_lock);
@@ -141,6 +146,7 @@ static struct imgsensor_info_struct imgsensor_info = {
         .max_framerate = 300,
         .mipi_pixel_rate = 67200000,
     },
+         #ifdef OPLUS_FEATURE_CAMERA_COMMON
         .custom1 = {
              .pclk = 84000000,                //record different mode's pclk
              .linelength = 2192,                //record different mode's linelength
@@ -155,6 +161,7 @@ static struct imgsensor_info_struct imgsensor_info = {
              .max_framerate = 240,
              .mipi_pixel_rate = 67200000,
          },
+         #endif
 
         .margin = 16,            //sensor framelength & shutter margin
         .min_shutter = 4,        //min shutter
@@ -572,6 +579,7 @@ static void ihdr_write_shutter_gain(kal_uint16 le, kal_uint16 se, kal_uint16 gai
 
 }
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 static void set_mirror_flip(kal_uint8 image_mirror)
 {
     LOG_INF("image_mirror = %d\n", image_mirror);
@@ -596,6 +604,7 @@ static void set_mirror_flip(kal_uint8 image_mirror)
             LOG_INF("Error image_mirror setting\n");
     }
 }
+#endif
 
 /*************************************************************************
 * FUNCTION
@@ -1034,9 +1043,14 @@ static kal_uint32 open(void)
             break;
         retry = 2;
     }
+    #ifndef OPLUS_FEATURE_CAMERA_COMMON
+    if (imgsensor_info.sensor_id != sensor_id)
+        return ERROR_SENSOR_CONNECT_FAIL;
+    #else
     if (imgsensor_info.sensor_id != sensor_id) {
         return ERROR_SENSORID_READ_FAIL;
     }
+    #endif
     /*Don't Remove!!*/
 
     /* initail sequence write in  */
@@ -1119,7 +1133,9 @@ static kal_uint32 preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
     imgsensor.autoflicker_en = KAL_FALSE;
     spin_unlock(&imgsensor_drv_lock);
     preview_setting();
+    #ifdef OPLUS_FEATURE_CAMERA_COMMON
     set_mirror_flip(imgsensor.mirror);
+    #endif
     return ERROR_NONE;
 }    /*    preview   */
 
@@ -1163,7 +1179,9 @@ static kal_uint32 capture(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
     }
     spin_unlock(&imgsensor_drv_lock);
     capture_setting(imgsensor.current_fps);
+    #ifdef OPLUS_FEATURE_CAMERA_COMMON
     set_mirror_flip(imgsensor.mirror);
+    #endif
     return ERROR_NONE;
 }    /* capture() */
 
@@ -1183,7 +1201,9 @@ static kal_uint32 normal_video(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
     imgsensor.autoflicker_en = KAL_FALSE;
     spin_unlock(&imgsensor_drv_lock);
     normal_video_setting(imgsensor.current_fps);
+    #ifdef OPLUS_FEATURE_CAMERA_COMMON
     set_mirror_flip(imgsensor.mirror);
+    #endif
     return ERROR_NONE;
 }    /*    normal_video   */
 
@@ -1205,7 +1225,9 @@ static kal_uint32 hs_video(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
     imgsensor.autoflicker_en = KAL_FALSE;
     spin_unlock(&imgsensor_drv_lock);
     hs_video_setting();
+    #ifdef OPLUS_FEATURE_CAMERA_COMMON
     set_mirror_flip(imgsensor.mirror);
+    #endif
     return ERROR_NONE;
 }    /*    hs_video   */
 
@@ -1226,7 +1248,9 @@ static kal_uint32 slim_video(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
     imgsensor.autoflicker_en = KAL_FALSE;
     spin_unlock(&imgsensor_drv_lock);
     slim_video_setting();
+    #ifdef OPLUS_FEATURE_CAMERA_COMMON
     set_mirror_flip(imgsensor.mirror);
+    #endif
     return ERROR_NONE;
 }    /*    slim_video     */
 
@@ -1244,7 +1268,9 @@ static kal_uint32 custom1(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
     imgsensor.autoflicker_en = KAL_FALSE;
     spin_unlock(&imgsensor_drv_lock);
     custom1_setting();
+    #ifdef OPLUS_FEATURE_CAMERA_COMMON
     set_mirror_flip(imgsensor.mirror);
+    #endif
     return ERROR_NONE;
 }    /* custom1 */
 
@@ -1861,6 +1887,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
             LOG_INF("SENSOR_SET_SENSOR_IHDR LE=%d, SE=%d, Gain=%d\n",(UINT16)*feature_data,(UINT16)*(feature_data+1),(UINT16)*(feature_data+2));
             ihdr_write_shutter_gain((UINT16)*feature_data,(UINT16)*(feature_data+1),(UINT16)*(feature_data+2));
             break;
+        #ifdef OPLUS_FEATURE_CAMERA_COMMON
         /* sunxiaohong@Camer. Add for front frame sync. ALPS05053686. 2020-03-24 */
         case SENSOR_FEATURE_GET_FRAME_CTRL_INFO_BY_SCENARIO:
             /*
@@ -1870,6 +1897,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
             *(feature_data + 1) = 1; /* margin info by scenario */
             *(feature_data + 2) = imgsensor_info.margin;
             break;
+        #endif
         default:
             break;
     }

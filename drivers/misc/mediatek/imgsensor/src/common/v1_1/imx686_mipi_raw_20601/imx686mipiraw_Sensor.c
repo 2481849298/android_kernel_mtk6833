@@ -53,6 +53,9 @@
 #include "imx686mipiraw_Sensor.h"
 #include "imx686_eeprom.h"
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 
 /***************Modify Following Strings for Debug**********************/
 #define PFX "IMX686_camera_sensor"
@@ -440,6 +443,7 @@ static void imx686_set_pdaf_reg_setting(MUINT32 regNum, kal_uint16 *regDa)
 	}
 }
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define  CAMERA_MODULE_INFO_LENGTH  (8)
 static kal_uint8 gImx686_SN[CAMERA_MODULE_SN_LENGTH];
 static kal_uint8 gImx686_CamInfo[CAMERA_MODULE_INFO_LENGTH];
@@ -654,6 +658,7 @@ static void write_sensor_LRC(void)
 	}
 	#endif
 }
+#endif
 
 static void set_dummy(void)
 {
@@ -4133,6 +4138,7 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 				*sensor_id = imgsensor_info.sensor_id;
 				pr_debug("i2c write id: 0x%x, sensor id: 0x%x\n",
 					imgsensor.i2c_write_id, *sensor_id);
+				#ifdef OPLUS_FEATURE_CAMERA_COMMON
 				imgsensor_info.module_id = read_module_id();
 				read_eeprom_SN();
 				read_eeprom_CamInfo();
@@ -4142,6 +4148,7 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 			//		Oplusimgsensor_Registdeviceinfo("Cam_r0", DEVICE_VERSION_IMX686, imgsensor_info.module_id);
 			//		deviceInfo_register_value = 0x01;
 			//	}
+				#endif
 				return ERROR_NONE;
 			}
 
@@ -4212,9 +4219,14 @@ static kal_uint32 open(void)
 			break;
 		retry = 2;
 	}
+	#ifndef OPLUS_FEATURE_CAMERA_COMMON
+	if (imgsensor_info.sensor_id != sensor_id)
+		return ERROR_SENSOR_CONNECT_FAIL;
+	#else
 	if (imgsensor_info.sensor_id != sensor_id) {
 		return ERROR_SENSORID_READ_FAIL;
 	}
+	#endif
 	/* initail sequence write in  */
 	sensor_init();
 
@@ -5174,6 +5186,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 			break;
 		}
 		break;
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	case SENSOR_FEATURE_GET_MODULE_INFO:
 		LOG_INF("imx686 GET_MODULE_CamInfo:%d %d\n", *feature_para_len, *feature_data_32);
 		*(feature_data_32 + 1) = (gImx686_CamInfo[1] << 24)
@@ -5206,6 +5219,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 	case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
 		*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -16933000;
 		break;
+	#endif
 	case SENSOR_FEATURE_GET_SEAMLESS_SCENARIOS:
 		pScenarios = (MUINT32 *)((uintptr_t)(*(feature_data+1)));
 		switch (*feature_data) {
@@ -5344,9 +5358,11 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 	case SENSOR_FEATURE_SET_NIGHTMODE:
 		 /* night_mode((BOOL) *feature_data); */
 		break;
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	case SENSOR_FEATURE_CHECK_MODULE_ID:
 		*feature_return_para_32 = imgsensor_info.module_id;
 		break;
+	#endif
 	case SENSOR_FEATURE_SET_GAIN:
 		set_gain((UINT16) *feature_data);
 		break;

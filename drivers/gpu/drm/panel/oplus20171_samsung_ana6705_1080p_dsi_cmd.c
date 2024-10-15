@@ -59,7 +59,6 @@ static bool aod_state = false;
 static int aod_finger_unlock_flag = 0;
 static int esd_brightness;
 extern unsigned long oplus_max_normal_brightness;
-extern unsigned long aod_light_mode;
 
 #define LCM_DSI_CMD_MODE 1
 
@@ -858,6 +857,16 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 	int ret = 0;
 	struct drm_display_mode *m = get_mode_by_id(panel, mode);
 
+	if (!m) {
+		pr_err("%s, get mode failed\n", __func__);
+		return 1;
+	}
+
+	if (!ext) {
+		pr_err("%s, find_panel_ext failed\n", __func__);
+		return 1;
+	}
+
 	if (mode == 0)
 		ext->params = &ext_params;
 	else if (mode == 1)
@@ -1185,6 +1194,7 @@ static struct LCM_setting_table lcm_normal_to_aod_sam[] = {
 static int panel_doze_enable(struct drm_panel *panel, void *dsi, dcs_write_gce cb, void *handle)
 {
 	unsigned int i=0;
+//#ifdef VENDOR_EDIT
 	pr_err("debug for lcm %s\n", __func__);
 	aod_state = true;
 //#endif
@@ -1210,7 +1220,6 @@ static int panel_doze_enable(struct drm_panel *panel, void *dsi, dcs_write_gce c
 				cb(dsi, handle, lcm_normal_to_aod_sam[i].para_list, lcm_normal_to_aod_sam[i].count);
 		}
 	}
-	aod_light_mode = 0;
 
 	return 0;
 }
@@ -1372,11 +1381,10 @@ static int lcm_panel_poweron(struct drm_panel *panel)
 	struct lcm *ctx = panel_to_lcm(panel);
 	int ret;
 
-	pr_err("debug for lcm %s, ctx->prepared=%d\n", __func__, ctx->prepared);
-
-
 	if (ctx->prepared)
 		return 0;
+	else
+		pr_info("debug for lcm %s, ctx->prepared=%d\n", __func__, ctx->prepared);
 
 	ctx->bias_gpio = devm_gpiod_get(ctx->dev, "bias", GPIOD_OUT_HIGH);
 	if (IS_ERR(ctx->bias_gpio)) {
@@ -1414,10 +1422,10 @@ static int lcm_panel_poweroff(struct drm_panel *panel)
 	struct lcm *ctx = panel_to_lcm(panel);
 	int ret;
 
-	pr_err("debug for lcm %s  ctx->prepared %d \n", __func__,ctx->prepared);
-
 	if (ctx->prepared)
 		return 0;
+	else
+		pr_info("debug for lcm %s  ctx->prepared %d \n", __func__,ctx->prepared);
 
 	usleep_range(5000, 5100);
 	ctx->reset_gpio = devm_gpiod_get(ctx->dev, "reset", GPIOD_OUT_HIGH);

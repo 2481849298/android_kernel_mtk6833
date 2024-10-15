@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #define LOG_TAG "ddp_manager"
 
@@ -1619,7 +1611,7 @@ static int is_module_in_path(enum DISP_MODULE_ENUM module,
 			     struct ddp_path_handle *phandle)
 {
 	struct DDP_MANAGER_CONTEXT *c = _get_context();
-	if (module < DISP_MODULE_OVL0 || module >= DISP_MODULE_NUM) {
+	if (module >= DISP_MODULE_NUM) {
 		DISP_LOG_E("%s: error module_id:%d\n",
 			   __func__, module);
 		return -1;
@@ -1799,7 +1791,7 @@ int dpmgr_enable_event(disp_path_handle dp_handle, enum DISP_PATH_EVENT event)
 	struct DPMGR_WQ_HANDLE *wq_handle;
 
 	ASSERT(dp_handle);
-	if (event >= DISP_PATH_EVENT_NUM || event < DISP_PATH_EVENT_FRAME_DONE) {
+	if (event >= DISP_PATH_EVENT_NUM) {
 		DISP_LOG_E("%s: error:event:%d\n", __func__, event);
 		return 1;
 	}
@@ -2073,7 +2065,7 @@ int dpmgr_signal_event(disp_path_handle dp_handle, enum DISP_PATH_EVENT event)
 	ASSERT(dp_handle);
 	phandle = (struct ddp_path_handle *)dp_handle;
 	wq_handle = &phandle->wq_list[event];
-	if (event >= DISP_PATH_EVENT_NUM || event < DISP_PATH_EVENT_FRAME_DONE) {
+	if (event >= DISP_PATH_EVENT_NUM) {
 		DISP_LOG_E("%s: error:event:%d\n", __func__, event);
 		return 1;
 	}

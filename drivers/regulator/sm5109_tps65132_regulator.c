@@ -83,6 +83,32 @@ static int _lcm_i2c_remove(struct i2c_client *client)
 	return 0;
 }
 
+int _20015_lcm_i2c_read_bytes(unsigned char addr, char *value)
+{
+	int ret = 0;
+	struct i2c_client *client = _lcm_i2c_client;
+	char write_data[2] = { 0 };
+
+	if (client == NULL) {
+		pr_debug("ERROR!! _lcm_i2c_client is null\n");
+		return 0;
+	}
+
+	write_data[0] = addr;
+	ret = i2c_master_send(client, write_data, 1);
+	if (ret < 0)
+		pr_info("[LCM][ERROR] _lcm_i2c write data fail !!\n");
+	ret = i2c_master_recv(client, write_data, 1);
+	if (ret < 0) {
+		dev_err(&client->dev, "I2C read error\n");
+		return ret;
+	}
+	*value =  write_data[0] & 0x3;
+
+	return ret;
+}
+EXPORT_SYMBOL(_20015_lcm_i2c_read_bytes);
+
 int _20015_lcm_i2c_write_bytes(unsigned char addr, unsigned char value)
 {
 	int ret = 0;

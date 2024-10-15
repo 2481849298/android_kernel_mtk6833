@@ -21,6 +21,8 @@
 #include "connsys_debug_utility.h"
 #include "coredump_mng.h"
 #include "conn_power_throttling.h"
+#include "aee.h"
+#include "conn_dbg.h"
 
 /*******************************************************************************
 *                         C O M P I L E R   F L A G S
@@ -75,6 +77,7 @@ static void _consys_hw_conninfra_sleep(void);
  * 	0: No, the request is from sub-radio
  */
 static int _consys_hw_raise_voltage(enum consys_drv_type drv_type, bool raise, bool onoff);
+static void _consys_hw_conninfra_print_wakeup_record(void);
 
 /*******************************************************************************
 *                            P U B L I C   D A T A
@@ -102,7 +105,13 @@ struct consys_hw_env conn_hw_env;
 const struct consys_hw_ops_struct *consys_hw_ops;
 struct platform_device *g_pdev;
 
-int g_conninfra_wakeup_ref_cnt;
+static int g_conninfra_wakeup_ref_cnt;
+
+#define CONNINFRA_WAKEUP_RECORD_NUM 6
+static int g_conninfra_wakeup_rec_idx;
+static unsigned long long g_conninfra_wakeup_rec_sec[CONNINFRA_WAKEUP_RECORD_NUM];
+static unsigned long g_conninfra_wakeup_rec_nsec[CONNINFRA_WAKEUP_RECORD_NUM];
+static int g_conninfra_wakeup_rec_cnt[CONNINFRA_WAKEUP_RECORD_NUM];
 
 struct work_struct ap_resume_work;
 
@@ -253,7 +262,7 @@ int _consys_hw_pwr_on_rollback(enum conninfra_pwr_on_rollback_type type)
 				pr_err("[%s] turn off VCN control fail, ret=%d\n", __func__, ret);
 			break;
 		default:
-			pr_err("[%s] wrong type: %d", type);
+			pr_notice("[%s] wrong type: %u", __func__, type);
 			break;
 	}
 	return 0;
@@ -340,6 +349,11 @@ int consys_hw_pwr_on(unsigned int curr_status, unsigned int on_radio)
 			ret = consys_hw_ops->consys_plt_polling_consys_chipid();
 		if (ret) {
 			pr_err("[%s] polling d-die id fail, ret=%d\n", __func__, ret);
+			//#ifndef OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR
+			//conn_dbg_add_log_once(CONN_DBG_LOG_TYPE_HW_ERR, "polling d-die id fail.");
+			//#else
+			conn_dbg_add_log_once(CONN_DBG_LOG_TYPE_HW_ERR, "conninfra+d-die\n");
+			//#endif /* OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR */
 			_consys_hw_pwr_on_rollback(CONNINFRA_PWR_ON_POLLING_CHIP_ID_FAIL);
 			return CONNINFRA_POWER_ON_D_DIE_FAIL;
 		}
@@ -362,6 +376,11 @@ int consys_hw_pwr_on(unsigned int curr_status, unsigned int on_radio)
 			ret = consys_hw_ops->consys_plt_a_die_cfg();
 		if (ret) {
 			pr_err("[%s] a-die config error, ret=%d\n", __func__, ret);
+			//#ifndef OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR
+			//conn_dbg_add_log_once(CONN_DBG_LOG_TYPE_HW_ERR, "a-die config fail.");
+			//#else
+			conn_dbg_add_log_once(CONN_DBG_LOG_TYPE_HW_ERR, "conninfra+a-die\n");
+			//#endif /* OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR */
 			_consys_hw_pwr_on_rollback(CONNINFRA_PWR_ON_A_DIE_FAIL);
 			return CONNINFRA_POWER_ON_A_DIE_FAIL;
 		}
@@ -522,9 +541,38 @@ int consys_hw_raise_voltage(enum consys_drv_type drv_type, bool raise, bool onof
 	return 0;
 }
 
+static void _consys_hw_conninfra_add_wakeup_record(int count)
+{
+	unsigned long long sec = 0;
+	unsigned long nsec = 0;
+
+	osal_get_local_time(&sec, &nsec);
+
+	if (g_conninfra_wakeup_rec_idx >= CONNINFRA_WAKEUP_RECORD_NUM)
+		g_conninfra_wakeup_rec_idx = 0;
+
+	g_conninfra_wakeup_rec_cnt[g_conninfra_wakeup_rec_idx] = count;
+	g_conninfra_wakeup_rec_sec[g_conninfra_wakeup_rec_idx] = sec;
+	g_conninfra_wakeup_rec_nsec[g_conninfra_wakeup_rec_idx] = nsec;
+	g_conninfra_wakeup_rec_idx++;
+
+	if (g_conninfra_wakeup_rec_idx == CONNINFRA_WAKEUP_RECORD_NUM)
+		_consys_hw_conninfra_print_wakeup_record();
+}
+
+static void _consys_hw_conninfra_print_wakeup_record(void)
+{
+	unsigned long long *sec = g_conninfra_wakeup_rec_sec;
+	unsigned long *nsec = g_conninfra_wakeup_rec_nsec;
+	int *cnt = g_conninfra_wakeup_rec_cnt;
+
+	pr_info("conn_wakeup:%llu.%06lu:%d; %llu.%06lu:%d; %llu.%06lu:%d; %llu.%06lu:%d; %llu.%06lu:%d; %llu.%06lu:%d",
+		sec[0], nsec[0], cnt[0], sec[1], nsec[1], cnt[1], sec[2], nsec[2], cnt[2],
+		sec[3], nsec[3], cnt[3], sec[4], nsec[4], cnt[4], sec[5], nsec[5], cnt[5]);
+}
+
 static int _consys_hw_conninfra_wakeup(void)
 {
-	int ref = g_conninfra_wakeup_ref_cnt;
 	bool wakeup = false, ret;
 
 	if (consys_hw_ops->consys_plt_conninfra_wakeup) {
@@ -537,16 +585,13 @@ static int _consys_hw_conninfra_wakeup(void)
 			wakeup = true;
 		}
 		g_conninfra_wakeup_ref_cnt++;
+		_consys_hw_conninfra_add_wakeup_record(g_conninfra_wakeup_ref_cnt);
 	}
-
-	pr_info("conninfra_wakeup refcnt=[%d]->[%d] %s",
-			ref, g_conninfra_wakeup_ref_cnt, (wakeup ? "wakeup!!" : ""));
 	return 0;
 }
 
 static void _consys_hw_conninfra_sleep(void)
 {
-	int ref = g_conninfra_wakeup_ref_cnt;
 	bool sleep = false;
 
 	if (consys_hw_ops->consys_plt_conninfra_sleep &&
@@ -554,8 +599,16 @@ static void _consys_hw_conninfra_sleep(void)
 		sleep = true;
 		consys_hw_ops->consys_plt_conninfra_sleep();
 	}
-	pr_info("conninfra_sleep refcnt=[%d]->[%d] %s",
-			ref, g_conninfra_wakeup_ref_cnt, (sleep ? "sleep!!" : ""));
+
+	if (g_conninfra_wakeup_ref_cnt < 0) {
+#if IS_ENABLED(CONFIG_MTK_AEE_FEATURE)
+		aee_kernel_exception("conninfra", "%s count %d is unexpected.", __func__, g_conninfra_wakeup_ref_cnt);
+#else
+		pr_notice("%s count %d is unexpected.", __func__, g_conninfra_wakeup_ref_cnt);
+#endif
+		_consys_hw_conninfra_print_wakeup_record();
+	} else
+		_consys_hw_conninfra_add_wakeup_record(g_conninfra_wakeup_ref_cnt);
 }
 
 int consys_hw_force_conninfra_wakeup(void)
@@ -861,7 +914,7 @@ int consys_hw_init(struct conninfra_dev_cb *dev_cb)
 	conninfra_pm_notifier.notifier_call = conninfra_pm_notifier_callback;
 	ret = register_pm_notifier(&conninfra_pm_notifier);
 	if (ret < 0)
-		pr_notice("%s register_pm_notifier fail %d\n", ret);
+		pr_notice("%s register_pm_notifier fail %d\n", __func__, ret);
 
 	pr_info("[consys_hw_init] result [%d]\n", iRet);
 

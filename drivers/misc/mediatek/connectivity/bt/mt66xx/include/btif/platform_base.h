@@ -7,6 +7,7 @@
 #define _PLATFORM_BASE_H
 
 #include "conninfra.h"
+#include "conn_dbg.h"
 
 #define BT_CR_DUMP_BUF_SIZE	(1024)
 #define FW_NAME_LEN		(64)

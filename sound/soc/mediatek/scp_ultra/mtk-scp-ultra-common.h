@@ -40,9 +40,7 @@
 				  DB_OPT_FTRACE, message, \
 				  "audio assert"))
 #endif /* CONFIG_OPLUS_FEATURE_MM_FEEDBACK */
-
 #else
-
 #if IS_ENABLED(CONFIG_OPLUS_FEATURE_MM_FEEDBACK)
 #ifndef AUDIO_AEE
 #define AUDIO_AEE(message) \
@@ -54,12 +52,11 @@
 #else /* CONFIG_OPLUS_FEATURE_MM_FEEDBACK */
 #define AUDIO_AEE(message) WARN_ON(true)
 #endif /*CONFIG_OPLUS_FEATURE_MM_FEEDBACK*/
-
 #endif
 
 /* wake lock relate*/
-#define aud_wake_lock_init(ws, name) wakeup_source_init(ws, name)
-#define aud_wake_lock_destroy(ws) wakeup_source_trash(ws)
+#define aud_wake_lock_init(dev, name) wakeup_source_register(dev, name)
+#define aud_wake_lock_destroy(ws) wakeup_source_destroy(ws)
 #define aud_wake_lock(ws) __pm_stay_awake(ws)
 #define aud_wake_unlock(ws) __pm_relax(ws)
 

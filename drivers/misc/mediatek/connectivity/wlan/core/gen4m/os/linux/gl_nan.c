@@ -248,7 +248,7 @@ err_alloc:
 	}
 
 	if (prGlueInfo->aprNANDevInfo[ucRoleIdx]) {
-		kalMemFree(prGlueInfo->aprNANDevInfo, VIR_MEM_TYPE,
+		kalMemFree(prGlueInfo->aprNANDevInfo[ucRoleIdx], VIR_MEM_TYPE,
 		   sizeof(struct _GL_NAN_INFO_T));
 
 		prGlueInfo->aprNANDevInfo[ucRoleIdx] = NULL;
@@ -273,12 +273,15 @@ err_alloc:
 unsigned char
 nanFreeInfo(struct GLUE_INFO *prGlueInfo, uint8_t ucRoleIdx)
 {
-	struct ADAPTER *prAdapter = prGlueInfo->prAdapter;
+	struct ADAPTER *prAdapter;
 
 	if (!prGlueInfo) {
 		DBGLOG(NAN, ERROR, "prGlueInfo error\n");
 		return FALSE;
 	}
+
+	prAdapter = prGlueInfo->prAdapter;
+
 	if (!prAdapter) {
 		DBGLOG(NAN, ERROR, "prAdapter error!\n");
 		return FALSE;
@@ -393,12 +396,13 @@ nanNetUnregister(struct GLUE_INFO *prGlueInfo,
 
 	GLUE_SPIN_LOCK_DECLARATION();
 
-	prAdapter = prGlueInfo->prAdapter;
-
 	if (!prGlueInfo) {
 		DBGLOG(NAN, ERROR, "prGlueInfo error\n");
 		return FALSE;
 	}
+
+	prAdapter = prGlueInfo->prAdapter;
+
 	if (!prAdapter) {
 		DBGLOG(NAN, ERROR, "prAdapter error\n");
 		return FALSE;
@@ -626,6 +630,10 @@ mtk_nan_wext_set_Multicastlist(struct GLUE_INFO *prGlueInfo)
 		prMCAddrList = kalMemAlloc(
 			MAX_NUM_GROUP_ADDR * ETH_ALEN, VIR_MEM_TYPE);
 
+		if (!prMCAddrList) {
+			DBGLOG(NAN, ERROR, "prMCAddrList is null!\n");
+			return;
+		}
 		netdev_for_each_mc_addr(ha, prDev) {
 			if (i < MAX_NUM_GROUP_ADDR) {
 				kalMemCopy(
@@ -638,8 +646,11 @@ mtk_nan_wext_set_Multicastlist(struct GLUE_INFO *prGlueInfo)
 				i++;
 			}
 		}
-		if (i >= MAX_NUM_GROUP_ADDR)
+		if (i >= MAX_NUM_GROUP_ADDR) {
+			kalMemFree(prMCAddrList, VIR_MEM_TYPE,
+			   MAX_NUM_GROUP_ADDR * ETH_ALEN);
 			return;
+		}
 
 		wlanoidSetNANMulticastList(
 			prGlueInfo->prAdapter,
@@ -681,7 +692,7 @@ glRegisterNAN(struct GLUE_INFO *prGlueInfo, const char *prDevName)
 {
 	struct ADAPTER *prAdapter = NULL;
 	uint8_t rMacAddr[6];
-	uint8_t rRandMacAddr[6];
+	uint8_t rRandMacAddr[6] = {0};
 	uint8_t rRandMacMask[6] = {0xFF, 0xFF, 0xFF, 0x0, 0x0, 0x0};
 	struct wireless_dev *prNanWdev = NULL;
 	struct net_device *prNanDev = NULL;

@@ -50,6 +50,13 @@
 #include <linux/thermal.h>
 #include "conn_power_throttling.h"
 
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+//CONNECTIVITY.WIFI.HARDWARE.POWER, 2022/06/30
+//add for mtk connectivity power monitor
+#include <oplus_conn_event.h>
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
+
+
 /*******************************************************************************
 *                         C O M P I L E R   F L A G S
 ********************************************************************************
@@ -702,6 +709,11 @@ static int conninfra_dev_init(void)
 	int cdevErr = -1;
 	int iret = 0;
 
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+	//CONNECTIVITY.WIFI.HARDWARE.POWER, 2022/06/30
+	//add for mtk connectivity power monitor
+	oplusConnUeventInit();
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 	g_conninfra_init_status = CONNINFRA_INIT_START;
 	init_waitqueue_head((wait_queue_head_t *)&g_conninfra_init_wq);
 
@@ -805,6 +817,11 @@ static void conninfra_dev_deinit(void)
 	cdev_del(&gConninfraCdev);
 	unregister_chrdev_region(dev, CONNINFRA_DEV_NUM);
 
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+	//CONNECTIVITY.WIFI.HARDWARE.POWER, 2022/06/30
+	//add for mtk connectivity power monitor
+	oplusConnUeventDeinit();
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 	pr_info("ConnInfra: ALPS platform init (%d)\n", iret);
 }
 

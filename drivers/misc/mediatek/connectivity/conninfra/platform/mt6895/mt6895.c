@@ -15,6 +15,13 @@
 
 #include <connectivity_build_in_adapter.h>
 
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+//CONNECTIVITY.WIFI.HARDWARE.POWER, 2022/06/30
+//add for mtk connectivity power monitor
+#include <oplus_conn_event.h>
+#include <linux/string.h>
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
+
 #include "osal.h"
 #include "conninfra.h"
 #include "conninfra_conf.h"
@@ -62,6 +69,12 @@ struct rf_cr_backup_data {
 	unsigned int value2;
 };
 
+
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+//CONNECTIVITY.WIFI.HARDWARE.POWER, 2022/06/30
+//add for mtk connectivity power monitor
+static char mUevent[256] = {'\0'};
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 /*******************************************************************************
 *                  F U N C T I O N   D E C L A R A T I O N S
 ********************************************************************************
@@ -408,9 +421,14 @@ static void consys_power_state(void)
 			buf_len += str_len;
 		}
 	}
-	if (r & 0xFFFF)
+	if (r & 0xFFFF) {
 		pr_info("[%s] [0x%x] %s", __func__, r, buf);
-
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+		//CONNECTIVITY.WIFI.HARDWARE.POWER, 2022/06/30
+		//add for mtk connectivity power monitor
+		snprintf(mUevent, sizeof(mUevent), "consys=power_state:%s;", buf);
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
+        }
 	consys_print_irq_status();
 }
 
@@ -530,8 +548,50 @@ static int consys_power_state_dump(char *buf, unsigned int size, int print_log)
 	}
 
 	/* Power state */
-	if (print_log > 0)
+	if (print_log > 0) {
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+		//CONNECTIVITY.WIFI.HARDWARE.POWER, 2022/06/30
+		//add for mtk connectivity power monitor
+		memset(mUevent, '\0', sizeof(mUevent));
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 		consys_power_state();
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+		//CONNECTIVITY.WIFI.HARDWARE.POWER, 2022/06/30
+		//add for mtk connectivity power monitor
+		if (strlen(mUevent) > 0) {
+			snprintf(&(mUevent[strlen(mUevent)]), sizeof(mUevent)-strlen(mUevent),
+				"conninfra:%u.%03u,%u;wf:%u.%03u,%u;bt:%u.%03u,%u;gps:%u.%03u,%u;"
+				"[total]conninfra:%llu.%03llu,%llu;wf:%llu.%03llu,%llu;"
+				"bt:%llu.%03llu,%llu;gps:%llu.%03llu,%llu;",
+			CONN_TICK_TO_SEC(conninfra_sleep_time),
+			CONN_TICK_TO_SEC((conninfra_sleep_time % CONN_32K_TICKS_PER_SEC)* 1000),
+			conninfra_sleep_cnt,
+			CONN_TICK_TO_SEC(wf_sleep_time),
+			CONN_TICK_TO_SEC((wf_sleep_time % CONN_32K_TICKS_PER_SEC)* 1000),
+			wf_sleep_cnt,
+			CONN_TICK_TO_SEC(bt_sleep_time),
+			CONN_TICK_TO_SEC((bt_sleep_time % CONN_32K_TICKS_PER_SEC)* 1000),
+			bt_sleep_cnt,
+			CONN_TICK_TO_SEC(gps_sleep_time),
+			CONN_TICK_TO_SEC((gps_sleep_time % CONN_32K_TICKS_PER_SEC)* 1000),
+			gps_sleep_cnt,
+			CONN_TICK_TO_SEC(t_conninfra_sleep_time),
+			CONN_TICK_TO_SEC((t_conninfra_sleep_time % CONN_32K_TICKS_PER_SEC)* 1000),
+			t_conninfra_sleep_cnt,
+			CONN_TICK_TO_SEC(t_wf_sleep_time),
+			CONN_TICK_TO_SEC((t_wf_sleep_time % CONN_32K_TICKS_PER_SEC)* 1000),
+			t_wf_sleep_cnt,
+			CONN_TICK_TO_SEC(t_bt_sleep_time),
+			CONN_TICK_TO_SEC((t_bt_sleep_time % CONN_32K_TICKS_PER_SEC)* 1000),
+			t_bt_sleep_cnt,
+			CONN_TICK_TO_SEC(t_gps_sleep_time),
+			CONN_TICK_TO_SEC((t_gps_sleep_time % CONN_32K_TICKS_PER_SEC)* 1000),
+			t_gps_sleep_cnt);
+
+			oplusConnSendUevent(mUevent);
+		}
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
+	}
 
 	round++;
 

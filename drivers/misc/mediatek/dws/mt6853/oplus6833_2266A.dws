@@ -50,13 +50,6 @@
                 <sensitive_level>Level</sensitive_level>
                 <debounce_en>Enable</debounce_en>
             </eint1>
-            <eint5>
-                <varName>IRQ_NFC</varName>
-                <debounce_time>0</debounce_time>
-                <polarity>High</polarity>
-                <sensitive_level>Level</sensitive_level>
-                <debounce_en>Disable</debounce_en>
-            </eint5>
             <eint7>
                 <varName>SWTP</varName>
                 <debounce_time>512</debounce_time>
@@ -192,7 +185,6 @@
                 <inpull_selhigh>true</inpull_selhigh>
                 <def_dir>IN</def_dir>
                 <out_high>false</out_high>
-                <varName0>GPIO_TCPC_PD_IRQB</varName0>
                 <smt>true</smt>
                 <ies>true</ies>
             </gpio9>
@@ -667,11 +659,11 @@
                 <ies>true</ies>
             </gpio54>
             <gpio55>
-                <eint_mode>true</eint_mode>
+                <eint_mode>false</eint_mode>
                 <def_mode>0</def_mode>
                 <inpull_en>true</inpull_en>
                 <inpull_selhigh>true</inpull_selhigh>
-                <def_dir>IN</def_dir>
+                <def_dir>OUT</def_dir>
                 <out_high>false</out_high>
                 <smt>true</smt>
                 <ies>true</ies>
@@ -1292,7 +1284,7 @@
                 <smt>true</smt>
                 <ies>true</ies>
             </gpio112>
-            <gpio113>
+           <gpio113>
                 <eint_mode>false</eint_mode>
                 <def_mode>0</def_mode>
                 <inpull_en>true</inpull_en>

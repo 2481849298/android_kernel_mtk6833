@@ -3,6 +3,7 @@
 #include <linux/highmem.h>
 #include <linux/sched.h>
 #include <linux/hugetlb.h>
+#include <linux/sched/signal.h>
 
 static int walk_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 			  struct mm_walk *walk)
@@ -15,9 +16,9 @@ static int walk_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 		err = walk->pte_entry(pte, addr, addr + PAGE_SIZE, walk);
 		if (err)
 		       break;
-		addr += PAGE_SIZE;
-		if (addr == end)
+		if (addr >= end - PAGE_SIZE)
 			break;
+		addr += PAGE_SIZE;
 		pte++;
 	}
 
@@ -131,6 +132,11 @@ static int walk_p4d_range(pgd_t *pgd, unsigned long addr, unsigned long end,
 				break;
 			continue;
 		}
+		if (walk->p4d_entry) {
+			err = walk->p4d_entry(p4d, addr, next, walk);
+			if (err)
+				break;
+		}
 		if (walk->pmd_entry || walk->pte_entry)
 			err = walk_pud_range(p4d, addr, next, walk);
 		if (err)
@@ -157,7 +163,7 @@ static int walk_pgd_range(unsigned long addr, unsigned long end,
 				break;
 			continue;
 		}
-		if (walk->pmd_entry || walk->pte_entry)
+		if (walk->p4d_entry || walk->pmd_entry || walk->pte_entry)
 			err = walk_p4d_range(pgd, addr, next, walk);
 		if (err)
 			break;
@@ -258,6 +264,9 @@ static int __walk_page_range(unsigned long start, unsigned long end,
 
 /**
  * walk_page_range - walk page table with caller specific callbacks
+ * @start: start address of the virtual address range
+ * @end: end address of the virtual address range
+ * @walk: mm_walk structure defining the callbacks and the target address space
  *
  * Recursively walk the page table tree of the process represented by @walk->mm
  * within the virtual address range [@start, @end). During walking, we can do
@@ -265,6 +274,7 @@ static int __walk_page_range(unsigned long start, unsigned long end,
  * pte_entry(), and/or hugetlb_entry(). If you don't set up for some of these
  * callbacks, the associated entries/pages are just ignored.
  * The return values of these callbacks are commonly defined like below:
+ *
  *  - 0  : succeeded to handle the current entry, and if you don't reach the
  *         end address yet, continue to walk.
  *  - >0 : succeeded to handle the current entry, and return to the caller
@@ -330,6 +340,10 @@ int walk_page_range(unsigned long start, unsigned long end,
 		if (walk->vma || walk->pte_hole)
 			err = __walk_page_range(start, next, walk);
 		if (err)
+			break;
+
+		if (unlikely(signal_pending(current) &&
+			sigismember(&current->pending.signal, SIGUSR2)))
 			break;
 	} while (start = next, start < end);
 	return err;

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2018-2019 HUAWEI, Inc.
- *             https://www.huawei.com/
- * Created by Gao Xiang <gaoxiang25@huawei.com>
+ * Copyright (C) 2018-2019 odm, Inc.
+ *             https://www.odm.com/
+ * Created by Gao Xiang <gaoxiang25@odm.com>
  */
 #include "internal.h"
 #include <asm/unaligned.h>

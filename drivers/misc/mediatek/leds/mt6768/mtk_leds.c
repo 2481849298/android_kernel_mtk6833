@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -44,7 +36,7 @@
 #include "mtkfb.h"
 #endif
 
-#define MET_USER_EVENT_SUPPORT
+// #define MET_USER_EVENT_SUPPORT
 #ifdef MET_USER_EVENT_SUPPORT
 #include <mt-plat/met_drv.h>
 #endif
@@ -53,12 +45,6 @@
 #include "mtk_leds_hal.h"
 #include "../mtk_leds_drv.h"
 
-#ifdef OPLUS_FEATURE_MULTIBITS_BL
-extern bool __attribute((weak)) oplus_display_twelvebits_support;
-#include <mt-plat/mtk_boot_common.h>
-extern unsigned long oplus_silence_mode;
-#endif
-
 /* for LED&Backlight bringup, define the dummy API */
 #ifndef CONFIG_MTK_PMIC_NEW_ARCH
 u16 pmic_set_register_value(u32 flagname, u32 val)
@@ -66,6 +52,11 @@ u16 pmic_set_register_value(u32 flagname, u32 val)
 	return 0;
 }
 #endif
+
+#ifdef OPLUS_BUG_STABILITY
+#include <mt-plat/mtk_boot_common.h>
+extern unsigned long silence_mode;
+#endif /* OPLUS_BUG_STABILITY */
 
 static DEFINE_MUTEX(leds_mutex);
 static DEFINE_MUTEX(leds_pmic_mutex);
@@ -87,7 +78,7 @@ static int button_flag_isink1;
 struct wakeup_source leds_suspend_lock;
 struct cust_mt65xx_led *pled_dtsi;
 
-char *leds_name[TYPE_TOTAL] = {
+char *leds_name[MT65XX_LED_TYPE_TOTAL] = {
 	"red",
 	"green",
 	"blue",
@@ -113,9 +104,9 @@ static int debug_enable_led_hal = 1;
 static int time_array_hal[PWM_DIV_NUM] = {
 	256, 512, 1024, 2048, 4096, 8192, 16384, 32768 };
 static unsigned int backlight_PWM_div_hal = CLK_DIV1;
+#endif
 static unsigned int div_array_hal[PWM_DIV_NUM] = {
 	1, 2, 4, 8, 16, 32, 64, 128 };
-#endif
 
 /****************************************************************************
  * func:return global variables
@@ -156,9 +147,12 @@ static void backlight_debug_log(int level, int mappingLevel)
 
 void mt_leds_wake_lock_init(void)
 {
-	wakeup_source_init(&leds_suspend_lock, "leds wakelock");
+	// wakeup_source_init(&leds_suspend_lock, "leds wakelock");
 }
-
+unsigned int *mt_get_div_array(void)
+{
+	return &div_array_hal[0];
+}
 struct cust_mt65xx_led *get_cust_led_dtsi(void)
 {
 	struct device_node *led_node = NULL;
@@ -171,14 +165,14 @@ struct cust_mt65xx_led *get_cust_led_dtsi(void)
 		goto out;
 
 	pr_info("[LED] %s pled_dtsi is null, load dts file\n", __func__);
-	pled_dtsi = kmalloc_array(TYPE_TOTAL,
+	pled_dtsi = kmalloc_array(MT65XX_LED_TYPE_TOTAL,
 			sizeof(struct cust_mt65xx_led), GFP_KERNEL);
 	if (pled_dtsi == NULL) {
 		LEDS_DEBUG("%s kmalloc fail\n", __func__);
 		goto out;
 	}
 
-	for (i = 0; i < TYPE_TOTAL; i++) {
+	for (i = 0; i < MT65XX_LED_TYPE_TOTAL; i++) {
 		char node_name[32] = "mediatek,";
 
 		if (strlen(node_name) + strlen(leds_name[i]) + 1 >
@@ -702,8 +696,8 @@ int mt_brightness_set_pmic(enum mt65xx_led_pmic pmic_type, u32 level, u32 div)
 		if ((button_flag_isink0 == 0) && (first_time == true)) {
 			/* sw workround for sync leds status */
 			if (button_flag_isink1 == 0)
-				pmic_set_register_value(PMIC_ISINK_CH1_EN,
-					NLED_OFF);
+				// pmic_set_register_value(PMIC_ISINK_CH1_EN,
+				// 	NLED_OFF);
 			first_time = false;
 		}
 		pmic_set_register_value(PMIC_RG_DRV_128K_CK_PDN, 0x0);
@@ -768,12 +762,12 @@ int mt_mt65xx_led_set_cust(struct cust_mt65xx_led *cust, int level)
 #endif
 	static bool button_flag;
 
-	#ifdef OPLUS_BUG_STABILITY
-	if (oplus_silence_mode) {
-		printk("%s oplus_silence_mode is %ld, set backlight to 0\n",__func__, oplus_silence_mode);
+#ifdef OPLUS_BUG_STABILITY
+	if (silence_mode) {
+		printk("%s silence_mode is %ld, set backlight to 0\n",__func__, silence_mode);
 		level = 0;
 	}
-	#endif /* OPLUS_BUG_STABILITY */
+#endif /* OPLUS_BUG_STABILITY */
 
 	switch (cust->mode) {
 
@@ -869,6 +863,12 @@ void mt_mt65xx_led_work(struct work_struct *work)
 	mutex_unlock(&leds_mutex);
 }
 
+#ifdef OPLUS_FEATURE_DISPLAY
+extern int primary_display_set_gamma_mode(unsigned int gamma_flag);
+int gamma_flag = 1;
+extern char *mtkfb_find_lcm_driver(void);
+#endif
+
 void mt_mt65xx_led_set(struct led_classdev *led_cdev, enum led_brightness level)
 {
 	struct mt65xx_led_data *led_data =
@@ -895,54 +895,47 @@ void mt_mt65xx_led_set(struct led_classdev *led_cdev, enum led_brightness level)
 		level = (level * CONFIG_LIGHTNESS_MAPPING_VALUE) / 255;
 
 	backlight_debug_log(led_data->level, level);
-
-	#ifndef OPLUS_FEATURE_MULTIBITS_BL
-	disp_pq_notify_backlight_changed((((1 << MT_LED_INTERNAL_LEVEL_BIT_CNT)
-					    - 1) * level + 127) / 255);
-	#else /* OPLUS_FEATURE_MULTIBITS_BL */
-	if(oplus_display_twelvebits_support){
-		disp_pq_notify_backlight_changed((((1 << MT_LED_INTERNAL_LEVEL_BIT_CNT_SALA)
-							- 1) * level + 127) / 255);
-	}else{
+#ifdef OPLUS_FEATURE_DISPLAY
+	if (!strcmp(mtkfb_find_lcm_driver(), "ac112_p_7_a0009_fhd_dsi_vdo_lcm_drv")
+		|| !strcmp(mtkfb_find_lcm_driver(), "ac112_p_d_a0010_fhd_dsi_vdo_lcm_drv")
+		|| !strcmp(mtkfb_find_lcm_driver(), "ac114_p_3_a0013_video_panel")) {
+		if (13 == level) {
+			if (1 == gamma_flag) {
+				primary_display_set_gamma_mode(1);
+				gamma_flag = 0;
+			}
+		} else if (level > 13) {
+			if (0 == gamma_flag) {
+				primary_display_set_gamma_mode(0);
+				gamma_flag = 1;
+			}
+		}
+		disp_pq_notify_backlight_changed(level);
+	} else
+#endif
 		disp_pq_notify_backlight_changed((((1 << MT_LED_INTERNAL_LEVEL_BIT_CNT)
 					    - 1) * level + 127) / 255);
-	}
-	#endif /* OPLUS_FEATURE_MULTIBITS_BL */
-#ifdef CONFIG_MTK_AAL_SUPPORT
-	#ifndef OPLUS_FEATURE_MULTIBITS_BL
-	disp_aal_notify_backlight_changed((((1 <<
-					MT_LED_INTERNAL_LEVEL_BIT_CNT)
-					    - 1) * level + 127) / 255);
-	#else /* OPLUS_FEATURE_MULTIBITS_BL */
-	/*
-	Yongpeng.Yi@PSW.MultiMedia.Display.LCD.Feature, 2018/09/10,
-	modify for silence mode.
-	*/
-	if (oplus_silence_mode) {
-		printk("%s oplus_silence_mode is %ld, set backlight to 0\n", __func__, oplus_silence_mode);
+
+#ifndef OPLUS_BUG_STABILITY
+	if (silence_mode) {
+		printk("%s silence_mode is %ld, set backlight to 0\n", __func__, silence_mode);
 		level = 0;
 	}
-	disp_aal_notify_backlight_changed(level);
-	#endif /* OPLUS_FEATURE_MULTIBITS_BL */
-#else
-	#ifdef OPLUS_FEATURE_MULTIBITS_BL
-		if(oplus_display_twelvebits_support){
-			if (led_data->cust.mode == MT65XX_LED_MODE_CUST_BLS_PWM)
-				mt_mt65xx_led_set_cust(&led_data->cust,
-					((((1 << MT_LED_INTERNAL_LEVEL_BIT_CNT_SALA)
-						- 1) * level + 127) / 255));
-			else
-				mt_mt65xx_led_set_cust(&led_data->cust, level);
+#endif
 
-		}else{
-			if (led_data->cust.mode == MT65XX_LED_MODE_CUST_BLS_PWM)
-				mt_mt65xx_led_set_cust(&led_data->cust,
-					((((1 << MT_LED_INTERNAL_LEVEL_BIT_CNT)
-						- 1) * level + 127) / 255));
-			else
-				mt_mt65xx_led_set_cust(&led_data->cust, level);
-		}
-	#endif
+#ifdef CONFIG_MTK_AAL_SUPPORT
+#ifdef CONFIG_MTK_MT6382_BDG
+	disp_aal_notify_backlight_changed(level);
+#else
+	disp_aal_notify_backlight_changed(level);
+#endif
+#else
+	if (led_data->cust.mode == MT65XX_LED_MODE_CUST_BLS_PWM)
+		mt_mt65xx_led_set_cust(&led_data->cust,
+			((((1 << MT_LED_INTERNAL_LEVEL_BIT_CNT)
+				- 1) * level + 127) / 255));
+	else
+		mt_mt65xx_led_set_cust(&led_data->cust, level);
 #endif
 }
 

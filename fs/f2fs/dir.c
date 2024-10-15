@@ -380,16 +380,15 @@ struct f2fs_dir_entry *__f2fs_find_entry(struct inode *dir,
 	unsigned int max_depth;
 	unsigned int level;
 
+	*res_page = NULL;
+
 	if (f2fs_has_inline_dentry(dir)) {
-		*res_page = NULL;
 		de = f2fs_find_in_inline_dir(dir, fname, res_page);
 		goto out;
 	}
 
-	if (npages == 0) {
-		*res_page = NULL;
+	if (npages == 0)
 		goto out;
-	}
 
 	max_depth = F2FS_I(dir)->i_current_depth;
 	if (unlikely(max_depth > MAX_DIR_HASH_DEPTH)) {
@@ -400,7 +399,6 @@ struct f2fs_dir_entry *__f2fs_find_entry(struct inode *dir,
 	}
 
 	for (level = 0; level < max_depth; level++) {
-		*res_page = NULL;
 		de = find_in_level(dir, level, fname, res_page);
 		if (de || IS_ERR(*res_page))
 			break;
@@ -923,11 +921,12 @@ void f2fs_delete_entry(struct f2fs_dir_entry *dentry, struct page *page,
 		!f2fs_truncate_hole(dir, page->index, page->index + 1)) {
 		f2fs_clear_radix_tree_dirty_tag(page);
 		clear_page_dirty_for_io(page);
-		f2fs_clear_page_private(page);
 		ClearPageUptodate(page);
-		clear_cold_data(page);
+		clear_page_private_gcing(page);
 		inode_dec_dirty_pages(dir);
 		f2fs_remove_dirty_inode(dir);
+		detach_page_private(page);
+		set_page_private(page, 0);
 	}
 	f2fs_put_page(page, 1);
 

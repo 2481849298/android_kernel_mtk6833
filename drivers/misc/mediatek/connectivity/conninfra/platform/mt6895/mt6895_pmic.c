@@ -20,6 +20,7 @@
 #include "mt6895_pmic.h"
 #include "mt6895_consys_reg_offset.h"
 #include "mt6895_pos.h"
+#include "conn_dbg.h"
 
 /*******************************************************************************
 *                         C O M P I L E R   F L A G S
@@ -628,7 +629,11 @@ static int consys_vcn13_oc_notify(struct notifier_block *nb, unsigned long event
 
 	oc_counter++;
 	pr_info("[%s] VCN13 OC times: %d\n", __func__, oc_counter);
-
+	//#ifndef OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR
+	//conn_dbg_add_log_once(CONN_DBG_LOG_TYPE_HW_ERR, "VCN13 OC");
+	//#else
+	conn_dbg_add_log_once(CONN_DBG_LOG_TYPE_HW_ERR, "conninfra+VCN13-OC\n");
+	//#endif /* OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR */
 	if (oc_counter <= 30)
 		oc_dump = 1;
 	else if (oc_counter == (oc_dump * 100))
@@ -653,7 +658,11 @@ static int consys_vrfio18_oc_notify(struct notifier_block *nb, unsigned long eve
 
 	oc_counter++;
 	pr_info("[%s] VRFIO18 OC times: %d\n", __func__, oc_counter);
-
+	//#ifndef OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR
+	//conn_dbg_add_log_once(CONN_DBG_LOG_TYPE_HW_ERR, "VCN18 OC");
+	//#else
+	conn_dbg_add_log_once(CONN_DBG_LOG_TYPE_HW_ERR, "conninfra+VCN18-OC\n");
+	//#endif /* OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR */
 	if (oc_counter <= 30)
 		oc_dump = 1;
 	else if (oc_counter == (oc_dump * 100))
@@ -671,7 +680,7 @@ void consys_pmic_debug_log_mt6895(void)
 {
 	struct regmap *r = g_regmap_mt6363;
 	struct regmap *r2 = g_regmap_mt6368;
-	int vcn13, vrfio18, vcn33_1, vcn33_2, vant18;
+	int vcn13 = 0, vrfio18 = 0, vcn33_1 = 0, vcn33_2 = 0, vant18 = 0;
 
 	if (!r || !r2) {
 		pr_notice("%s regmap is NULL\n", __func__);

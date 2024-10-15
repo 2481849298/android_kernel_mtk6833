@@ -391,17 +391,6 @@
        };
 };
 
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <7>;
-	u2_term_ref = <7>;
-	u2_enhance = <3>;
-	
-	host_u2_vrt_ref = <6>;
-	host_u2_term_ref = <6>;
-	host_u2_enhance = <3>;
-};
-
 &lk_charger {
         support_tuv_authentication;
 };
@@ -1270,6 +1259,7 @@ pinctrl-names = "default",
 			match-projects = <20608 20609 0x2060A 0x2060B 0x2070B 0x2070E 21625 0x216A0 0x216A1 0x216B5 0x216B6>;
 		};
 	};
+
 	kpd_volume_up:kpd_volume_up {
 		compatible = "mediatek, VOLUME_UP-eint";
 		interrupt-parent = <&pio>;
@@ -1484,6 +1474,27 @@ pinctrl-names = "default",
         Hw,sim_det = <&pio 77 0x00>;
     };
 //#endif /* OPLUS_FEATURE_TP_BASIC */
+
+	oplus,track-charge {
+                compatible = "oplus,track-charge";
+                track,fast_chg_break_t_thd = <1000>;
+                track,general_chg_break_t_thd = <200>;
+                track,voocphy_type = <2>;
+                track,wired_max_power = <33000>;
+                track,wired_fast_chg_scheme = <4>;
+        };
+
+        mediatek_phy_tuning: mediatek_phy_tuning {
+                phy_tuning {
+                        compatible = "mediatek,phy_tuning";
+                        eye-vrt = <6>;
+                        eye-term = <6>;
+                        eye-rev6 = <3>;
+                        host-eye-vrt = <6>;
+                        host-eye-term = <6>;
+                        host-eye-rev6 = <3>;
+                };
+        };
 };
 
 /* GPS GPIO standardization start */
@@ -1737,13 +1748,12 @@ oplus_fp: fingerprint@0 {
 //#endif  /*OPLUS_VENDOR_SWTP*/
 //#endif /* OPLUS_FEATURE_FINGERPRINT */
 
-&msdc1 {
+&mmc1 {
     cd-gpios = <&pio 4 0>;
     status = "okay";
     vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
 };
 &mt6360_ldo {
-	ldo5_ctrls = [00 80 01 2d a4];
 	sdcard_det_en = <1>;
 	sdcard_hlact = <0>;
 };
@@ -1751,5 +1761,13 @@ oplus_fp: fingerprint@0 {
 #include "mediatek/cust_mt6833_camera_21625.dtsi"
 #include <oplus6833_21625/cust.dtsi>
 #include "mediatek/cust_mt6833_nfc_20796.dtsi"
-
+&mmc1 {
+    cd-gpios = <&pio 4 0>;
+    status = "okay";
+    vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
+};
+&mt6360_ldo {
+	sdcard_det_en = <1>;
+	sdcard_hlact = <0>;
+};
 /*End of this file, DO NOT ADD ANYTHING HERE*/

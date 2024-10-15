@@ -1,16 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * TCPC Type-C Driver for Richtek
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include <linux/delay.h>
@@ -129,10 +119,8 @@ static inline int typec_enable_low_power_mode(
 
 static inline int typec_enable_vconn(struct tcpc_device *tcpc)
 {
-#ifndef CONFIG_USB_POWER_DELIVERY
 	if (!typec_is_sink_with_emark())
 		return 0;
-#endif /* CONFIG_TCPC_VCONN_SUPPLY_MODE */
 
 #ifdef CONFIG_TCPC_VCONN_SUPPLY_MODE
 	if (tcpc->tcpc_vconn_supply == TCPC_VCONN_SUPPLY_NEVER)
@@ -377,10 +365,9 @@ static int typec_check_water_status(struct tcpc_device *tcpc)
 static bool typec_try_enter_norp_src(struct tcpc_device *tcpc)
 {
 #ifndef OPLUS_FEATURE_CHG_BASIC
-	if (tcpci_check_vbus_valid_from_ic(tcpc) &&
-	    typec_is_cc_no_res() &&
-	    tcpc->typec_state == typec_unattached_snk) {
-		TYPEC_INFO("norp_src=1\n");
+	if (tcpci_check_vbus_valid(tcpc) &&
+		(tcpc->typec_state == typec_unattached_snk)) {
+		TYPEC_DBG("norp_src=1\r\n");
 		tcpc_enable_timer(tcpc, TYPEC_TIMER_NORP_SRC);
 		return true;
 	}
@@ -417,15 +404,10 @@ static inline int typec_norp_src_attached_entry(struct tcpc_device *tcpc)
 #ifdef CONFIG_WATER_DETECTION
 #ifdef CONFIG_WD_POLLING_ONLY
 	if (!tcpc->typec_power_ctrl) {
-		if (get_boot_mode() == KERNEL_POWER_OFF_CHARGING_BOOT ||
-		    get_boot_mode() == LOW_POWER_OFF_CHARGING_BOOT)
-#ifndef OPLUS_FEATURE_CHG_BASIC
-		typec_check_water_status(tcpc);
+		if (tcpc->bootmode == 8 || tcpc->bootmode == 9)
+			typec_check_water_status(tcpc);
+
 		tcpci_set_usbid_polling(tcpc, false);
-#else
-		if (typec_check_water_status(tcpc))
-			return 0;
-#endif
 	}
 #else
 	if (!tcpc->typec_power_ctrl && typec_check_water_status(tcpc))
@@ -580,14 +562,10 @@ static inline void typec_unattached_cc_entry(struct tcpc_device *tcpc)
 	}
 #endif	/* CONFIG_TYPEC_CAP_ROLE_SWAP */
 #ifdef CONFIG_CABLE_TYPE_DETECTION
-	if (tcpc->typec_state == typec_attached_snk ||
-	    tcpc->typec_state == typec_unattachwait_pe)
-		tcpc_typec_handle_ctd(tcpc, TCPC_CABLE_TYPE_NONE);
+	tcpc_typec_handle_ctd(tcpc, TCPC_CABLE_TYPE_NONE);
 #endif /* CONFIG_CABLE_TYPE_DETECTION */
-	#ifdef OPLUS_FEATURE_CHG_BASIC
-	//add by tongfeng
+
 	tcpc->typec_role = tcpc->typec_role_new;
-	#endif
 	switch (tcpc->typec_role) {
 	case TYPEC_ROLE_SNK:
 		TYPEC_NEW_STATE(typec_unattached_snk);
@@ -862,11 +840,18 @@ static inline bool typec_role_is_try_src(
 
 static inline void typec_try_src_entry(struct tcpc_device *tcpc)
 {
+	uint32_t chip_vid;
+	int rv = 0;
+
 	TYPEC_NEW_STATE(typec_try_src);
 	tcpc->typec_drp_try_timeout = false;
 
 	tcpci_set_cc(tcpc, TYPEC_CC_RP);
 	tcpc_enable_timer(tcpc, TYPEC_TRY_TIMER_DRP_TRY);
+
+	rv = tcpci_get_chip_vid(tcpc,&chip_vid);
+	if (!rv && SOUTHCHIP_PD_VID == chip_vid)
+		tcpc_typec_handle_cc_change(tcpc);
 }
 
 static inline void typec_trywait_snk_entry(struct tcpc_device *tcpc)
@@ -921,11 +906,19 @@ static inline bool typec_role_is_try_sink(
 
 static inline void typec_try_snk_entry(struct tcpc_device *tcpc)
 {
+	uint32_t chip_vid;
+	int rv = 0;
+
 	TYPEC_NEW_STATE(typec_try_snk);
 	tcpc->typec_drp_try_timeout = false;
 
 	tcpci_set_cc(tcpc, TYPEC_CC_RD);
 	tcpc_enable_timer(tcpc, TYPEC_TRY_TIMER_DRP_TRY);
+
+	rv = tcpci_get_chip_vid(tcpc,&chip_vid);
+	if (!rv && SOUTHCHIP_PD_VID == chip_vid) {
+		tcpc_typec_handle_cc_change(tcpc);
+	}
 }
 
 static inline void typec_trywait_src_entry(struct tcpc_device *tcpc)
@@ -1577,6 +1570,8 @@ static inline bool typec_handle_cc_changed_entry(struct tcpc_device *tcpc)
 static inline void typec_attach_wait_entry(struct tcpc_device *tcpc)
 {
 	bool as_sink;
+	int rv = 0;
+	uint32_t chip_vid;
 #ifdef CONFIG_USB_POWER_DELIVERY
 	struct pd_port *pd_port = &tcpc->pd_port;
 #endif	/* CONFIG_USB_POWER_DELIVERY */
@@ -1646,13 +1641,14 @@ static inline void typec_attach_wait_entry(struct tcpc_device *tcpc)
 #ifdef CONFIG_TYPEC_NOTIFY_ATTACHWAIT
 	tcpci_notify_attachwait_state(tcpc, as_sink);
 #endif	/* CONFIG_TYPEC_NOTIFY_ATTACHWAIT */
-
-	if (as_sink)
+	rv = tcpci_get_chip_vid(tcpc,&chip_vid);
+	if (as_sink) {
 		TYPEC_NEW_STATE(typec_attachwait_snk);
-	else {
+		if (!rv && SOUTHCHIP_PD_VID == chip_vid)
+			tcpci_set_cc(tcpc,TYPEC_CC_RD);
+	} else {
 		/* Advertise Rp level before Attached.SRC Ellisys 3.1.6359 */
-		tcpci_set_cc(tcpc,
-			TYPEC_CC_PULL(tcpc->typec_local_rp_level, TYPEC_CC_RP));
+		tcpci_set_cc(tcpc, TYPEC_CC_PULL(tcpc->typec_local_rp_level, TYPEC_CC_RP));
 		TYPEC_NEW_STATE(typec_attachwait_src);
 	}
 
@@ -1694,6 +1690,7 @@ static inline void typec_detach_wait_entry(struct tcpc_device *tcpc)
 #ifdef OPLUS_FEATURE_CHG_BASIC
 	TYPEC_INFO("typec_detach_wait_entry typec_state[%d]\n", tcpc->typec_state);
 #endif
+
 	switch (tcpc->typec_state) {
 #ifdef TYPEC_EXIT_ATTACHED_SNK_VIA_VBUS
 	case typec_attached_snk:
@@ -1833,6 +1830,7 @@ static inline bool typec_is_cc_attach(struct tcpc_device *tcpc)
 		}
 		break;
 	}
+
 #ifdef OPLUS_FEATURE_CHG_BASIC
 	TYPEC_INFO("%s: cc_attach[%d]\n", __func__, cc_attach);
 #endif
@@ -2073,12 +2071,21 @@ int tcpc_typec_handle_cc_change(struct tcpc_device *tcpc)
 
 	TYPEC_INFO("[CC_Alert] %d/%d\n", typec_get_cc1(), typec_get_cc2());
 
+#ifndef OPLUS_FEATURE_CHG_BASIC
+	if (typec_is_drp_toggling()) {
+		TYPEC_DBG("[Warning] DRP Toggling\r\n");
+#else
 	if (typec_is_cc_no_res()) {
-		TYPEC_DBG("[Warning] CC No Res\n");
+		TYPEC_DBG("[Warning] CC No Res\r\n");
+#endif
 		if (tcpc->typec_lpm && !tcpc->typec_cable_only)
 			typec_enter_low_power_mode(tcpc);
+#ifndef OPLUS_FEATURE_CHG_BASIC
+		return 0;
+#else
 		if (typec_is_drp_toggling())
 			return 0;
+#endif
 	}
 
 #ifdef CONFIG_TYPEC_CAP_NORP_SRC
@@ -2086,20 +2093,18 @@ int tcpc_typec_handle_cc_change(struct tcpc_device *tcpc)
 		return 0;
 #endif	/* CONFIG_TYPEC_CAP_NORP_SRC */
 
-#ifdef OPLUS_FEATURE_CHG_BASIC
-	TYPEC_INFO("[CC_Alert] cc1/cc2[%d/%d], typec_state[%d]\r\n", typec_get_cc1(),
-			typec_get_cc2(), tcpc->typec_state);
-#else
-	TYPEC_INFO("[CC_Alert] %d/%d\r\n", typec_get_cc1(), typec_get_cc2());
+#ifndef OPLUS_FEATURE_CHG_BASIC
+	typec_disable_low_power_mode(tcpc);
 #endif
+
 #ifdef OPLUS_FEATURE_CHG_BASIC
-	if (typec_is_ignore_cc_change(tcpc, rp_present)) {
-		TYPEC_INFO("tcpc_typec_handle_cc_change ignore cc_change\n");
-		return 0;
-	}
+		if (typec_is_ignore_cc_change(tcpc, rp_present)) {
+			TYPEC_INFO("tcpc_typec_handle_cc_change ignore cc_change\n");
+			return 0;
+		}
 #else
-	if (typec_is_ignore_cc_change(tcpc, rp_present))
-		return 0;
+		if (typec_is_ignore_cc_change(tcpc, rp_present))
+			return 0;
 #endif
 
 	if (tcpc->typec_state == typec_attachwait_snk
@@ -2107,23 +2112,30 @@ int tcpc_typec_handle_cc_change(struct tcpc_device *tcpc)
 		typec_wait_ps_change(tcpc, TYPEC_WAIT_PS_DISABLE);
 
 	if (typec_is_cc_attach(tcpc)) {
+#ifdef OPLUS_FEATURE_CHG_BASIC
 		typec_disable_low_power_mode(tcpc);
+#endif
 		typec_attach_wait_entry(tcpc);
 #ifdef CONFIG_WATER_DETECTION
 		if (typec_state_old == typec_unattached_snk ||
 		    typec_state_old == typec_unattached_src) {
 #ifdef CONFIG_WD_POLLING_ONLY
-			if (get_boot_mode() == KERNEL_POWER_OFF_CHARGING_BOOT
-			    || get_boot_mode() == LOW_POWER_OFF_CHARGING_BOOT)
+			if (tcpc->bootmode == 8 || tcpc->bootmode == 9)
 				typec_check_water_status(tcpc);
 #else
 			typec_check_water_status(tcpc);
 #endif /* CONFIG_WD_POLLING_ONLY */
 		}
 #endif /* CONFIG_WATER_DETECTION */
-	} else
+	} else {
 		typec_detach_wait_entry(tcpc);
-
+#ifdef OPLUS_FEATURE_CHG_BASIC
+/********* workaround MO.230913213000256759: sc6607 workaround for pd abnormal start*********/
+		tcpc->int_invaild_cnt = 0;
+		tcpc->recv_msg_cnt = 0;
+/********* workaround MO.230913213000256759: sc6607 workaround for pd abnormal end*********/
+#endif
+	}
 	return 0;
 }
 
@@ -2183,7 +2195,7 @@ static inline int typec_handle_debounce_timeout(struct tcpc_device *tcpc)
 	if (typec_is_cc_no_res() && tcpci_check_vbus_valid(tcpc)
 #ifndef OPLUS_FEATURE_CHG_BASIC
 		&& (tcpc->typec_state == typec_unattached_snk))
-		return typec_norp_src_attached_entry(tcpc);
+		typec_norp_src_attached_entry(tcpc);
 #else
 		&& (tcpc->typec_state == typec_unattached_snk)) {
 		typec_norp_src_attached_entry(tcpc);
@@ -2191,6 +2203,7 @@ static inline int typec_handle_debounce_timeout(struct tcpc_device *tcpc)
 		return 0;
 	}
 #endif /*OPLUS_FEATURE_CHG_BASIC*/
+
 #endif
 
 	if (typec_is_drp_toggling()) {
@@ -2244,20 +2257,22 @@ static inline int typec_handle_pe_idle(struct tcpc_device *tcpc)
 #ifdef CONFIG_USB_PD_WAIT_BC12
 static inline void typec_handle_pd_wait_bc12(struct tcpc_device *tcpc)
 {
+	int ret = 0;
 	uint8_t type = TYPEC_UNATTACHED;
-	enum charger_type chg_type = CHARGER_UNKNOWN;
+	union power_supply_propval val = {.intval = 0};
 
 	mutex_lock(&tcpc->access_lock);
 
 	type = tcpc->typec_attach_new;
-	chg_type = mt_get_charger_type();
-	TYPEC_INFO("type=%d, chg_type=%d, count=%d\n", type, chg_type,
-		tcpc->pd_wait_bc12_count);
+	ret = power_supply_get_property(tcpc->chg_psy,
+		POWER_SUPPLY_PROP_USB_TYPE, &val);
+	TYPEC_INFO("type=%d, ret,chg_type=%d,%d, count=%d\n", type,
+		ret, val.intval, tcpc->pd_wait_bc12_count);
 
 	if (type != TYPEC_ATTACHED_SNK && type != TYPEC_ATTACHED_DBGACC_SNK)
 		goto out;
 
-	if (chg_type != CHARGER_UNKNOWN ||
+	if ((ret >= 0 && val.intval != POWER_SUPPLY_USB_TYPE_UNKNOWN) ||
 		tcpc->pd_wait_bc12_count >= 20) {
 		__pd_put_cc_attached_event(tcpc, type);
 	} else {
@@ -2540,6 +2555,7 @@ static inline int typec_attached_snk_vbus_absent(struct tcpc_device *tcpc)
 
 static inline int typec_handle_vbus_absent(struct tcpc_device *tcpc)
 {
+	int ret = 0;
 #ifdef CONFIG_USB_POWER_DELIVERY
 	if (tcpc->pd_wait_pr_swap_complete) {
 		TYPEC_DBG("[PR.Swap] Ignore vbus_absent\n");
@@ -2561,16 +2577,33 @@ static inline int typec_handle_vbus_absent(struct tcpc_device *tcpc)
 #ifndef CONFIG_TCPC_VSAFE0V_DETECT
 	tcpc_typec_handle_vsafe0v(tcpc);
 #endif /* CONFIG_TCPC_VSAFE0V_DETECT */
+	ret = tcpci_get_cc(tcpc);
+	if (ret < 0)
+		return ret;
+
+	if (!typec_is_cc_no_res())
+		tcpc_typec_handle_cc_change(tcpc);
 
 	return 0;
 }
 
 int tcpc_typec_handle_ps_change(struct tcpc_device *tcpc, int vbus_level)
 {
-#ifdef OPLUS_FEATURE_CHG_BASIC
-	bool old_power_ctrl = false;
-#endif
+	int rv = 0;
+	uint32_t chip_id = 0;
+	uint32_t chip_pid = 0;
+
 	tcpc->typec_reach_vsafe0v = false;
+
+	rv = tcpci_get_chip_id(tcpc, &chip_id);
+	rv |= tcpci_get_chip_pid(tcpc, &chip_pid);
+
+	if (!rv && chip_pid == SC2150A_PID && chip_id == SC2150A_DID) {
+		if (vbus_level >= TCPC_VBUS_VALID)
+			typec_disable_low_power_mode(tcpc);
+		else
+			typec_enable_low_power_mode(tcpc, TYPEC_CC_DRP);
+	}
 
 #ifdef CONFIG_TYPEC_CHECK_LEGACY_CABLE
 	if (tcpc->typec_legacy_cable) {
@@ -2585,35 +2618,36 @@ int tcpc_typec_handle_ps_change(struct tcpc_device *tcpc, int vbus_level)
 			return 0;
 #endif	/* CONFIG_TYPEC_CAP_NORP_SRC */
 
+#ifndef OPLUS_FEATURE_CHG_BASIC
+	if (typec_is_drp_toggling()) {
+		TYPEC_DBG("[Warning] DRP Toggling\r\n");
+#else
 	if (typec_is_cc_no_res()) {
-		TYPEC_DBG("[Warning] CC No Res\n");
+		TYPEC_DBG("[Warning] CC No Res\r\n");
+#endif
 		if (tcpc->typec_lpm && !tcpc->typec_cable_only)
 			typec_enter_low_power_mode(tcpc);
+#ifndef OPLUS_FEATURE_CHG_BASIC
+		return 0;
+#else
 		if (typec_is_drp_toggling())
 			return 0;
+#endif
 	}
 
 #ifdef CONFIG_TYPEC_CAP_AUDIO_ACC_SINK_VBUS
-#ifdef OPLUS_FEATURE_CHG_BASIC
-	if (tcpc->typec_state == typec_audioaccessory) {
-		old_power_ctrl = tcpc->typec_power_ctrl;
-		typec_audio_acc_sink_vbus(
-			tcpc, vbus_level >= TCPC_VBUS_VALID);
-		if (old_power_ctrl != tcpc->typec_power_ctrl)
-			tcpci_notify_typec_state(tcpc);
-	}
-#else
 	if (tcpc->typec_state == typec_audioaccessory) {
 		return typec_audio_acc_sink_vbus(
 			tcpc, vbus_level >= TCPC_VBUS_VALID);
 	}
-#endif
 #endif	/* CONFIG_TYPEC_CAP_AUDIO_ACC_SINK_VBUS */
 
 	if (vbus_level >= TCPC_VBUS_VALID)
-		return typec_handle_vbus_present(tcpc);
+		rv = typec_handle_vbus_present(tcpc);
+	else
+		rv = typec_handle_vbus_absent(tcpc);
 
-	return typec_handle_vbus_absent(tcpc);
+	return rv;
 }
 
 /*
@@ -2787,7 +2821,6 @@ int tcpc_typec_change_role(
 		return 0;
 }
 
-
 #ifdef CONFIG_TYPEC_CAP_POWER_OFF_CHARGE
 static int typec_init_power_off_charge(struct tcpc_device *tcpc)
 {
@@ -2845,10 +2878,7 @@ int tcpc_typec_init(struct tcpc_device *tcpc, uint8_t typec_role)
 	TYPEC_INFO("typec_init: %s\n", typec_role_name[typec_role]);
 
 	tcpc->typec_role = typec_role;
-	#ifdef OPLUS_FEATURE_CHG_BASIC
-	//add by tongfeng
 	tcpc->typec_role_new = typec_role;
-	#endif
 	tcpc->typec_attach_new = TYPEC_UNATTACHED;
 	tcpc->typec_attach_old = TYPEC_UNATTACHED;
 
@@ -2894,11 +2924,10 @@ int tcpc_typec_handle_wd(struct tcpc_device *tcpc, bool wd)
 {
 	int ret = 0;
 
-	pr_info("%s: wd = %d\n", __func__, wd);
 	if (!(tcpc->tcpc_flags & TCPC_FLAGS_WATER_DETECTION))
 		return 0;
 
-	TYPEC_INFO("%s %d\n", __func__, wd);
+	TYPEC_INFO("%s %d\r\n", __func__, wd);
 
 #ifdef OPLUS_FEATURE_CHG_BASIC
 	tcpc->wd_already = wd;
@@ -2912,6 +2941,7 @@ int tcpc_typec_handle_wd(struct tcpc_device *tcpc, bool wd)
 	tcpci_notify_wd_status(tcpc, wd);
 	return ret;
 #endif
+
 	if (!wd) {
 		tcpci_set_water_protection(tcpc, false);
 		tcpc_typec_error_recovery(tcpc);
@@ -2919,9 +2949,7 @@ int tcpc_typec_handle_wd(struct tcpc_device *tcpc, bool wd)
 	}
 
 #ifdef CONFIG_MTK_KERNEL_POWER_OFF_CHARGING
-	ret = get_boot_mode();
-	if (ret == KERNEL_POWER_OFF_CHARGING_BOOT ||
-	    ret == LOW_POWER_OFF_CHARGING_BOOT) {
+	if (tcpc->bootmode == 8 || tcpc->bootmode == 9) {
 		TYPEC_INFO("KPOC does not enter water protection\n");
 		goto out;
 	}
@@ -2959,9 +2987,9 @@ int tcpc_typec_handle_ctd(struct tcpc_device *tcpc,
 {
 	int ret;
 
-	TCPC_INFO("%s: cable_type = %d\n", __func__, cable_type);
 	if (!(tcpc->tcpc_flags & TCPC_FLAGS_CABLE_TYPE_DETECTION))
 		return 0;
+
 
 	/* Filter out initial no cable */
 	if (cable_type == TCPC_CABLE_TYPE_C2C) {
@@ -2976,24 +3004,6 @@ int tcpc_typec_handle_ctd(struct tcpc_device *tcpc,
 		}
 	}
 
-	TCPC_INFO("%s: typec_state=%s, pre_ct=%d, ct=%d, typec_ct=%d\n",
-		  __func__, typec_state_name[tcpc->typec_state],
-		  tcpc->pre_typec_cable_type,
-		  cable_type,  tcpc->typec_cable_type);
-
-	if (tcpc->typec_state == typec_attachwait_snk) {
-		TCPC_INFO("%s during attachwait_snk\n", __func__);
-		tcpc->pre_typec_cable_type = cable_type;
-	} else if (tcpc->typec_state == typec_try_snk ||
-		   (tcpc->typec_state == typec_attached_snk &&
-			cable_type != TCPC_CABLE_TYPE_NONE)) {
-		if (tcpc->pre_typec_cable_type != TCPC_CABLE_TYPE_NONE) {
-			TCPC_INFO("%s try_snk cable(%d, %d)\n", __func__,
-				  tcpc->pre_typec_cable_type, cable_type);
-			cable_type = tcpc->pre_typec_cable_type;
-			tcpc->pre_typec_cable_type = TCPC_CABLE_TYPE_NONE;
-		}
-	}
 	TCPC_INFO("%s cable (%d, %d)\n", __func__, tcpc->typec_cable_type,
 		  cable_type);
 

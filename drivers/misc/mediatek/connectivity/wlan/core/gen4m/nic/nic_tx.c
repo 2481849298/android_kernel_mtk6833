@@ -1367,8 +1367,7 @@ uint32_t nicTxMsduInfoListMthread(IN struct ADAPTER
 		}
 #endif /* CFG_SUPPORT_DROP_INVALID_MSDUINFO */
 
-		if (prMsduInfo->ucTC >= 0 &&
-		    prMsduInfo->ucTC < TC_NUM) {
+		if (prMsduInfo->ucTC < TC_NUM) {
 			QUEUE_GET_NEXT_ENTRY(
 				(struct QUE_ENTRY *) prMsduInfo) =
 				NULL;
@@ -1471,12 +1470,15 @@ uint32_t nicTxMsduQueueMthread(IN struct ADAPTER *prAdapter)
 	}
 #else
 
-	uint32_t u4TxLoopCount = prAdapter->rWifiVar.u4HifTxloopCount;
+	uint32_t u4TxLoopCount = prAdapter->rWifiVar.u4HifTxloopCount, u4Idx;
 
 	if (halIsHifStateSuspend(prAdapter)) {
 		DBGLOG(TX, WARN, "Suspend TxMsduQueueMthread\n");
 		return WLAN_STATUS_SUCCESS;
 	}
+
+	for (u4Idx = 0; u4Idx < MAX_BSSID_NUM; u4Idx++)
+		halAdjustBssTxCredit(prAdapter, u4Idx);
 
 	while (u4TxLoopCount--) {
 		if (prAdapter->rWifiVar.ucTxMsduQueue == 1)
@@ -2430,6 +2432,7 @@ uint32_t nicTxMsduQueue(IN struct ADAPTER *prAdapter,
 	struct MSDU_INFO *prMsduInfo;
 	struct TX_CTRL *prTxCtrl;
 	struct QUE qDataTemp, *prDataTemp = NULL;
+	uint32_t u4TxCredit[MAX_BSSID_NUM], u4Idx;
 
 	ASSERT(prAdapter);
 	ASSERT(prQue);
@@ -2444,6 +2447,9 @@ uint32_t nicTxMsduQueue(IN struct ADAPTER *prAdapter,
 
 	prDataTemp = &qDataTemp;
 	QUEUE_INITIALIZE(prDataTemp);
+
+	for (u4Idx = 0; u4Idx < MAX_BSSID_NUM; u4Idx++)
+		u4TxCredit[u4Idx] = halGetBssTxCredit(prAdapter, u4Idx);
 
 	while (QUEUE_IS_NOT_EMPTY(prQue)) {
 		u_int8_t fgTxDoneHandler;
@@ -2461,11 +2467,14 @@ uint32_t nicTxMsduQueue(IN struct ADAPTER *prAdapter,
 			break;
 		}
 
-		if (prMsduInfo->ucBssIndex < BSS_DEFAULT_NUM &&
-		    halIsTxBssCntFull(prAdapter, prMsduInfo->ucBssIndex)) {
-			QUEUE_INSERT_TAIL(prDataTemp,
-					  (struct QUE_ENTRY *) prMsduInfo);
-			continue;
+		if (prMsduInfo->ucBssIndex < BSS_DEFAULT_NUM) {
+			if (u4TxCredit[prMsduInfo->ucBssIndex] == 0) {
+				QUEUE_INSERT_TAIL(
+					prDataTemp,
+					(struct QUE_ENTRY *) prMsduInfo);
+				continue;
+			}
+			u4TxCredit[prMsduInfo->ucBssIndex]--;
 		}
 
 		fgTxDoneHandler = prMsduInfo->pfTxDoneHandler ?
@@ -3016,6 +3025,8 @@ u_int8_t nicTxFillMsduInfo(IN struct ADAPTER *prAdapter,
 			prMsduInfo->ucPktType = ENUM_PKT_TDLS;
 		else if (GLUE_TEST_PKT_FLAG(prPacket, ENUM_PKT_DNS))
 			prMsduInfo->ucPktType = ENUM_PKT_DNS;
+		else if (GLUE_TEST_PKT_FLAG(prPacket, ENUM_PKT_ICMPV6))
+			prMsduInfo->ucPktType = ENUM_PKT_ICMPV6;
 
 #if (CFG_SUPPORT_DMASHDL_SYSDVT)
 		if (prMsduInfo->ucPktType != ENUM_PKT_ICMP) {
@@ -3676,6 +3687,8 @@ void nicTxProcessTxDoneEvent(IN struct ADAPTER *prAdapter,
 #endif
 
 	if (prMsduInfo) {
+		uint8_t ucBssIndex = prMsduInfo->ucBssIndex;
+
 		prMsduInfo->pfTxDoneHandler(prAdapter, prMsduInfo,
 	    (enum ENUM_TX_RESULT_CODE) (prTxDone->ucStatus));
 
@@ -3690,11 +3703,8 @@ void nicTxProcessTxDoneEvent(IN struct ADAPTER *prAdapter,
 			nicTxReturnMsduInfo(prAdapter, prMsduInfo);
 		}
 
-		if (prTxDone->ucStatus == 0 &&
-			prMsduInfo->ucBssIndex < MAX_BSSID_NUM)
-			GET_BOOT_SYSTIME(
-				&prTxCtrl->u4LastTxTime
-				[prMsduInfo->ucBssIndex]);
+		if (prTxDone->ucStatus == 0 && ucBssIndex < MAX_BSSID_NUM)
+			GET_BOOT_SYSTIME(&prTxCtrl->u4LastTxTime[ucBssIndex]);
 	}
 }
 
@@ -4887,7 +4897,7 @@ static uint8_t nicTxDirectGetHifTc(struct MSDU_INFO
 {
 	uint8_t ucHifTc = 0;
 
-	if (prMsduInfo->ucTC >= 0 && prMsduInfo->ucTC < TC_NUM)
+	if (prMsduInfo->ucTC < TC_NUM)
 		ucHifTc = prMsduInfo->ucTC;
 	else
 		ASSERT(0);

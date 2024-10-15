@@ -1,6 +1,16 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2019-2020 Oplus. All rights reserved.
+ * Copyright (C) 2019 OPPO, Inc.
+ * Author: Fang Xiang <fangxiang@oppo.com>
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
  */
 
 #define pr_fmt(fmt) "%s:%s " fmt, KBUILD_MODNAME, __func__
@@ -202,6 +212,19 @@ static const struct file_operations proc_shell_fops = {
 	.read = seq_read,
 	.release = single_release,
 };
+
+int get_current_temp(void)
+{
+	int temp = 0, index;
+	unsigned long flags;
+	spin_lock_irqsave(&horae_lock, flags);
+	for (index = 0; index < SHELL_MAX; index++) {
+		if (shell_temp[index] > temp)
+			temp = shell_temp[index];
+	}
+	spin_unlock_irqrestore(&horae_lock, flags);
+	return temp;
+}
 
 static int __init horae_shell_init(void)
 {

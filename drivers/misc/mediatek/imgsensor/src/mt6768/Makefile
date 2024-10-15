@@ -1,15 +1,4 @@
-#
-# Copyright (C) 2015 MediaTek Inc.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
+# SPDX-License-Identifier: GPL-2.0
 
 #
 # Makefile for misc devices that really don't fit anywhere else.
@@ -20,8 +9,9 @@ ARCH_MTK_PROJECT := $(subst ",,$(CONFIG_ARCH_MTK_PROJECT))
 IMGSENSOR_DRIVER_PATH  := $(srctree)/drivers/misc/mediatek/imgsensor/src
 COMMON_VERSION := v1
 
-subdir-ccflags-y +=  -I$(IMGSENSOR_DRIVER_PATH)/common/$(COMMON_VERSION)
-subdir-ccflags-y +=  -I$(IMGSENSOR_DRIVER_PATH)/../../mmdvfs
+subdir-ccflags-y +=  -I$(IMGSENSOR_DRIVER_PATH)/common/$(COMMON_VERSION) \
+	-I$(srctree)/drivers/i2c/busses/ \
+	-I$(srctree)/drivers/misc/mediatek/mmdvfs/
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor.o
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor.o
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor_hw.o
@@ -29,7 +19,11 @@ obj-y				+= ../common/$(COMMON_VERSION)/imgsensor_i2c.o
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor_legacy.o
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor_proc.o
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor_sensor_list.o
-
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+obj-y				+= ../common/$(COMMON_VERSION)/imgsensor_eeprom.o
+obj-y				+= ../OplusImgsensor/imgsensor_hwcfg_custom_v1.o
+obj-y				+= ../OplusImgsensor/imgsensor_hwcfg_mt6768.o
+#endif
 
 define FILTER_DRV
 ifeq ($(wildcard $(IMGSENSOR_DRIVER_PATH)/$(MTK_PLATFORM)/camera_project/$(ARCH_MTK_PROJECT)/$(1)),)

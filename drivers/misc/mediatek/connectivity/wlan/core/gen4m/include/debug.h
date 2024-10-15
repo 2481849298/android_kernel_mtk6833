@@ -133,7 +133,6 @@ extern struct MIB_INFO_STAT g_arMibInfo[ENUM_BAND_NUM];
 #define DEG_HIF_PSE             BIT(4)
 #define DEG_HIF_PLE             BIT(5)
 #define DEG_HIF_MAC             BIT(6)
-#define DEG_HIF_PHY             BIT(7)
 
 #define DEG_HIF_DEFAULT_DUMP					\
 	(DEG_HIF_HOST_CSR | DEG_HIF_PDMA | DEG_HIF_DMASCH |	\
@@ -492,6 +491,11 @@ struct CHIP_DBG_OPS {
 		char *pcCommand,
 		int32_t i4TotalLen);
 #endif /* CFG_SUPPORT_CONNAC2X == 1 */
+	void (*get_rssi_from_wtbl)(
+		struct ADAPTER *prAdapter, uint32_t u4Index,
+		int32_t *pi4Rssi0, int32_t *pi4Rssi1,
+		int32_t *pi4Rssi2, int32_t *pi4Rssi3
+	);
 	void (*showHifInfo)(struct ADAPTER *prAdapter);
 	void (*printHifDbgInfo)(struct ADAPTER *prAdapter);
 	int32_t (*show_rx_rate_info)(
@@ -534,6 +538,9 @@ struct CHIP_DBG_OPS {
 		IN struct ADAPTER *prAdapter,
 		IN struct SW_RFB *prRetSwRfb,
 		IN uint32_t u4RxVector0);
+#endif
+#if CFG_MTK_MDDP_SUPPORT
+	void (*mddp_notify_dump_debug_info)(void);
 #endif
 };
 
@@ -890,6 +897,11 @@ int32_t connac2x_show_wtbl_info(
 	uint32_t u4Index,
 	char *pcCommand,
 	int i4TotalLen);
+void connac2x_get_rssi_from_wtbl(
+	struct ADAPTER *prAdapter, uint32_t u4Index,
+	int32_t *pi4Rssi0, int32_t *pi4Rssi1,
+	int32_t *pi4Rssi2, int32_t *pi4Rssi3
+);
 int32_t connac2x_show_umac_wtbl_info(
 	struct ADAPTER *prAdapter,
 	uint32_t u4Index,

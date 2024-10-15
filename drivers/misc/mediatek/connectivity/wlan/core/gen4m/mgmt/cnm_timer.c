@@ -254,7 +254,7 @@ void cnmTimerInitialize(IN struct ADAPTER *prAdapter)
 
 	KAL_ACQUIRE_SPIN_LOCK(prAdapter, SPIN_LOCK_TIMER);
 
-	log_dbg(CNM, WARN, "reset timer list\n");
+	log_dbg(CNM, INFO, "reset timer list\n");
 
 	/* Remove all pending timers */
 	prTimerList = &(prAdapter->rRootTimer.rLinkHead);
@@ -437,7 +437,7 @@ void cnmTimerStopTimer(IN struct ADAPTER *prAdapter, IN struct TIMER *prTimer)
 	ASSERT(prAdapter);
 	ASSERT(prTimer);
 
-	log_dbg(CNM, INFO, "stop timer, timer %p func %pf\n",
+	log_dbg(CNM, TRACE, "stop timer, timer %p func %pf\n",
 		prTimer, prTimer->pfMgmtTimeOutFunc);
 
 	cnmTimerStopTimer_impl(prAdapter, prTimer, TRUE);
@@ -466,7 +466,7 @@ void cnmTimerStartTimer(IN struct ADAPTER *prAdapter, IN struct TIMER *prTimer,
 	ASSERT(prAdapter);
 	ASSERT(prTimer);
 
-	log_dbg(CNM, INFO, "start timer, timer %p func %pf %d ms\n",
+	log_dbg(CNM, TRACE, "start timer, timer %p func %pf %d ms\n",
 		prTimer, prTimer->pfMgmtTimeOutFunc, u4TimeoutMs);
 
 #if (CFG_SUPPORT_STATISTICS == 1)

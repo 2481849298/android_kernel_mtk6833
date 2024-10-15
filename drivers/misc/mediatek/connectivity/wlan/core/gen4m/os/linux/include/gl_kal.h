@@ -150,10 +150,56 @@ extern bool fgIsTxPowerDecreased;
 	GLUE_FLAG_NOTIFY_MD_CRASH | \
 	GLUE_FLAG_DRV_INT)
 
-#define GLUE_FLAG_RX_PROCESS (GLUE_FLAG_HALT | GLUE_FLAG_RX_TO_OS)
+#define GLUE_FLAG_RX_PROCESS (GLUE_FLAG_HALT | GLUE_FLAG_RX_TO_OS | \
+	GLUE_FLAG_RX_GRO_TIMEOUT)
 #else
 /* All flags for single thread driver */
 #define GLUE_FLAG_TX_PROCESS  0xFFFFFFFF
+#endif
+
+#if CFG_SUPPORT_SNIFFER
+#define RADIOTAP_FIELD_TSFT			BIT(0)
+#define RADIOTAP_FIELD_FLAGS		BIT(1)
+#define RADIOTAP_FIELD_RATE			BIT(2)
+#define RADIOTAP_FIELD_CHANNEL		BIT(3)
+#define RADIOTAP_FIELD_ANT_SIGNAL	BIT(5)
+#define RADIOTAP_FIELD_ANT_NOISE	BIT(6)
+#define RADIOTAP_FIELD_ANT			BIT(11)
+#define RADIOTAP_FIELD_MCS			BIT(19)
+#define RADIOTAP_FIELD_AMPDU		BIT(20)
+#define RADIOTAP_FIELD_VHT			BIT(21)
+#define RADIOTAP_FIELD_VENDOR       BIT(30)
+#define RADIOTAP_LEN_VHT			48
+#define RADIOTAP_FIELDS_VHT (RADIOTAP_FIELD_TSFT | \
+				    RADIOTAP_FIELD_FLAGS | \
+				    RADIOTAP_FIELD_RATE | \
+				    RADIOTAP_FIELD_CHANNEL | \
+				    RADIOTAP_FIELD_ANT_SIGNAL | \
+				    RADIOTAP_FIELD_ANT_NOISE | \
+				    RADIOTAP_FIELD_ANT | \
+				    RADIOTAP_FIELD_AMPDU | \
+				    RADIOTAP_FIELD_VHT | \
+				    RADIOTAP_FIELD_VENDOR)
+#define RADIOTAP_LEN_HT				36
+#define RADIOTAP_FIELDS_HT (RADIOTAP_FIELD_TSFT | \
+				    RADIOTAP_FIELD_FLAGS | \
+				    RADIOTAP_FIELD_RATE | \
+				    RADIOTAP_FIELD_CHANNEL | \
+				    RADIOTAP_FIELD_ANT_SIGNAL | \
+				    RADIOTAP_FIELD_ANT_NOISE | \
+				    RADIOTAP_FIELD_ANT | \
+				    RADIOTAP_FIELD_MCS | \
+				    RADIOTAP_FIELD_AMPDU | \
+				    RADIOTAP_FIELD_VENDOR)
+#define RADIOTAP_LEN_LEGACY			26
+#define RADIOTAP_FIELDS_LEGACY (RADIOTAP_FIELD_TSFT | \
+				    RADIOTAP_FIELD_FLAGS | \
+				    RADIOTAP_FIELD_RATE | \
+				    RADIOTAP_FIELD_CHANNEL | \
+				    RADIOTAP_FIELD_ANT_SIGNAL | \
+				    RADIOTAP_FIELD_ANT_NOISE | \
+				    RADIOTAP_FIELD_ANT | \
+				    RADIOTAP_FIELD_VENDOR)
 #endif
 
 #define PERF_MON_INIT_BIT       (0)
@@ -167,7 +213,7 @@ extern bool fgIsTxPowerDecreased;
 #define PERF_MON_TP_CONDITION (125000)
 #define PERF_MON_COEX_TP_THRESHOLD (100)
 
-#define PERF_MON_MCC_TP_THRESHOLD (100)
+#define PERF_MON_MCC_TP_THRESHOLD (50)
 
 /* By wifi.cfg first. If it is not set 1s by default; 100ms on more. */
 #define TX_LATENCY_STATS_UPDATE_INTERVAL (0)
@@ -203,7 +249,11 @@ extern bool fgIsTxPowerDecreased;
 #endif
 
 #define WIFI_LOG_MSG_MAX	(512)
+#if IS_ENABLED(CONFIG_ARM64)
 #define WIFI_LOG_MSG_BUFFER	(WIFI_LOG_MSG_MAX * 2)
+#else
+#define WIFI_LOG_MSG_BUFFER	(768)
+#endif
 
 #if (CFG_SUPPORT_POWER_THROTTLING == 1)
 #define PWR_LEVEL_STAT_UPDATE_INTERVAL	60	/* sec */
@@ -1075,6 +1125,11 @@ do { \
 #define WIPHY_PRIV(_wiphy, _priv) \
 	(_priv = *((struct GLUE_INFO **) wiphy_priv(_wiphy)))
 
+/******************************************************************************
+ * 64 bit operand
+ ******************************************************************************/
+#define kal_div64_u64(_a, _b) div64_u64(_a, _b)
+
 /*******************************************************************************
  *                  F U N C T I O N   D E C L A R A T I O N S
  *******************************************************************************
@@ -1120,8 +1175,7 @@ uint32_t
 kalProcessRxPacket(IN struct GLUE_INFO *prGlueInfo,
 		   IN void *pvPacket,
 		   IN uint8_t *pucPacketStart, IN uint32_t u4PacketLen,
-		   /* IN PBOOLEAN           pfgIsRetain, */
-		   IN u_int8_t fgIsRetain, IN enum ENUM_CSUM_RESULT aeCSUM[]);
+		   IN enum ENUM_CSUM_RESULT aeCSUM[]);
 
 uint32_t kalRxIndicatePkts(IN struct GLUE_INFO *prGlueInfo,
 			   IN void *apvPkts[],
@@ -1436,7 +1490,8 @@ uint32_t kalGetTxPendingFrameCount(IN struct GLUE_INFO
 uint32_t kalGetTxPendingCmdCount(IN struct GLUE_INFO
 				 *prGlueInfo);
 
-void kalClearCommandQueue(IN struct GLUE_INFO *prGlueInfo);
+void kalClearCommandQueue(IN struct GLUE_INFO *prGlueInfo,
+	IN u_int8_t fgIsNeedHandler);
 
 u_int8_t kalSetTimer(IN struct GLUE_INFO *prGlueInfo,
 		     IN uint32_t u4Interval);
@@ -1758,7 +1813,7 @@ kalChannelFormatSwitch(IN struct cfg80211_chan_def *channel_def,
 
 #if CFG_SUPPORT_RX_GRO
 void kalSetGROEvent2Rx(struct GLUE_INFO *pr);
-#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
+#if KERNEL_VERSION(4, 15, 0) <= CFG80211_VERSION_CODE
 void kalGROTimerFunc(struct timer_list *timer);
 #else
 void kalGROTimerFunc(unsigned long data);

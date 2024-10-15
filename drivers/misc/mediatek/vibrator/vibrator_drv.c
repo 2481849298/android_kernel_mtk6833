@@ -1,16 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
-
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -24,11 +15,14 @@
 #include <linux/spinlock.h>
 #include <linux/jiffies.h>
 #include <linux/timer.h>
-
+#include <linux/mod_devicetable.h>
 #include <vibrator.h>
 #include <vibrator_hal.h>
 #include <mt-plat/upmu_common.h>
-
+#ifndef CONFIG_MACH_MT6771
+#include <linux/regulator/consumer.h>
+#include <linux/of.h>
+#endif
 #define VIB_DEVICE				"mtk_vibrator"
 #define VIB_TAG                                 "[vibrator]"
 #undef pr_fmt
@@ -41,19 +35,24 @@ struct mt_vibr {
 	struct hrtimer vibr_timer;
 	int ldo_state;
 	int shutdown_flag;
+#ifndef CONFIG_MACH_MT6771
+	struct regulator *reg;
+#endif
 	atomic_t vibr_dur;
 	spinlock_t vibr_lock;
 	atomic_t vibr_state;
 };
 
 static struct mt_vibr *g_mt_vib;
-
 static int vibr_Enable(void)
 {
-
 	if (!g_mt_vib->ldo_state) {
 		pr_info("vibr enable");
+#ifndef CONFIG_MACH_MT6771
+		vibr_Enable_HW(g_mt_vib->reg);
+#else
 		vibr_Enable_HW();
+#endif
 		g_mt_vib->ldo_state = 1;
 	}
 	return 0;
@@ -61,10 +60,13 @@ static int vibr_Enable(void)
 
 static int vibr_Disable(void)
 {
-
 	if (g_mt_vib->ldo_state) {
 		pr_info("vibr disable");
+#ifndef CONFIG_MACH_MT6771
+		vibr_Disable_HW(g_mt_vib->reg);
+#else
 		vibr_Disable_HW();
+#endif
 		g_mt_vib->ldo_state = 0;
 	}
 	return 0;
@@ -87,11 +89,11 @@ static void vibrator_enable(unsigned int dur, unsigned int activate)
 	unsigned long flags;
 	struct vibrator_hw *hw = mt_get_cust_vibrator_hw();
 
-	spin_lock_irqsave(&g_mt_vib->vibr_lock, flags);
 	hrtimer_cancel(&g_mt_vib->vibr_timer);
-	cancel_work(&g_mt_vib->vibr_onwork);
 	pr_info(VIB_TAG "cancel hrtimer, cust:%dms, value:%u, activate:%d, shutdown:%d\n",
 			hw->vib_timer, dur, activate, g_mt_vib->shutdown_flag);
+	cancel_work_sync(&g_mt_vib->vibr_onwork);
+	spin_lock_irqsave(&g_mt_vib->vibr_lock, flags);
 
 	if (activate == 0 || g_mt_vib->shutdown_flag == 1) {
 		atomic_set(&g_mt_vib->vibr_state, 0);
@@ -277,6 +279,14 @@ static int vib_probe(struct platform_device *pdev)
 		return -ENODATA;
 	}
 
+#ifndef CONFIG_MACH_MT6771
+	vibr->reg = devm_regulator_get(&pdev->dev, "vibr");
+	if (IS_ERR(vibr->reg)) {
+		ret = PTR_ERR(vibr->reg);
+		pr_info("Error load dts: get regulator return %d\n", ret);
+		return ret;
+	}
+#endif
 	INIT_WORK(&vibr->vibr_onwork, on_vibrator);
 	INIT_WORK(&vibr->vibr_offwork, off_vibrator);
 	spin_lock_init(&vibr->vibr_lock);

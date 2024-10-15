@@ -6,6 +6,7 @@
  */
 
 #include <linux/memcontrol.h>
+#include <linux/mm_inline.h>
 #include <linux/writeback.h>
 #include <linux/shmem_fs.h>
 #include <linux/pagemap.h>
@@ -184,7 +185,6 @@ static unsigned int bucket_order __read_mostly;
 static void *pack_shadow(int memcgid, pg_data_t *pgdat, unsigned long eviction,
 			 bool workingset)
 {
-	eviction >>= bucket_order;
 	eviction = (eviction << MEM_CGROUP_ID_SHIFT) | memcgid;
 	eviction = (eviction << NODES_SHIFT) | pgdat->node_id;
 	eviction = (eviction << 1) | workingset;
@@ -210,16 +210,116 @@ static void unpack_shadow(void *shadow, int *memcgidp, pg_data_t **pgdat,
 
 	*memcgidp = memcgid;
 	*pgdat = NODE_DATA(nid);
-	*evictionp = entry << bucket_order;
+	*evictionp = entry;
 	*workingsetp = workingset;
 }
+
+#ifdef CONFIG_LRU_GEN
+
+static int page_lru_refs(struct page *page)
+{
+	unsigned long flags = READ_ONCE(page->flags);
+
+	BUILD_BUG_ON(LRU_GEN_WIDTH + LRU_REFS_WIDTH > BITS_PER_LONG - EVICTION_SHIFT);
+
+	/* see the comment on MAX_NR_TIERS */
+	return flags & BIT(PG_workingset) ? (flags & LRU_REFS_MASK) >> LRU_REFS_PGOFF : 0;
+}
+
+void *lru_gen_eviction(struct page *page)
+{
+	int hist, tier;
+	unsigned long token;
+	unsigned long min_seq;
+	struct lruvec *lruvec;
+	struct lru_gen_struct *lrugen;
+	int type = page_is_file_cache(page);
+	int refs = page_lru_refs(page);
+	int delta = hpage_nr_pages(page);
+	bool workingset = PageWorkingset(page);
+	struct mem_cgroup *memcg = page_memcg(page);
+	struct pglist_data *pgdat = page_pgdat(page);
+
+	if (!mem_cgroup_disabled() && !memcg)
+		return NULL;
+
+	/* FIXME: no case for chp lruvec! */
+	lruvec = mem_cgroup_lruvec(pgdat, memcg);
+	lrugen = &lruvec->lrugen;
+	min_seq = READ_ONCE(lrugen->min_seq[type]);
+	token = (min_seq << LRU_REFS_WIDTH) | refs;
+
+	hist = lru_hist_from_seq(min_seq);
+	tier = lru_tier_from_refs(refs + workingset);
+	atomic_long_add(delta, &lrugen->evicted[hist][type][tier]);
+
+	return pack_shadow(mem_cgroup_id(memcg), pgdat, token, workingset);
+}
+
+void lru_gen_refault(struct page *page, void *shadow)
+{
+	int hist, tier, refs;
+	int memcg_id;
+	bool workingset;
+	unsigned long token;
+	unsigned long min_seq;
+	struct lruvec *lruvec;
+	struct lru_gen_struct *lrugen;
+	struct mem_cgroup *memcg;
+	struct pglist_data *pgdat;
+	int type = page_is_file_cache(page);
+	int delta = hpage_nr_pages(page);
+
+	unpack_shadow(shadow, &memcg_id, &pgdat, &token, &workingset);
+
+	refs = token & (BIT(LRU_REFS_WIDTH) - 1);
+	if (refs && !workingset)
+		return;
+
+	if (page_pgdat(page) != pgdat)
+		return;
+
+	rcu_read_lock();
+	memcg = mem_cgroup_from_id(memcg_id);
+	if (!mem_cgroup_disabled() && !memcg)
+		goto unlock;
+
+	token >>= LRU_REFS_WIDTH;
+	/* FIXME: no case for chp lruvec! */
+	lruvec = mem_cgroup_lruvec(pgdat, memcg);
+	lrugen = &lruvec->lrugen;
+	min_seq = READ_ONCE(lrugen->min_seq[type]);
+	if (token != (min_seq & (EVICTION_MASK >> LRU_REFS_WIDTH)))
+		goto unlock;
+
+	hist = lru_hist_from_seq(min_seq);
+	tier = lru_tier_from_refs(refs + workingset);
+	atomic_long_add(delta, &lrugen->refaulted[hist][type][tier]);
+	mod_lruvec_state(lruvec, WORKINGSET_REFAULT, delta);
+
+	/*
+	 * Count the following two cases as stalls:
+	 * 1. For pages accessed through page tables, hotter pages pushed out
+	 *    hot pages which refaulted immediately.
+	 * 2. For pages accessed through file descriptors, numbers of accesses
+	 *    might have been beyond the limit.
+	 */
+	if (lru_gen_in_fault() || refs + workingset == BIT(LRU_REFS_WIDTH)) {
+		SetPageWorkingset(page);
+		mod_lruvec_state(lruvec, WORKINGSET_RESTORE, delta);
+	}
+unlock:
+	rcu_read_unlock();
+}
+
+#endif /* CONFIG_LRU_GEN */
 
 /**
  * workingset_eviction - note the eviction of a page from memory
  * @mapping: address space the page was backing
  * @page: the page being evicted
  *
- * Returns a shadow entry to be stored in @mapping->page_tree in place
+ * Returns a shadow entry to be stored in @mapping->i_pages in place
  * of the evicted @page so that a later refault can be detected.
  */
 void *workingset_eviction(struct address_space *mapping, struct page *page)
@@ -235,8 +335,17 @@ void *workingset_eviction(struct address_space *mapping, struct page *page)
 	VM_BUG_ON_PAGE(page_count(page), page);
 	VM_BUG_ON_PAGE(!PageLocked(page), page);
 
-	lruvec = mem_cgroup_lruvec(pgdat, memcg);
+	if (lru_gen_enabled())
+		return lru_gen_eviction(page);
+
+#if defined(CONFIG_CONT_PTE_HUGEPAGE) && CONFIG_CONT_PTE_HUGEPAGE_LRU
+	if (ContPteCMAHugePageHead(page))
+		lruvec = mem_cgroup_chp_lruvec(memcg, pgdat);
+	else
+#endif
+		lruvec = mem_cgroup_lruvec(pgdat, memcg);
 	eviction = atomic_long_inc_return(&lruvec->inactive_age);
+	eviction >>= bucket_order;
 	return pack_shadow(memcgid, pgdat, eviction, PageWorkingset(page));
 }
 
@@ -260,7 +369,13 @@ void workingset_refault(struct page *page, void *shadow)
 	bool workingset;
 	int memcgid;
 
+	if (lru_gen_enabled()) {
+		lru_gen_refault(page, shadow);
+		return;
+	}
+
 	unpack_shadow(shadow, &memcgid, &pgdat, &eviction, &workingset);
+	eviction <<= bucket_order;
 
 	rcu_read_lock();
 	/*
@@ -282,7 +397,12 @@ void workingset_refault(struct page *page, void *shadow)
 	memcg = mem_cgroup_from_id(memcgid);
 	if (!mem_cgroup_disabled() && !memcg)
 		goto out;
-	lruvec = mem_cgroup_lruvec(pgdat, memcg);
+#if defined(CONFIG_CONT_PTE_HUGEPAGE) && CONFIG_CONT_PTE_HUGEPAGE_LRU
+	if (ContPteCMAHugePageHead(page))
+		lruvec = mem_cgroup_chp_lruvec(memcg, pgdat);
+	else
+#endif
+		lruvec = mem_cgroup_lruvec(pgdat, memcg);
 	refault = atomic_long_read(&lruvec->inactive_age);
 	active_file = lruvec_lru_size(lruvec, LRU_ACTIVE_FILE, MAX_NR_ZONES);
 
@@ -347,7 +467,12 @@ void workingset_activation(struct page *page)
 	memcg = page_memcg_rcu(page);
 	if (!mem_cgroup_disabled() && !memcg)
 		goto out;
-	lruvec = mem_cgroup_lruvec(page_pgdat(page), memcg);
+#if defined(CONFIG_CONT_PTE_HUGEPAGE) && CONFIG_CONT_PTE_HUGEPAGE_LRU
+	if (ContPteCMAHugePageHead(page))
+		lruvec = mem_cgroup_chp_lruvec(memcg, page_pgdat(page));
+	else
+#endif
+		lruvec = mem_cgroup_lruvec(page_pgdat(page), memcg);
 	atomic_long_inc(&lruvec->inactive_age);
 out:
 	rcu_read_unlock();
@@ -367,21 +492,15 @@ out:
 
 static struct list_lru shadow_nodes;
 
-void workingset_update_node(struct radix_tree_node *node, void *private)
+void workingset_update_node(struct radix_tree_node *node)
 {
-	struct address_space *mapping = private;
-
-	/* Only regular page cache has shadow entries */
-	if (dax_mapping(mapping) || shmem_mapping(mapping))
-		return;
-
 	/*
 	 * Track non-empty nodes that contain only shadow entries;
 	 * unlink those that contain pages or are being freed.
 	 *
 	 * Avoid acquiring the list_lru lock when the nodes are
 	 * already where they should be. The list_empty() test is safe
-	 * as node->private_list is protected by &mapping->tree_lock.
+	 * as node->private_list is protected by the i_pages lock.
 	 */
 	if (node->count && node->count == node->exceptional) {
 		if (list_empty(&node->private_list))
@@ -399,10 +518,7 @@ static unsigned long count_shadow_nodes(struct shrinker *shrinker,
 	unsigned long nodes;
 	unsigned long cache;
 
-	/* list_lru lock nests inside IRQ-safe mapping->tree_lock */
-	local_irq_disable();
 	nodes = list_lru_shrink_count(&shadow_nodes, sc);
-	local_irq_enable();
 
 	/*
 	 * Approximate a reasonable limit for the radix tree nodes
@@ -435,6 +551,9 @@ static unsigned long count_shadow_nodes(struct shrinker *shrinker,
 	}
 	max_nodes = cache >> (RADIX_TREE_MAP_SHIFT - 3);
 
+	if (!nodes)
+		return SHRINK_EMPTY;
+
 	if (nodes <= max_nodes)
 		return 0;
 	return nodes - max_nodes;
@@ -452,22 +571,22 @@ static enum lru_status shadow_lru_isolate(struct list_head *item,
 
 	/*
 	 * Page cache insertions and deletions synchroneously maintain
-	 * the shadow node LRU under the mapping->tree_lock and the
+	 * the shadow node LRU under the i_pages lock and the
 	 * lru_lock.  Because the page cache tree is emptied before
 	 * the inode can be destroyed, holding the lru_lock pins any
 	 * address_space that has radix tree nodes on the LRU.
 	 *
-	 * We can then safely transition to the mapping->tree_lock to
+	 * We can then safely transition to the i_pages lock to
 	 * pin only the address_space of the particular node we want
 	 * to reclaim, take the node off-LRU, and drop the lru_lock.
 	 */
 
 	node = container_of(item, struct radix_tree_node, private_list);
-	mapping = container_of(node->root, struct address_space, page_tree);
+	mapping = container_of(node->root, struct address_space, i_pages);
 
 	/* Coming from the list, invert the lock order */
-	if (!spin_trylock(&mapping->tree_lock)) {
-		spin_unlock(lru_lock);
+	if (!xa_trylock(&mapping->i_pages)) {
+		spin_unlock_irq(lru_lock);
 		ret = LRU_RETRY;
 		goto out;
 	}
@@ -501,42 +620,36 @@ static enum lru_status shadow_lru_isolate(struct list_head *item,
 	if (WARN_ON_ONCE(node->exceptional))
 		goto out_invalid;
 	inc_lruvec_page_state(virt_to_page(node), WORKINGSET_NODERECLAIM);
-	__radix_tree_delete_node(&mapping->page_tree, node,
-				 workingset_update_node, mapping);
+	__radix_tree_delete_node(&mapping->i_pages, node,
+				 workingset_lookup_update(mapping));
 
 out_invalid:
-	spin_unlock(&mapping->tree_lock);
+	xa_unlock_irq(&mapping->i_pages);
 	ret = LRU_REMOVED_RETRY;
 out:
-	local_irq_enable();
 	cond_resched();
-	local_irq_disable();
-	spin_lock(lru_lock);
+	spin_lock_irq(lru_lock);
 	return ret;
 }
 
 static unsigned long scan_shadow_nodes(struct shrinker *shrinker,
 				       struct shrink_control *sc)
 {
-	unsigned long ret;
-
-	/* list_lru lock nests inside IRQ-safe mapping->tree_lock */
-	local_irq_disable();
-	ret = list_lru_shrink_walk(&shadow_nodes, sc, shadow_lru_isolate, NULL);
-	local_irq_enable();
-	return ret;
+	/* list_lru lock nests inside the IRQ-safe i_pages lock */
+	return list_lru_shrink_walk_irq(&shadow_nodes, sc, shadow_lru_isolate,
+					NULL);
 }
 
 static struct shrinker workingset_shadow_shrinker = {
 	.count_objects = count_shadow_nodes,
 	.scan_objects = scan_shadow_nodes,
-	.seeks = DEFAULT_SEEKS,
+	.seeks = 0, /* ->count reports only fully expendable nodes */
 	.flags = SHRINKER_NUMA_AWARE | SHRINKER_MEMCG_AWARE,
 };
 
 /*
  * Our list_lru->lock is IRQ-safe as it nests inside the IRQ-safe
- * mapping->tree_lock.
+ * i_pages lock.
  */
 static struct lock_class_key shadow_nodes_key;
 
@@ -561,15 +674,17 @@ static int __init workingset_init(void)
 	pr_info("workingset: timestamp_bits=%d max_order=%d bucket_order=%u\n",
 	       timestamp_bits, max_order, bucket_order);
 
-	ret = __list_lru_init(&shadow_nodes, true, &shadow_nodes_key);
+	ret = prealloc_shrinker(&workingset_shadow_shrinker);
 	if (ret)
 		goto err;
-	ret = register_shrinker(&workingset_shadow_shrinker);
+	ret = __list_lru_init(&shadow_nodes, true, &shadow_nodes_key,
+			      &workingset_shadow_shrinker);
 	if (ret)
 		goto err_list_lru;
+	register_shrinker_prepared(&workingset_shadow_shrinker);
 	return 0;
 err_list_lru:
-	list_lru_destroy(&shadow_nodes);
+	free_prealloced_shrinker(&workingset_shadow_shrinker);
 err:
 	return ret;
 }

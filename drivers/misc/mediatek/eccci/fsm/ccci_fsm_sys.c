@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
  */
 #include <linux/kobject.h>
 #include "ccci_fsm_internal.h"
@@ -18,7 +10,7 @@
 
 struct mdee_info_collect mdee_collect;
 
-void fsm_sys_mdee_info_notify(const char *buf)
+void fsm_sys_mdee_info_notify(char *buf)
 {
 	int ret = 0;
 
@@ -132,3 +124,68 @@ int fsm_sys_init(void)
 	return ret;
 }
 
+//#ifdef OPLUS_FEATURE_MODEM_MINIDUMP
+//#ifdef OPLUS_FEATURE_MODEM_MINIDUMP
+int getSubstrIndex(char *srcStr, char *subStr) {
+	int index = 0;
+	char* myStr = srcStr;
+	char* mySub = subStr;
+	char* temp_mystr = NULL;
+	char* temp_mysub = NULL;
+
+	while (*myStr != '\0')
+	{
+		if (*myStr != *mySub) {
+			++myStr;
+			index++;
+			continue;
+		}
+		temp_mystr = myStr;
+		temp_mysub = mySub;
+		while (*temp_mysub != '\0') {
+
+			if (*temp_mystr != *temp_mysub) {
+				/* The following characters are not equal,
+				so we need to skip them directly because we have already
+				compared them and there is no need to compare them again. */
+				++myStr;
+				index++;
+				break;
+			}
+			/* Two characters are equal, and both pointers move backwards at the same time */
+			++temp_mysub;
+			++temp_mystr;
+		}
+		if (*temp_mysub == '\0') {
+			return index;
+		}
+	}
+	return -1;
+}
+
+void deleteChar(char* str, int strLen, int index) {
+	int i = index;
+	for (i = index; i + 1 < strLen; i++) {
+		str[i] = str[i + 1];
+	}
+	str[strLen-1] = '\0';
+}
+
+unsigned int BKDRHash(const char* str, unsigned int len, int md_id) {
+	unsigned int seed = 131u; /* 31 131 1313 13131 131313 etc.. */
+	unsigned int hash = 0u;
+	int i = 0;
+	CCCI_ERROR_LOG(md_id, FSM, "BKDRHash str: %s, len: %d\n", str, len);
+
+	if (str == NULL) {
+		return 0;
+	}
+
+	for (i = 0; i < len; str++, i++) {
+		hash = (hash * seed) + (unsigned int)(*str);
+		hash = hash & 0xffffffff;
+	}
+	CCCI_ERROR_LOG(md_id, FSM, "BKDRHash hash: %u\n", hash);
+	return hash;
+}
+//#endif /*OPLUS_FEATURE_MODEM_MINIDUMP*/

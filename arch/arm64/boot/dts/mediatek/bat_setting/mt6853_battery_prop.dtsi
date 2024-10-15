@@ -73,6 +73,7 @@ bat_gm30: battery{
 	MULTI_TEMP_GAUGE0 = <(1)>;
 /* Multi gauge0 enable*/
 /*ifdef OPLUS_FEATURE_CHG_BASIC*/
+/* 2020/05/15, import zcv data of battery*/
 #include "mt6853_battery_table_ext.dtsi"
 /*else*/
 /*#include "mt6853_battery_table.dtsi"*/

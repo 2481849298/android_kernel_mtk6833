@@ -1,7 +1,9 @@
-source "drivers/misc/mediatek/sensor/2.0/lsm6dsm_secondary/Kconfig"
+# SPDX-License-Identifier: GPL-2.0
+
+source "drivers/misc/mediatek/sensor/2.0/mtk_nanohub/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/sensorhub/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/test/Kconfig"
-source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/Kconfig"
+source "drivers/misc/mediatek/sensor/2.0/lsm6dsm_secondary/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/camera_protecthub/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/free_fallhub/Kconfig"
@@ -13,4 +15,8 @@ source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/elevator_d
 source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/oplus_activity_recognitionhub/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/oplus_sensor_devinfo/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/sensor_monitor/Kconfig"
+source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/rotation_detecthub/Kconfig"
+source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/back_tap_detecthub/Kconfig"
+source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/lay_detecthub/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/mn29005/Kconfig"
+source "drivers/misc/mediatek/sensor/2.0/oplus_consumer_ir/Kconfig"

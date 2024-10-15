@@ -1,16 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * Power Delivery Core Driver
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include <linux/of.h>
@@ -95,7 +85,7 @@ static inline int pd_parse_pdata_bats(
 	ret = of_property_read_u32(np, "bat,nr", &val);
 	if (ret < 0) {
 		pr_err("%s get pd bat NR fail\n", __func__);
-		pd_port->bat_nr = 0;
+		val = 0;
 		return 0;
 	}
 
@@ -149,6 +139,7 @@ static inline int pd_parse_pdata_country(
 	ret = of_property_read_u32(sub, "pd,country_code", &val);
 	if (ret < 0) {
 		pr_err("%s get country code fail\n", __func__);
+		val = 0;
 		return -ENODEV;
 	}
 
@@ -727,19 +718,6 @@ void pd_reset_svid_data(struct pd_port *pd_port)
 	}
 }
 
-void pd_free_unexpected_event(struct pd_port *pd_port)
-{
-#ifdef CONFIG_USB_PD_DISCARD_AND_UNEXPECT_MSG
-	struct pe_data *pe_data = &pd_port->pe_data;
-
-	if (!pe_data->pd_unexpected_event_pending)
-		return;
-
-	pe_data->pd_unexpected_event_pending = false;
-	pd_free_event(pd_port->tcpc, &pe_data->pd_unexpected_event);
-#endif	/* CONFIG_USB_PD_DISCARD_AND_UNEXPECT_MSG */
-}
-
 #define PE_RESET_MSG_ID(pd_port, sop)	{ \
 	pd_port->pe_data.msg_id_tx[sop] = 0; \
 	pd_port->pe_data.msg_id_rx[sop] = PD_MSG_ID_MAX; \
@@ -790,16 +768,12 @@ int pd_reset_protocol_layer(struct pd_port *pd_port, bool sop_only)
 	pd_port->msg_id_pr_swap_last = 0xff;
 #endif	/* CONFIG_USB_PD_IGNORE_PS_RDY_AFTER_PR_SWAP */
 
-#ifdef CONFIG_USB_PD_DISCARD_AND_UNEXPECT_MSG
-	pe_data->pd_sent_ams_init_cmd = true;
-	pd_free_unexpected_event(pd_port);
-#endif	/* CONFIG_USB_PD_DISCARD_AND_UNEXPECT_MSG */
-
 	return 0;
 }
 
 int pd_set_rx_enable(struct pd_port *pd_port, uint8_t enable)
 {
+	pd_port->rx_cap = enable;
 	return tcpci_set_rx_enable(pd_port->tcpc, enable);
 }
 
@@ -1355,6 +1329,36 @@ void pd_lock_msg_output(struct pd_port *pd_port)
 	pd_port->msg_output_lock = true;
 
 	pd_dbg_info_lock();
+}
+
+void pd_add_miss_msg(struct pd_port *pd_port,struct pd_event *pd_event,
+				uint8_t msg)
+{
+	struct pd_msg *pd_msg = pd_event->pd_msg;
+	struct pd_msg * miss_msg = NULL;
+	uint8_t sop_type = 0;
+	struct pd_event evt = {
+		.event_type = PD_EVT_CTRL_MSG,
+		.msg = msg,
+		.pd_msg = NULL,
+	};
+
+	if (pd_msg != NULL)
+		sop_type = pd_msg->frame_type;
+
+	pd_put_event(pd_port->tcpc,&evt,true);
+	miss_msg = pd_alloc_msg(pd_port->tcpc);
+
+	if (miss_msg == NULL)
+		return;
+
+	if (pd_msg != NULL)
+		memcpy(miss_msg,pd_msg,sizeof(struct pd_msg));
+
+	pd_put_pd_msg_event(pd_port->tcpc,miss_msg);
+	pd_port->pe_data.msg_id_rx[sop_type]--;
+
+	return;
 }
 
 void pd_unlock_msg_output(struct pd_port *pd_port)

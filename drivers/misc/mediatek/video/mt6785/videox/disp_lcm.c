@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/slab.h>
 
@@ -29,7 +21,6 @@
 #ifdef OPLUS_BUG_STABILITY
 extern bool __attribute((weak)) oplus_flag_lcd_off;
 extern bool __attribute((weak)) oplus_display_twelvebits_support;
-#endif
 /* #ifdef OPLUS_FEATURE_AOD */
 /*
 * add for lcd status flag
@@ -44,7 +35,7 @@ extern int __attribute__((weak)) tp_gesture_enable_flag(void)
 	return 0;
 };
 extern int tp_gesture_enable_flag(void);
-
+#endif
 /* This macro and arrya is designed for multiple LCM support */
 /* for multiple LCM, we should assign I/F Port id in lcm driver, */
 /* such as DPI0, DSI0/1 */
@@ -1462,14 +1453,11 @@ int disp_lcm_resume(struct disp_lcm_handle *plcm)
 		}
 #ifdef OPLUS_BUG_STABILITY
 		oplus_flag_lcd_off = false;
-#endif
-
-		#ifdef OPLUS_BUG_STABILITY
 		/*
 		* add for lcd status flag
 		*/
 		oplus_flag_lcd_off = false;
-		#endif /* OPLUS_BUG_STABILITY */
+#endif /* OPLUS_BUG_STABILITY */
 		return 0;
 	}
 	DISPMSG("lcm_drv is null\n");
@@ -1483,7 +1471,7 @@ int disp_lcm_aod(struct disp_lcm_handle *plcm, int enter)
 	DISPMSG("%s, enter:%d\n", __func__, enter);
 	if (_is_lcm_inited(plcm)) {
 		lcm_drv = plcm->drv;
-
+#ifdef OPLUS_BUG_STABILITY
 		/* #ifdef OPLUS_FEATURE_AOD */
 		/*
 		* add for aod
@@ -1492,6 +1480,7 @@ int disp_lcm_aod(struct disp_lcm_handle *plcm, int enter)
 			if (lcm_drv->resume_power)
 				lcm_drv->resume_power();
 		}
+#endif
 		/* #endif */ /* OPLUS_FEATURE_AOD */
 		if (lcm_drv->aod) {
 			lcm_drv->aod(enter);
@@ -1499,7 +1488,7 @@ int disp_lcm_aod(struct disp_lcm_handle *plcm, int enter)
 			DISP_PR_ERR("FATAL ERROR, lcm_drv->aod is null\n");
 			return -1;
 		}
-
+#ifdef OPLUS_BUG_STABILITY
 		/* #ifdef OPLUS_FEATURE_AOD */
 		/*
 		* add for lcd status flag
@@ -1507,6 +1496,7 @@ int disp_lcm_aod(struct disp_lcm_handle *plcm, int enter)
 		if (oplus_display_aod_support) {
 			oplus_flag_lcd_off = false;
 		}
+#endif
 		/* #endif */ /* OPLUS_FEATURE_AOD */
 		return 0;
 	}
@@ -1850,46 +1840,7 @@ int disp_lcm_oplus_set_lcm_cabc_cmd(struct disp_lcm_handle *plcm, void *handle, 
 /*
 * add power seq api for ulps
 */
-int disp_lcm_poweron_before_ulps(struct disp_lcm_handle *plcm)
-{
-	struct LCM_DRIVER *lcm_drv = NULL;
 
-	DISPFUNC();
-	if (_is_lcm_inited(plcm)) {
-		lcm_drv = plcm->drv;
-		if (lcm_drv->poweron_before_ulps) {
-			lcm_drv->poweron_before_ulps();
-		} else {
-			DISP_PR_ERR("FATAL ERROR, lcm_drv->poweron_before_ulps is null\n");
-			return -1;
-		}
-		return 0;
-	}
-	DISP_PR_ERR("lcm_drv is null\n");
-	return -1;
-}
-
-int disp_lcm_poweroff_after_ulps(struct disp_lcm_handle *plcm)
-{
-	struct LCM_DRIVER *lcm_drv = NULL;
-
-	DISPFUNC();
-	if (_is_lcm_inited(plcm)) {
-		lcm_drv = plcm->drv;
-		if (lcm_drv->poweroff_after_ulps) {
-			/* if ((0 == tp_gesture_enable_flag()) || (1 == display_esd_recovery_lcm())) { */
-			if (0 == tp_gesture_enable_flag()) {
-				lcm_drv->poweroff_after_ulps();
-			}
-		} else {
-			DISP_PR_ERR("FATAL ERROR, lcm_drv->poweroff_after_ulps is null\n");
-			return -1;
-		}
-		return 0;
-	}
-	DISP_PR_ERR("lcm_drv is null\n");
-	return -1;
-}
 #endif /* OPLUS_BUG_STABILITY */
 /* #ifdef OPLUS_FEATURE_AOD */
 /*
@@ -1960,7 +1911,6 @@ int disp_lcm_get_hbm_state(struct disp_lcm_handle *plcm)
 		return -1;
 	}
 
-		DISP_PR_INFO("plcm->drv->get_hbm_state\n");
 	return plcm->drv->get_hbm_state();
 }
 
@@ -2019,29 +1969,6 @@ int disp_lcm_set_hbm_wait_ramless(bool wait, struct disp_lcm_handle *plcm, void 
 }
 
 extern bool oplus_display_aod_ramless_support;
-int mtk_disp_lcm_set_hbm(bool en, struct disp_lcm_handle *plcm, void *qhandle)
-{
-	if (!_is_lcm_inited(plcm)) {
-		DISP_PR_ERR("lcm_drv is null\n");
-		return -1;
-	}
-	/* #ifdef OPLUS_FEATURE_RAMLESS_AOD */
-	if (oplus_display_aod_ramless_support) {
-		if (!disp_lcm_is_video_mode(plcm)) {
-			DISPCHECK("%s disp is cmd Ramless set hbm [%d]\n", __func__, en);
-		}
-	}
-	/* #endif */ /* OPLUS_FEATURE_RAMLESS_AOD */
-
-	if (!plcm->drv->set_hbm_cmdq) {
-		DISP_PR_ERR("FATAL ERROR, lcm_drv->set_hbm_cmdq is null\n");
-		return -1;
-	}
-
-	plcm->drv->set_hbm_cmdq(en, qhandle);
-
-	return 0;
-}
 
 unsigned int disp_lcm_get_hbm_time(bool en, struct disp_lcm_handle *plcm)
 {

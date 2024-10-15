@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 #ifndef __TSCPU_SETTINGS_H__
 #define __TSCPU_SETTINGS_H__
 
@@ -369,6 +361,7 @@ struct thermal_controller {
 extern u32 thermal_irq_number;
 extern u32 thermal_mcu_irq_number;
 extern void __iomem *thermal_base;
+extern void __iomem *rgu_base;
 extern void __iomem *auxadc_ts_base;
 extern void __iomem *infracfg_ao_base;
 extern void __iomem *th_apmixed_base;
@@ -680,6 +673,7 @@ extern int tscpu_check_cpu_segment(void);
 
 #if 1
 #define THERM_CTRL_BASE_2    thermal_base
+#define RGU_CTRL_BASE_2      rgu_base
 #define AUXADC_BASE_2        auxadc_ts_base
 #define INFRACFG_AO_BASE_2   infracfg_ao_base
 #define APMIXED_BASE_2       th_apmixed_base
@@ -687,6 +681,7 @@ extern int tscpu_check_cpu_segment(void);
 #include <mach/mt_reg_base.h>
 #define AUXADC_BASE_2     AUXADC_BASE
 #define THERM_CTRL_BASE_2 THERM_CTRL_BASE
+#define RGU_CTRL_BASE_2   RGU_CTRL_BASE
 #define PERICFG_BASE_2    PERICFG_BASE
 #define APMIXED_BASE_2    APMIXED_BASE
 #endif

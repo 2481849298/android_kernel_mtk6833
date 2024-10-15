@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifdef CONFIG_MTK_CLKMGR
 #include <mach/mt_clkmgr.h>
@@ -24,6 +16,7 @@
 #include <musb_core.h>
 #include "usb20.h"
 #include "mtk_devinfo.h"
+#include <linux/phy/phy.h>
 
 #ifdef CONFIG_OF
 #include <linux/of_address.h>
@@ -35,7 +28,8 @@
 #include <mt-plat/mtk_boot_common.h>
 
 #ifdef OPLUS_FEATURE_CHG_BASIC
-#include <soc/oplus/system/oppo_project.h>
+//#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #endif /*OPLUS_FEATURE_CHG_BASIC*/
 
 #define FRA (48)
@@ -493,12 +487,12 @@ void usb_phy_switch_to_usb(void)
 void set_usb_phy_mode(int mode)
 {
 	switch (mode) {
-	case PHY_DEV_ACTIVE:
+	case PHY_MODE_USB_DEVICE:
 	/* VBUSVALID=1, AVALID=1, BVALID=1, SESSEND=0, IDDIG=1, IDPULLUP=1 */
 		USBPHY_CLR32(0x6C, (0x10<<0));
 		USBPHY_SET32(0x6C, (0x2F<<0));
 		USBPHY_SET32(0x6C, (0x3F<<8));
-        if ((is_project(0x216AF)) || (is_project(0x216B0)) ||(is_project(0x216B1))) {
+        if ((is_project(0x216AF)) || (is_project(0x226AF)) || (is_project(0x226AD)) ||(is_project(0x226AE)) || (is_project(0x226B0)) || (is_project(0x216B0)) ||(is_project(0x216B1)) || (is_project(0x226BC)) || (is_project(0x226BD)) || (is_project(0x226BE)) || (is_project(0x226BF)) || (is_project(0x2167A)) || (is_project(0x2167B)) || (is_project(0x2167C)) || (is_project(0x2167D))) {
 		USBPHY_CLR32(OFFSET_RG_USB20_VRT_VREF_SEL, VAL_MAX_WIDTH_3 << SHFT_RG_USB20_VRT_VREF_SEL);
 		USBPHY_SET32(OFFSET_RG_USB20_VRT_VREF_SEL, 6 << SHFT_RG_USB20_VRT_VREF_SEL);
 		USBPHY_CLR32(OFFSET_RG_USB20_TERM_VREF_SEL, VAL_MAX_WIDTH_3 << SHFT_RG_USB20_TERM_VREF_SEL);
@@ -507,7 +501,7 @@ void set_usb_phy_mode(int mode)
 		USBPHY_SET32(OFFSET_RG_USB20_PHY_REV6, 3 <<SHFT_RG_USB20_PHY_REV6);
         }
 		break;
-	case PHY_HOST_ACTIVE:
+	case PHY_MODE_USB_HOST:
 	/* VBUSVALID=1, AVALID=1, BVALID=1, SESSEND=0, IDDIG=0, IDPULLUP=1 */
 		USBPHY_CLR32(0x6c, (0x12<<0));
 		USBPHY_SET32(0x6c, (0x2d<<0));
@@ -527,7 +521,7 @@ void set_usb_phy_mode(int mode)
 		USBPHY_SET32(OFFSET_RG_USB20_TERM_VREF_SEL, 5 << SHFT_RG_USB20_TERM_VREF_SEL);
 		USBPHY_CLR32(OFFSET_RG_USB20_PHY_REV6, VAL_MAX_WIDTH_2 <<SHFT_RG_USB20_PHY_REV6);
 		USBPHY_SET32(OFFSET_RG_USB20_PHY_REV6, 2 <<SHFT_RG_USB20_PHY_REV6);
-	} else if ((is_project(0x216AF)) || (is_project(0x216B0)) ||(is_project(0x216B1))) {
+	} else if ((is_project(0x216AF)) || (is_project(0x226AF)) || (is_project(0x226AD)) ||(is_project(0x226AE)) || (is_project(0x226B0)) || (is_project(0x216B0)) ||(is_project(0x216B1)) || (is_project(0x226BC)) || (is_project(0x226BD)) || (is_project(0x226BE)) || (is_project(0x226BF)) || (is_project(0x2167A)) || (is_project(0x2167B)) || (is_project(0x2167C)) || (is_project(0x2167D))) {
 		USBPHY_CLR32(OFFSET_RG_USB20_VRT_VREF_SEL, VAL_MAX_WIDTH_3 << SHFT_RG_USB20_VRT_VREF_SEL);
 		USBPHY_SET32(OFFSET_RG_USB20_VRT_VREF_SEL, 6 << SHFT_RG_USB20_VRT_VREF_SEL);
 		USBPHY_CLR32(OFFSET_RG_USB20_TERM_VREF_SEL, VAL_MAX_WIDTH_3 << SHFT_RG_USB20_TERM_VREF_SEL);
@@ -544,7 +538,7 @@ void set_usb_phy_mode(int mode)
 	}
 #endif /*OPLUS_FEATURE_CHG_BASIC*/
 		break;
-	case PHY_IDLE_MODE:
+	case PHY_MODE_INVALID:
 	/* VBUSVALID=0, AVALID=0, BVALID=0, SESSEND=1, IDDIG=0, IDPULLUP=1 */
 		USBPHY_SET32(0x6c, (0x11<<0));
 		USBPHY_CLR32(0x6c, (0x2e<<0));
@@ -703,7 +697,7 @@ static void usb_phy_savecurrent_internal(void)
 
 	udelay(1);
 
-	set_usb_phy_mode(PHY_IDLE_MODE);
+	set_usb_phy_mode(PHY_MODE_INVALID);
 }
 
 void usb_phy_savecurrent(void)
@@ -829,7 +823,7 @@ void usb_phy_recover(void)
 		USBPHY_SET32(OFFSET_RG_USB20_TERM_VREF_SEL, 6 << SHFT_RG_USB20_TERM_VREF_SEL);
 		USBPHY_CLR32(OFFSET_RG_USB20_PHY_REV6, VAL_MAX_WIDTH_2 <<SHFT_RG_USB20_PHY_REV6);
 		USBPHY_SET32(OFFSET_RG_USB20_PHY_REV6, 2 << SHFT_RG_USB20_PHY_REV6);
-	} else if ((is_project(0x216AF)) || (is_project(0x216B0)) ||(is_project(0x216B1))) {
+	} else if ((is_project(0x216AF)) || (is_project(0x226AF)) || (is_project(0x226AD)) ||(is_project(0x226AE)) || (is_project(0x226B0)) || (is_project(0x216B0)) ||(is_project(0x216B1)) || (is_project(0x226BC)) || (is_project(0x226BD)) || (is_project(0x226BE)) || (is_project(0x226BF)) || (is_project(0x2167A)) || (is_project(0x2167B)) || (is_project(0x2167C)) || (is_project(0x2167D))) {
 		USBPHY_CLR32(OFFSET_RG_USB20_VRT_VREF_SEL, VAL_MAX_WIDTH_3 << SHFT_RG_USB20_VRT_VREF_SEL);
 		USBPHY_SET32(OFFSET_RG_USB20_VRT_VREF_SEL, 6 << SHFT_RG_USB20_VRT_VREF_SEL);
 		USBPHY_CLR32(OFFSET_RG_USB20_TERM_VREF_SEL, VAL_MAX_WIDTH_3 << SHFT_RG_USB20_TERM_VREF_SEL);
@@ -887,6 +881,7 @@ void Charger_Detect_Init(void)
 
 	DBG(0, "%s\n", __func__);
 }
+EXPORT_SYMBOL(Charger_Detect_Init);
 
 void Charger_Detect_Release(void)
 {
@@ -909,6 +904,7 @@ void Charger_Detect_Release(void)
 
 	DBG(0, "%s\n", __func__);
 }
+EXPORT_SYMBOL(Charger_Detect_Release);
 
 void usb_phy_context_save(void)
 {

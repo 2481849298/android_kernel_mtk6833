@@ -98,7 +98,7 @@ static int use_count;
 static int g_flash_duty = -1;
 
 #ifdef CONFIG_PM_WAKELOCKS
-struct wakeup_source flashlight_wake_lock;
+struct wakeup_source even_flashlight_wake_lock;
 #endif
 
 /* platform data */
@@ -118,8 +118,10 @@ static int even_pinctrl_init(struct platform_device *pdev)
 	/* get pinctrl */
 	even_pinctrl = devm_pinctrl_get(&pdev->dev);
 	if (IS_ERR(even_pinctrl)) {
-		printk("Failed to get flashlight pinctrl.\n");
+		printk("%s,Failed to get flashlight pinctrl.\n",__FUNCTION__);
 		ret = PTR_ERR(even_pinctrl);
+		even_pinctrl = NULL ;
+		return ret;
 	}
 
 	/*  Flashlight pin initialization */
@@ -218,7 +220,7 @@ static int even_pinctrl_set(int pin, int state)
 
 /* flashlight enable  pwm function */
 /* 52M/32/100 = 16KHZ  actually 21KHZ for SGM3785*/
-int mt_flashlight_led_set_pwm(int pwm_num,u32 level )
+int even_mt_flashlight_led_set_pwm(int pwm_num,u32 level )
 {
 	struct pwm_spec_config pwm_setting;
 	memset(&pwm_setting, 0, sizeof(struct pwm_spec_config));
@@ -256,7 +258,7 @@ static int even_verify_level(int level)
 
 /* flashlight enable function */
 #ifdef FLASHLIGHT_BRIGHTNESS_ADD
-bool fl_state=false;
+bool even_fl_state=false;
 #endif
 
 static int even_enable(void)
@@ -264,13 +266,13 @@ static int even_enable(void)
 	int tempPWM = 0;
 
 #ifdef CONFIG_PM_WAKELOCKS
-	__pm_stay_awake(&flashlight_wake_lock);
+	__pm_stay_awake(&even_flashlight_wake_lock);
 #endif
 
 #ifdef FLASHLIGHT_BRIGHTNESS_ADD
-	if (fl_state){
+	if (even_fl_state){
 		g_flash_duty = EVEN_LEVEL_NUM - 1;
-		printk("fl_state=true\n");
+		printk("even_fl_state=true\n");
 	}
 #endif
 
@@ -280,7 +282,7 @@ static int even_enable(void)
 		even_pinctrl_set(EVEN_PINCTRL_PIN_PWM_GPIO, 1);
 		mdelay(6);                                          //delay more than 5ms
 		even_pinctrl_set(EVEN_PINCTRL_PIN_PWM_EN,1);    //set pwm mode
-		mt_flashlight_led_set_pwm(0,80);                    //torch pwm 40%
+		even_mt_flashlight_led_set_pwm(0,80);                    //torch pwm 40%
 	}  else if (g_flash_duty < EVEN_LEVEL_TORCH) {//flash mode
 		//even_pinctrl_set(EVEN_PINCTRL_PIN_FLASH_EN,0);
 		//even_pinctrl_set(EVEN_PINCTRL_PIN_PWM_GPIO,1);//torch max
@@ -288,7 +290,7 @@ static int even_enable(void)
 		even_pinctrl_set(EVEN_PINCTRL_PIN_PWM_GPIO, 1);
 		mdelay(6);                                          //delay more than 5ms
 		even_pinctrl_set(EVEN_PINCTRL_PIN_PWM_EN,1);    //set pwm mode
-		mt_flashlight_led_set_pwm(0,40);                    //torch pwm 40%
+		even_mt_flashlight_led_set_pwm(0,40);                    //torch pwm 40%
 	} else {//flash mode
 
 		if (g_flash_duty < EVEN_LEVEL_NUM)
@@ -298,7 +300,7 @@ static int even_enable(void)
 
 		even_pinctrl_set(EVEN_PINCTRL_PIN_FLASH_EN,0);
 		even_pinctrl_set(EVEN_PINCTRL_PIN_PWM_EN,1);
-		mt_flashlight_led_set_pwm(0,tempPWM);               //flash pwm tempPWM%
+		even_mt_flashlight_led_set_pwm(0,tempPWM);               //flash pwm tempPWM%
 		udelay(500);
 		even_pinctrl_set(EVEN_PINCTRL_PIN_FLASH_EN,1);
 	}
@@ -317,7 +319,7 @@ static int even_disable(void)
 	even_pinctrl_set(EVEN_PINCTRL_PIN_PWM_GPIO, state);
 
 #ifdef CONFIG_PM_WAKELOCKS
-	__pm_relax(&flashlight_wake_lock);
+	__pm_relax(&even_flashlight_wake_lock);
 #endif
 
 	return 0;
@@ -339,11 +341,11 @@ int even_temperature_enable(bool On)
 int even_enable_flash(int level)
 {
 	if (level==0) {
-		fl_state=false;
+		even_fl_state=false;
 		printk("flash mode close\n");
 	}
 	else {
-		fl_state=true;//flash 1A
+		even_fl_state=true;//flash 1A
 		printk("flash mode open\n");
 	}
 	return 0;
@@ -603,7 +605,7 @@ static int even_probe(struct platform_device *pdev)
 
 	/* init pinctrl */
 	if (even_pinctrl_init(pdev)) {
-		printk("Failed to init pinctrl.\n");
+		printk("%s,Failed to init pinctrl.\n",__FUNCTION__);
 		err = -EFAULT;
 		goto err;
 	}
@@ -653,7 +655,7 @@ static int even_probe(struct platform_device *pdev)
 	even_current = sgm3785_current;
 
 #ifdef CONFIG_PM_WAKELOCKS
-	wakeup_source_init(&flashlight_wake_lock, "flashlight_lock_wakelock");
+	wakeup_source_init(&even_flashlight_wake_lock, "flashlight_lock_wakelock");
 #endif
 
 	printk("Probe done.\n");

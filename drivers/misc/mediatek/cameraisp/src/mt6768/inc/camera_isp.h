@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef _MT_ISP_H
 #define _MT_ISP_H
@@ -160,9 +152,11 @@ struct ISP_WAIT_IRQ_STRUCT {
 	struct ISP_WAIT_IRQ_ST EventInfo;
 };
 
+#define USERKEY_STR_LEN	32
+
 struct ISP_REGISTER_USERKEY_STRUCT {
 	int userKey;
-	char userName[32]; /* this size must the same as the icamiopipe api
+	char userName[USERKEY_STR_LEN]; /* this size must the same as the icamiopipe api
 			    * - registerIrq(...)
 			    */
 };
@@ -686,7 +680,10 @@ enum ISP_CMD_ENUM {
 	ISP_CMD_SET_PM_QOS_INFO,
 	ISP_CMD_TRANSFOR_CCU_REG,
 	ISP_CMD_SET_SEC_DAPC_REG,
-	ISP_CMD_SET_SEC_ENABLE
+	ISP_CMD_SET_SEC_ENABLE,
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	ISP_CMD_SET_VIR_CQCNT
+#endif
 };
 
 enum ISP_HALT_DMA_ENUM {
@@ -805,6 +802,10 @@ enum ISP_HALT_DMA_ENUM {
 	_IOWR(ISP_MAGIC, ISP_CMD_TRANSFOR_CCU_REG,  unsigned char*)
 #define ISP_SET_SEC_ENABLE \
 	_IOW(ISP_MAGIC, ISP_CMD_SET_SEC_ENABLE, unsigned int)
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+#define ISP_SET_VIR_CQCNT \
+	_IOWR(ISP_MAGIC, ISP_CMD_SET_VIR_CQCNT, unsigned int)
+#endif
 
 #ifdef CONFIG_COMPAT
 #define COMPAT_ISP_READ_REGISTER      \
@@ -847,6 +848,10 @@ enum ISP_HALT_DMA_ENUM {
 #define COMPAT_ISP_SET_MEM_INFO       \
 	_IOWR(ISP_MAGIC, ISP_CMD_SET_MEM_INFO, \
 					struct compat_ISP_MEM_INFO_STRUCT)
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+#define COMPAT_ISP_SET_VIR_CQCNT      \
+	_IOWR(ISP_MAGIC, ISP_CMD_SET_VIR_CQCNT, unsigned int)
+#endif
 #endif
 
 int32_t ISP_MDPClockOnCallback(uint64_t engineFlag);

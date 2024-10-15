@@ -187,6 +187,7 @@ struct panel_aod_area_para {
 #define PANEL_IOCTL_SET_ESD                   PANEL_IOW(0x2F, unsigned int)
 #define PANEL_IOCTL_GET_ESD                   PANEL_IOW(0x30, unsigned int)
 #define PANEL_IOCTL_SET_MTK_LOG_LEVEL         PANEL_IOW(0x31, struct kernel_loglevel)
+#define PANEL_IOCTL_GET_PANEL_BPP                    PANEL_IOWR(0x3B, unsigned int)
 #define PANEL_IOCTL_SET_CABC_STATUS			  PANEL_IOW(0x59, unsigned int)
 #define PANEL_IOCTL_GET_CABC_STATUS			  PANEL_IOWR(0x5A, unsigned int)
 #define PANEL_IOCTL_SET_DRE_STATUS			  PANEL_IOW(0x5B, unsigned int)

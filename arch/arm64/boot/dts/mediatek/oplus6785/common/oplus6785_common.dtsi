@@ -723,6 +723,7 @@
 	gpslna_pins_init: gpslna@0 {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO155__FUNC_GPIO155>;
+                        //#ifndef VENDOR_EDIT
                         //modify for: [GPS_LNA gpio's output direction is out]
                         /*
 			slew-rate = <0>;

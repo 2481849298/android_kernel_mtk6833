@@ -540,7 +540,7 @@ static void sensor_init(void)
 	write_cmos_sensor(0xe5,0x3b);
 	write_cmos_sensor(0xe6,0x04);
 	write_cmos_sensor(0x70,0x02);
-	write_cmos_sensor(0x71,0x02);
+	write_cmos_sensor(0x71,0x01);
 	write_cmos_sensor(0x72,0x03);
 	write_cmos_sensor(0x73,0x04);
 	write_cmos_sensor(0x74,0x02);
@@ -607,16 +607,19 @@ static void slim_video_setting(void)
 
 static kal_uint32 set_test_pattern_mode(kal_uint8 modes, struct SET_SENSOR_PATTERN_SOLID_COLOR *pTestpatterndata)
 {
-	//LOG_INF("modes: %d\n", modes);
+	// LOG_INF("-----modes: %d\n", modes);
 
      if( modes ) {
 		write_cmos_sensor( 0x4b, 0xc0 );
 		write_cmos_sensor( 0x4c, 0x00 );
 		write_cmos_sensor( 0x4d, 0x00 );
 		write_cmos_sensor( 0x4e, 0x00 );
+		// LOG_INF("=======modes: %d\n", modes);
      }
      else {
 		write_cmos_sensor( 0x4a, 0x00 );
+		// LOG_INF("-----====modes: %d\n", modes);
+
      }
      spin_lock(&imgsensor_drv_lock);
      imgsensor.test_pattern = modes;

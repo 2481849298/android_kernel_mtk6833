@@ -1,17 +1,3 @@
-/***********************************************************
-** Copyright (C), 2008-2018, OPPO Mobile Comm Corp., Ltd.
-**
-** File: - discard.c
-** Description: Source file for ext4 async discard suppot.
-** To support ext4 async discard.
-** Version: 1.0
-** Date : 2018/11/26
-**
-** ------------------------------- Revision History:-------------------------------
-** <author> <data> <version > <desc>
-** yh 2018/11/26 1.0 build this module
-****************************************************************/
-
 #include <linux/fs.h>
 #include <linux/bio.h>
 #include <linux/blkdev.h>
@@ -59,7 +45,7 @@ static void __init_discard_policy(struct ext4_sb_info *sbi,
 	}
 }
 
-void stop_discard_thread(struct ext4_sb_info *sbi)
+void ext4_stop_discard_thread(struct ext4_sb_info *sbi)
 {
 	struct discard_cmd_control *dcc = sbi->dcc_info;
 
@@ -106,20 +92,21 @@ static int issue_discard_thread(void *data)
 
 		issued = ext4_trim_groups(sbi->s_sb, dcc);
 
-		if (issued > 0) {
+		if (issued > 0) {//issued >0
 			wait_ms = dcc->dpolicy.min_interval;
-		} else if ((issued == 0) && dcc->io_interrupted) {
+		}else if ((issued == 0) && dcc->io_interrupted){//io_interrupted
 			dcc->io_interrupted = false;
 			delta = (sbi->last_time + interval) - jiffies;
 			if (delta > 0)
 				wait_ms = jiffies_to_msecs(delta);
 			else
 				wait_ms = dcc->dpolicy.mid_interval;
-		} else {
+		}else {//issued <= 0, for idle or error
 			wait_ms = dcc->dpolicy.max_interval;
 		}
 
 		sb_end_intwrite(sbi->s_sb);
+
 	} while (!kthread_should_stop());
 	return 0;
 }
@@ -139,7 +126,7 @@ int create_discard_cmd_control(struct ext4_sb_info *sbi)
 	if (!dcc)
 		return -ENOMEM;
 
-	dcc->groups_block_bitmap = vmalloc((sbi->s_clusters_per_group/8) * sbi->s_groups_count);
+	dcc->groups_block_bitmap = vmalloc((sbi->s_clusters_per_group/8) * sbi->s_groups_count); //for backup groups block bitmap
 	if (!dcc->groups_block_bitmap)
 		goto free_dcc;
 	memset(dcc->groups_block_bitmap, 0xFF, (sbi->s_clusters_per_group/8) * sbi->s_groups_count);
@@ -155,8 +142,8 @@ int create_discard_cmd_control(struct ext4_sb_info *sbi)
 	init_waitqueue_head(&dcc->discard_wait_queue);
 	sbi->dcc_info = dcc;
 init_thread:
-	dcc->ext4_issue_discard_thread = kthread_run(issue_discard_thread, sbi,
-		"ext4_discard-%u:%u", MAJOR(dev), MINOR(dev));
+	dcc->ext4_issue_discard_thread= kthread_run(issue_discard_thread, sbi,
+				"ext4_discard-%u:%u", MAJOR(dev), MINOR(dev));
 	if (IS_ERR(dcc->ext4_issue_discard_thread)) {
 		err = PTR_ERR(dcc->ext4_issue_discard_thread);
 		vfree(dcc->groups_block_bitmap);
@@ -179,7 +166,7 @@ void destroy_discard_cmd_control(struct ext4_sb_info *sbi)
 	if (!dcc)
 		return;
 
-	stop_discard_thread(sbi);
+	ext4_stop_discard_thread(sbi);
 
 	if (dcc->groups_block_bitmap)
 		vfree(dcc->groups_block_bitmap);
@@ -189,15 +176,16 @@ void destroy_discard_cmd_control(struct ext4_sb_info *sbi)
 
 int ext4_seq_discard_info_show(struct seq_file *seq, void *v)
 {
-	struct super_block *sb = (struct super_block *) seq->private;
+    struct super_block *sb = (struct super_block *) seq->private;
 	struct ext4_sb_info *sbi = EXT4_SB(sb);
 
 	if (v != SEQ_START_TOKEN)
 		return 0;
-	if (!test_opt(sb, ASYNC_DISCARD)) {
+ 
+	if (!test_opt(sb, ASYNC_DISCARD)){
 		seq_printf(seq, "async_discard option is closed !\n");
-		return 0;
-	}
+        return 0;
+    }
 
 	seq_printf(seq, "DCC info:\n  DCC granularity:%d\n  total issued discard:%lld\n  total trimed groups:%d\n",
 		   sbi->dcc_info->discard_granularity,

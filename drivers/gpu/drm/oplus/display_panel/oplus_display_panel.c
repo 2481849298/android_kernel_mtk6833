@@ -10,6 +10,7 @@
 **  Li.Sheng       2020/06/13        1.0           Build this moudle
 ******************************************************************/
 #include "oplus_display_panel.h"
+#include "../oplus_display_onscreenfingerprint.h"
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 /*
@@ -20,8 +21,14 @@ extern int oplus_display_panel_set_pwr(void *buf);
 extern int oplus_display_panel_get_pwr(void *buf);
 extern int oplus_display_panel_get_max_brightness(void *buf);
 extern int oplus_display_panel_get_serial_number(void *buf);
+#ifndef CONFIG_OPLUS_OFP_V2
 extern int oplus_display_panel_set_hbm(void *buf);
 extern int oplus_display_panel_get_hbm(void *buf);
+extern int oplus_display_panel_set_finger_print(void *buf);
+extern int oplus_panel_set_aod_light_mode(void *buf);
+extern int oplus_panel_get_aod_light_mode(void *buf);
+extern int oplus_display_panel_notify_fp_press(void *buf);
+#endif
 extern int oplus_display_panel_set_dim_alpha(void *buf);
 extern int oplus_display_panel_get_dim_alpha(void *buf);
 extern int oplus_display_panel_set_dim_dc_alpha(void *buf);
@@ -36,37 +43,44 @@ extern int oplus_display_set_brightness(void *buf);
 extern int oplus_display_get_brightness(void *buf);
 extern int oplus_display_panel_set_cabc(void *buf);
 extern int oplus_display_panel_get_cabc(void *buf);
-extern int oplus_display_panel_set_finger_print(void *buf);
 extern int oplus_display_panel_set_esd(void *buf);
 extern int oplus_display_panel_get_esd(void *buf);
 extern int oplus_display_set_mtk_loglevel(void *buf);
+extern int oplus_display_panel_get_panel_bpp(void *buf);
 extern int oplus_display_panel_get_vendor(void *buf);
 extern int oplus_display_panel_set_seed(void *buf);
 extern int oplus_display_panel_get_seed(void *buf);
-extern int oplus_panel_set_aod_light_mode(void *buf);
-extern int oplus_panel_get_aod_light_mode(void *buf);
-extern int oplus_display_panel_notify_fp_press(void *buf);
 extern int oplus_display_set_cabc_status(void *buf);
 extern int oplus_display_get_cabc_status(void *buf);
 extern int oplus_display_set_aod_area(void *buf);
+extern int oplus_display_panel_get_id(void *buf);
 
 static const struct panel_ioctl_desc panel_ioctls[] = {
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_POWER, oplus_display_panel_set_pwr),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_POWER, oplus_display_panel_get_pwr),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_SEED, oplus_display_panel_set_seed),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_SEED, oplus_display_panel_get_seed),
+#ifdef CONFIG_OPLUS_OFP_V2
+	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_AOD, oplus_ofp_set_aod_light_mode),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_AOD, oplus_ofp_get_aod_light_mode),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_HBM, oplus_ofp_set_hbm),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_HBM, oplus_ofp_get_hbm),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_FP_PRESS, oplus_ofp_notify_fp_press),
+#else
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_AOD, oplus_panel_set_aod_light_mode),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_AOD, oplus_panel_get_aod_light_mode),
-	/*PANEL_IOCTL_DEF(PANEL_IOCTL_GET_PANELID, oplus_display_panel_get_id),
-	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_FFL, oplus_display_panel_set_ffl),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_HBM, oplus_display_panel_set_hbm),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_HBM, oplus_display_panel_get_hbm),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_FP_PRESS, oplus_display_panel_notify_fp_press),
+#endif
+	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_PANELID, oplus_display_panel_get_id),
+	/*PANEL_IOCTL_DEF(PANEL_IOCTL_SET_FFL, oplus_display_panel_set_ffl),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_FFL, oplus_display_panel_get_ffl),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_MAX_BRIGHTNESS, oplus_display_panel_set_max_brightness),*/
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_MAX_BRIGHTNESS, oplus_display_panel_get_max_brightness),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_PANELINFO, oplus_display_panel_get_vendor),
 	/*PANEL_IOCTL_DEF(PANEL_IOCTL_GET_CCD, oplus_display_panel_get_ccd_check),*/
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_SERIAL_NUMBER, oplus_display_panel_get_serial_number),
-	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_HBM, oplus_display_panel_set_hbm),
-	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_HBM, oplus_display_panel_get_hbm),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_DIM_ALPHA, oplus_display_panel_set_dim_alpha),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_DIM_ALPHA, oplus_display_panel_get_dim_alpha),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_DIM_DC_ALPHA, oplus_display_panel_set_dim_dc_alpha),
@@ -93,10 +107,10 @@ static const struct panel_ioctl_desc panel_ioctls[] = {
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_DYNAMIC_OSC_CLOCK, oplus_display_panel_get_dynamic_osc_clock),*/
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_OPLUS_BRIGHTNESS, oplus_display_set_brightness),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_OPLUS_BRIGHTNESS, oplus_display_get_brightness),
-	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_FP_PRESS, oplus_display_panel_notify_fp_press),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_ESD, oplus_display_panel_set_esd),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_ESD, oplus_display_panel_get_esd),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_MTK_LOG_LEVEL, oplus_display_set_mtk_loglevel),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_PANEL_BPP, oplus_display_panel_get_panel_bpp),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_CABC_STATUS, oplus_display_set_cabc_status),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_CABC_STATUS, oplus_display_get_cabc_status),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_DRE_STATUS, oplus_display_set_cabc_status),
@@ -149,6 +163,10 @@ long panel_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	}
 
 	ioctl = &panel_ioctls[nr];
+	if (!ioctl) {
+		pr_err("%s invalid ioctl\n", __func__);
+		return retcode;
+	}
 	func = ioctl->func;
 	if (unlikely(!func)) {
 		pr_err("%s no function\n", __func__);
@@ -156,7 +174,9 @@ long panel_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return retcode;
 	}
 
-	in_size = out_size = drv_size = PANEL_IOCTL_SIZE(cmd);
+	drv_size = PANEL_IOCTL_SIZE(cmd);
+	out_size = drv_size;
+	in_size = drv_size;
 	if ((cmd & ioctl->cmd & IOC_IN) == 0) {
 		in_size = 0;
 	}
@@ -193,9 +213,6 @@ long panel_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	}
 
 err_panel:
-	if (!ioctl) {
-		pr_err("%s invalid ioctl\n", __func__);
-	}
 	if (kdata != static_data) {
 		kfree(kdata);
 	}

@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2016 MediaTek Inc.
  */
 
 #include <linux/types.h>
@@ -86,6 +78,8 @@ void ccu_get_sensor_i2c_slave_addr(int32_t *sensorI2cSlaveAddr)
 		g_ccu_sensor_info[IMGSENSOR_SENSOR_IDX_MAIN3].slave_addr;
 	sensorI2cSlaveAddr[4] =
 		g_ccu_sensor_info[IMGSENSOR_SENSOR_IDX_SUB2].slave_addr;
+        sensorI2cSlaveAddr[5] =
+		g_ccu_sensor_info[IMGSENSOR_SENSOR_IDX_MAIN4].slave_addr;
 }
 
 void ccu_get_sensor_name(char **sensor_name)
@@ -100,4 +94,6 @@ void ccu_get_sensor_name(char **sensor_name)
 	g_ccu_sensor_info[IMGSENSOR_SENSOR_IDX_MAIN3].sensor_name_string;
 	sensor_name[4] =
 	g_ccu_sensor_info[IMGSENSOR_SENSOR_IDX_SUB2].sensor_name_string;
+        sensor_name[5] =
+	g_ccu_sensor_info[IMGSENSOR_SENSOR_IDX_MAIN4].sensor_name_string;
 }

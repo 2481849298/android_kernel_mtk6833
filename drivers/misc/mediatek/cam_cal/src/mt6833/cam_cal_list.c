@@ -1,15 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
+
 #include <linux/kernel.h>
 #include "cam_cal_list.h"
 #include "eeprom_i2c_common_driver.h"
@@ -19,6 +12,12 @@
 #define MAX_EEPROM_SIZE_16K 0x4000
 
 struct stCAM_CAL_LIST_STRUCT g_camCalList[] = {
+	{S5K3L6_SENSOR_ID_LIJING, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{SC800CS_SENSOR_ID_LIJING, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{HI846_SENSOR_ID_LIJING, 0x40, Hi846_read_region, MAX_EEPROM_SIZE_16K},
+	{HI846_SENSOR_ID_LIJINGA, 0x40, Hi846a_read_region, MAX_EEPROM_SIZE_16K},
+	{HI556_SENSOR_ID_LIJINGA, 0x40, Hi556a_read_region, MAX_EEPROM_SIZE_16K},
+	{S5KJN103_SENSOR_ID_LIJING, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{CARR_OV13B10_SENSOR_ID, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{CARR_S5K3L6_SENSOR_ID, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{CARR_IMX355_SENSOR_ID, 0xA8, Common_read_region},
@@ -58,6 +57,11 @@ struct stCAM_CAL_LIST_STRUCT g_camCalList[] = {
 	{OV02B10_SENSOR_ID_APOLLOF, 0xA4, Common_read_region},
 	{OV64B_SENSOR_ID_APOLLOF,0xA0,Common_read_region,MAX_EEPROM_SIZE_16K},
 
+	{OV64B40_SENSOR_ID_HAWAII,0xA0,Common_read_region,MAX_EEPROM_SIZE_16K},
+	{OV08D10_SENSOR_ID_HAWAII, 0xA0, Common_read_region},
+	{OV16A1Q_SENSOR_ID_HAWAII, 0xA8, Common_read_region},
+	{OV02B1B_SENSOR_ID_HAWAII, 0xA4, Common_read_region},
+
 	{S5KGM1ST_SENSOR_ID_APOLLOB, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{IMX355_SENSOR_ID_APOLLOB, 0xA8, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{OV02B10_SENSOR_ID_APOLLOB, 0xA4, Common_read_region, MAX_EEPROM_SIZE_16K},
@@ -72,9 +76,19 @@ struct stCAM_CAL_LIST_STRUCT g_camCalList[] = {
 	{S5KGM1ST_SENSOR_ID_ALICER, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{HI5021SQT_SENSOR_ID_BLADE, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{HI1336_SENSOR_ID_BLADE, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{SC800CS_SENSOR_ID_BLADE, 0xA0, Common_read_region},
 	{HI556_SENSOR_ID_BLADE, 0x40, Hi556_read_region, MAX_EEPROM_SIZE_16K},
 	{SC201CS1_SENSOR_ID_BLADE, 0xA4, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{S5KJN103_SENSOR_ID_BLADE, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{GC02M1_SENSOR_ID_APOLLOT, 0xA4, Common_read_region},
+
+	{S5K3L6_SENSOR_ID_FANLI, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{S5KJN103_SENSOR_ID_FANLI, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{OV08D10_SENSOR_ID_FANLI, 0xA0, Common_read_region},
+	{GC02M1_SENSOR_ID_FANLI, 0xA4, Common_read_region},
+
+	{S5K3L6_SENSOR_ID_LIJINGA, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{SC520CS_SENSOR_ID_LIJINGA, 0x20, sc520cs_read_region, MAX_EEPROM_SIZE_16K},
 	/*  ADD before this line */
 	{0, 0, 0}       /*end of list */
 };

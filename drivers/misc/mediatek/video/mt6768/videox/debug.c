@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/string.h>
 #include <linux/time.h>
@@ -979,7 +971,11 @@ static void process_dbg_opt(const char *opt)
 			return;
 		}
 		DISPCHECK("clk_change:%d\n", clk);
+#ifdef CONFIG_MTK_MT6382_BDG
+		primary_display_mipi_clk_change(1, clk);
+#else
 		primary_display_mipi_clk_change(clk);
+#endif
 	} else if (strncmp(opt, "dsipattern:", 11) == 0) {
 		char *p = (char *)opt + 11;
 		unsigned int pattern;

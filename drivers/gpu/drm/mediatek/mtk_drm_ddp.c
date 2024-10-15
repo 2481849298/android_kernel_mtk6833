@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2015 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/clk.h>
 #include <linux/iopoll.h>
@@ -5968,7 +5960,6 @@ void mtk_ddp_insert_dsc_prim_MT6885(struct mtk_drm_crtc *mtk_crtc,
 	value = DISP_DITHER1_MOUT_EN_TO_DSI1_SEL;
 	cmdq_pkt_write(handle, mtk_crtc->gce_obj.base,
 		       mtk_crtc->config_regs_pa + addr, ~value, value);
-
 	/* MT6885_DISP_DITHER1_MOUT_EN -> PQ1_SOUT */
 	addr = MT6885_DISP_DITHER1_MOUT_EN;
 	value = DISP_DITHER1_MOUT_EN_TO_PQ1_SOUT;
@@ -7278,7 +7269,8 @@ void mmsys_config_dump_reg_mt6873(void __iomem *config_regs)
  */
 void mmsys_config_dump_analysis_mt6885(void __iomem *config_regs)
 {
-	unsigned int idx = 0, bit = 0, len = 0;
+	int len = 0;
+	unsigned int idx = 0, bit = 0;
 	unsigned int reg = 0;
 	char clock_on[512] = {'\0'};
 	char *pos = NULL;
@@ -7355,8 +7347,7 @@ void mmsys_config_dump_analysis_mt6885(void __iomem *config_regs)
 			else
 				len = sprintf(pos, "%s,", "n");
 
-			if (len >= 0)
-				pos += len;
+			pos += len;
 
 			if ((ready[idx] & (1 << bit)))
 				len = sprintf(pos, "%s", "r");
@@ -7986,8 +7977,7 @@ void mmsys_config_dump_analysis_mt6833(void __iomem *config_regs)
 			len = sprintf(pos, "%s,", "v");
 		else
 			len = sprintf(pos, "%s,", "n");
-		if (len >= 0)
-			pos += len;
+		pos += len;
 
 		if ((ready & (1 << i)))
 			len = sprintf(pos, "%s", "r");

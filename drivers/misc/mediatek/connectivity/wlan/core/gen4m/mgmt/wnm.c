@@ -150,8 +150,12 @@ void wnmWNMAction(IN struct ADAPTER *prAdapter, IN struct SW_RFB *prSwRfb)
 	case ACTION_WNM_BSS_TRANSITION_MANAGEMENT_REQ:
 #if CFG_SUPPORT_802_11V_BSS_TRANSITION_MGT
 #if CFG_SUPPORT_802_11V_BTM_OFFLOAD
-		/* btm offload */
-		wnmRecvBTMRequest(prAdapter, prSwRfb);
+		if (prAdapter->rWifiVar.u4SwTestMode == ENUM_SW_TEST_MODE_NONE
+			&& IS_FEATURE_ENABLED(
+			prAdapter->rWifiVar.ucBTMOffloadEnabled))
+			wnmRecvBTMRequest(prAdapter, prSwRfb);
+		else
+			aisFuncValidateRxActionFrame(prAdapter, prSwRfb);
 #else
 		DBGLOG(RX, INFO,
 		       "WNM: action frame %d, try to send to supplicant\n",
@@ -675,6 +679,7 @@ void wnmRecvBTMRequest(IN struct ADAPTER *prAdapter, IN struct SW_RFB *prSwRfb)
 	uint8_t ucBssIndex = secGetBssIdxByRfb(prAdapter, prSwRfb);
 	uint8_t fgNeedResponse = FALSE;
 	uint8_t ucStatus;
+	int32_t cTargetRssi = prAdapter->prGlueInfo->i4RssiCache[ucBssIndex];
 
 	prRxFrame = (struct ACTION_BTM_REQ_FRAME *) prSwRfb->pvHeader;
 	if (!prRxFrame)
@@ -720,6 +725,11 @@ void wnmRecvBTMRequest(IN struct ADAPTER *prAdapter, IN struct SW_RFB *prSwRfb)
 		u2TmpLen += sizeof(*prBssTermDuration);
 	}
 	if (ucRequestMode & WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT) {
+		if (prSwRfb->u2PacketLen < u2TmpLen + pucOptInfo[0]) {
+			DBGLOG(WNM, WARN,
+		       "BTM: Request frame length is less than a standard BTM frame\n");
+			return;
+		}
 		kalMemCopy(prBtmParam->aucSessionURL, &pucOptInfo[1],
 			   pucOptInfo[0]);
 		prBtmParam->ucSessionURLLen = pucOptInfo[0];
@@ -773,6 +783,15 @@ void wnmRecvBTMRequest(IN struct ADAPTER *prAdapter, IN struct SW_RFB *prSwRfb)
 			ucRequestMode & WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT,
 			ucRequestMode & WNM_BSS_TM_REQ_ABRIDGED,
 			ucRequestMode & WNM_BSS_TM_REQ_PREF_CAND_LIST_INCLUDED);
+		ucStatus = WNM_BSS_TM_REJECT_UNSPECIFIED;
+		goto send_response;
+	}
+
+	if (!(ucRequestMode & WNM_BSS_TM_REQ_DISASSOC_IMMINENT) &&
+		!(ucRequestMode & WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT) &&
+		cTargetRssi > -65) {
+		DBGLOG(WNM, WARN, "BTM: ignore nonurgent BTM request (%d)\n",
+			ucRequestMode);
 		ucStatus = WNM_BSS_TM_REJECT_UNSPECIFIED;
 		goto send_response;
 	}

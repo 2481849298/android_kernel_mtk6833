@@ -1360,6 +1360,7 @@ static inline INT32 _stp_psm_do_wait(MTKSTP_PSM_T *stp_psm, MTKSTP_PSM_STATE_T s
 	while (_stp_psm_get_state(stp_psm) != state && i < limit && mtk_wcn_stp_is_enable()) {
 		i++;
 		#ifndef OPLUS_BUG_STABILITY
+		//CONNECTIVITY.WIFI.BASE.LOG.1120976, 2017/09/27,
 		//Remove for reduce useless log.
 		if (i < 3)
 			STP_PSM_PR_INFO("STP is waiting state for %s, i=%d, state = %d\n",
@@ -1383,6 +1384,7 @@ static inline INT32 _stp_psm_do_wait(MTKSTP_PSM_T *stp_psm, MTKSTP_PSM_STATE_T s
 		return STP_PSM_OPERATION_FAIL;
 	}
 	#ifndef OPLUS_BUG_STABILITY
+	//CONNECTIVITY.WIFI.BASE.LOG.1120976, 2017/09/27,
 	//Remove for reduce useless log.
 	if (i > 0)
 		STP_PSM_PR_INFO("+Total waits for %s takes %llu usec\n",

@@ -158,7 +158,7 @@ int connfem_epaelna_get_flags(enum connfem_subsys subsys, void *flags)
 	}
 
 	if (!connfem_ctx->epaelna.flags_cfg[subsys].obj) {
-		pr_info("[WARN] %s, subsys %d '%s' flags is NULL",
+		pr_info("[INFO] %s, subsys %d '%s' flags is NULL",
 			__func__, subsys, cfm_subsys_name[subsys]);
 		return -EINVAL;
 	}
@@ -211,7 +211,7 @@ int connfem_epaelna_get_flags_names(enum connfem_subsys subsys,
 
 	if (!connfem_ctx->epaelna.flags_cfg[subsys].names ||
 	    !connfem_ctx->epaelna.flags_cfg[subsys].name_entries) {
-		pr_info("[WARN] %s, subsys %d '%s' names is NULL",
+		pr_info("[INFO] %s, subsys %d '%s' names is NULL",
 			__func__, subsys, cfm_subsys_name[subsys]);
 		return -EINVAL;
 	}

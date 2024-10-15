@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef __DSI_DRV_H__
 #define __DSI_DRV_H__
@@ -252,8 +244,17 @@ void DSI_dynfps_send_cmd(
 	void *cmdq, unsigned int cmd,
 	unsigned char count, unsigned char *para_list,
 	unsigned char force_update, enum LCM_Send_Cmd_Mode sendmode);
-
 /*-------------------------------DynFPS end------------------------------*/
+#endif
+#ifdef CONFIG_MTK_MT6382_BDG
+void mt6382_send_backlight_cmd(
+	void *cmdq, unsigned int cmd,
+	unsigned char count, unsigned char *para_list,
+	unsigned char force_update);
+void mt6382_send_cabc_cmd(
+	void *cmdq, unsigned int cmd,
+	unsigned char count, unsigned char *para_list,
+	unsigned char force_update);
 #endif
 #ifdef __cplusplus
 }

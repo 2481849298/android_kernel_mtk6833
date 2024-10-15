@@ -310,6 +310,8 @@
 #define GED_EVENT_NETWORK           (1 << 11)
 #define GED_EVENT_DOPT_WIFI_SCAN    (1 << 12)
 #define GED_EVENT_TX_DUP_DETECT     (1 << 13)
+#define GED_EVENT_DISABLE_ROAMING   (1 << 14)
+#define GED_EVENT_CAM_MODE          (1 << 15)
 
 #define LOW_LATENCY_MODE_MAGIC_CODE      0x86
 #define LOW_LATENCY_MODE_CMD_V2          0x2
@@ -1767,9 +1769,12 @@ struct CMD_GET_STATS_LLS {
 
 /* Used in Event as well */
 enum ENUM_STATS_LLS_TLV_TAG_ID {
-	STATS_LLS_TAG_LLS_DATA           = 0,
-	STATS_LLS_TAG_PPDU_LATENCY       = 1,
-	STATS_LLS_TAG_CURRENT_TX_RATE    = 2,
+	STATS_LLS_TAG_LLS_DATA                    = 0,
+	STATS_LLS_TAG_PPDU_LATENCY                = 1,
+	STATS_LLS_TAG_CURRENT_TX_RATE             = 2,
+	STATS_LLS_TAG_SET_WFD_TX_BITRATE_MONTR    = 3,
+	STATS_LLS_TAG_GET_WFD_PRED_TX_BITRATE     = 4,
+	STATS_LLS_TAG_GET_AVG_LATENCY             = 6,
 	STATS_LLS_TAG_MAX_NUM
 };
 
@@ -1804,7 +1809,20 @@ struct EVENT_STATS_LLS_TX_RATE_INFO {
 	struct _STATS_LLS_TX_RATE_INFO arTxRateInfo[BSSID_NUM];
 };
 
+struct EVENT_STATS_LLS_TX_BIT_RATE {
+	uint32_t au4CurrentBitrate[BSSID_NUM];
+	uint32_t au4PredBitRate[BSSID_NUM];
+};
+
 #endif /* CFG_SUPPORT_LLS */
+
+struct TX_LAT_MONTR_PARAM_STRUCT {
+	bool fgEnabled;
+	uint32_t u4Intvl;
+	uint32_t u4DriverCrit;
+	uint32_t u4MacCrit;
+	bool fgIsAvg;
+};
 
 struct PARAM_MTK_WIFI_TEST_STRUCT {
 	uint32_t u4FuncIndex;
@@ -2708,6 +2726,12 @@ struct PARAM_AX_BLACKLIST {
 	uint8_t aucList[MAC_ADDR_LEN * 16];
 };
 
+struct PARAM_STBC_MRC {
+	uint8_t ucType; /* 0: STBC, 1: MRC */
+	uint8_t ucBssIndex;
+	uint8_t fgEnable;
+};
+
 enum ENUM_AX_BLACKLIST_TYPE {
 	BLACKLIST_AX_TO_AC = 0,
 	BLACKLIST_DIS_HE_HTC = 1,
@@ -2822,6 +2846,12 @@ wlanoidSetConnect(IN struct ADAPTER *prAdapter,
 		  IN void *pvSetBuffer,
 		  IN uint32_t u4SetBufferLen,
 		  OUT uint32_t *pu4SetInfoLen);
+
+uint32_t
+wlanoidUpdateConnect(IN struct ADAPTER *prAdapter,
+		IN void *pvSetBuffer,
+		IN uint32_t u4SetBufferLen,
+		OUT uint32_t *pu4SetInfoLen);
 
 uint32_t
 wlanoidSetSsid(IN struct ADAPTER *prAdapter,
@@ -3090,6 +3120,12 @@ wlanoidQueryLinkSpeedEx(IN struct ADAPTER *prAdapter,
 			  IN void *pvQueryBuffer,
 			  IN uint32_t u4QueryBufferLen,
 			  OUT uint32_t *pu4QueryInfoLen);
+
+uint32_t
+wlanoidSetTxLatMontrParam(IN struct ADAPTER *prAdapter,
+		     IN void *pvSetBuffer,
+		     IN uint32_t u4SetBufferLen,
+		     OUT uint32_t *pu4SetInfoLen);
 
 #if CFG_SUPPORT_QA_TOOL
 #if CFG_SUPPORT_BUFFER_MODE
@@ -4279,9 +4315,9 @@ uint32_t wlanoidUpdateFtIes(IN struct ADAPTER *prAdapter, IN void *pvSetBuffer,
 
 #ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
 uint32_t wlanoidSetMonitor(IN struct ADAPTER *prAdapter,
-		  		IN void *pvSetBuffer,
-		  		IN uint32_t u4SetBufferLen,
-		  		OUT uint32_t *pu4SetInfoLen);
+				IN void *pvSetBuffer,
+				IN uint32_t u4SetBufferLen,
+				OUT uint32_t *pu4SetInfoLen);
 #endif
 
 uint32_t wlanoidSync11kCapabilities(IN struct ADAPTER *prAdapter,
@@ -4349,6 +4385,13 @@ wlanoidIndicateBssInfo(IN struct ADAPTER *prAdapter,
 
 uint32_t
 wlanoidSetAxBlacklist(IN struct ADAPTER *prAdapter,
+		IN void *pvSetBuffer,
+		IN uint32_t u4SetBufferLen,
+		OUT uint32_t *pu4SetInfoLen);
+
+
+uint32_t
+wlanoidForceStbcMrc(IN struct ADAPTER *prAdapter,
 		IN void *pvSetBuffer,
 		IN uint32_t u4SetBufferLen,
 		OUT uint32_t *pu4SetInfoLen);

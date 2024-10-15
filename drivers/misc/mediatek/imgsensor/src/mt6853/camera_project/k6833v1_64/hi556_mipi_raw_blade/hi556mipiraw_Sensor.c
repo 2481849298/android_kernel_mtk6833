@@ -15,6 +15,7 @@
 
 #include "hi556mipiraw_Sensor.h"
 #include "imgsensor_common.h"
+#include "imgsensor_hwcfg_custom.h"
 #define PFX "hi556_camera_sensor"
 #define LOG_INF(format, args...)    \
 	pr_info(PFX "[%s] " format, __func__, ##args)
@@ -23,17 +24,14 @@
 static DEFINE_SPINLOCK(imgsensor_drv_lock);
 
 #define per_frame 1
-static kal_uint8 deviceInfo_register_value = 0x00;
-extern enum IMGSENSOR_RETURN Eeprom_DataInit(
-            enum IMGSENSOR_SENSOR_IDX sensor_idx,
-            kal_uint32 sensorID);
+
 static struct imgsensor_info_struct imgsensor_info = {
 	.sensor_id = HI556_SENSOR_ID_BLADE,
 	.checksum_value = 0x55e2a82f,
 	.pre = {
-		.pclk = 168000000,
+		.pclk = 170300000,
 		.linelength = 2816,
-		.framelength = 1986,
+		.framelength = 2010,
 		.startx = 0,
 		.starty = 0,
 		.grabwindow_width = 2592,
@@ -42,36 +40,36 @@ static struct imgsensor_info_struct imgsensor_info = {
 		.mipi_data_lp2hs_settle_dc = 14,
 		/*	 following for GetDefaultFramerateByScenario()	*/
 		.max_framerate = 300,
-		.mipi_pixel_rate = 168000000,
+		.mipi_pixel_rate = 170300000,
 	},
 	.cap = {
-		.pclk = 168000000,
+		.pclk = 170300000,
 		.linelength = 2816,
-		.framelength = 2049,
+		.framelength = 2010,
 		.startx = 0,
 		.starty = 0,
 		.grabwindow_width = 2592,
 		.grabwindow_height = 1944,
 		.mipi_data_lp2hs_settle_dc = 14,
 		.max_framerate = 300,
-		.mipi_pixel_rate = 168000000,
+		.mipi_pixel_rate = 170300000,
 	},
 	.cap1 = {
-		.pclk = 168000000,
+		.pclk = 170300000,
 		.linelength = 2816,
-		.framelength = 4166,
+		.framelength = 4020,
 		.startx = 0,
 		.starty = 0,
 		.grabwindow_width = 2592,
 		.grabwindow_height = 1944,
 		.mipi_data_lp2hs_settle_dc = 14,
 		.max_framerate = 150,
-		.mipi_pixel_rate = 168000000,
+		.mipi_pixel_rate = 170300000,
 	},
 	.normal_video = {
-		.pclk = 168000000,
+		.pclk = 170300000,
 		.linelength = 2816,
-		.framelength = 2049,
+		.framelength = 2010,
 		.startx = 0,
 		.starty = 0,
 		.grabwindow_width = 2592,
@@ -80,10 +78,10 @@ static struct imgsensor_info_struct imgsensor_info = {
 		.mipi_data_lp2hs_settle_dc = 14,
 		/*	 following for GetDefaultFramerateByScenario()	*/
 		.max_framerate = 300,
-		.mipi_pixel_rate = 88000000,
+		.mipi_pixel_rate = 170300000,
 	},
 	.hs_video = {
-		.pclk = 168000000,
+		.pclk = 170300000,
 		.linelength = 2816,
 		.framelength = 520,
 		.startx = 0,
@@ -92,19 +90,19 @@ static struct imgsensor_info_struct imgsensor_info = {
 		.grabwindow_height = 480,
 		.mipi_data_lp2hs_settle_dc = 14,//unit , ns
 		.max_framerate = 1200,
-		.mipi_pixel_rate = 42000000,
+		.mipi_pixel_rate = 42575000,
 	},
 	.slim_video = {
-		.pclk = 168000000,
+		.pclk = 170300000,
 		.linelength = 2816,
-		.framelength = 2083,
+		.framelength = 2010,
 		.startx = 0,
 		.starty = 0,
 		.grabwindow_width = 1280,
 		.grabwindow_height = 720,
 		.mipi_data_lp2hs_settle_dc = 14,//unit , ns
 		.max_framerate = 300,
-		.mipi_pixel_rate = 84000000,
+		.mipi_pixel_rate = 85150000,
 	},
 
 	.margin = 2,
@@ -152,7 +150,7 @@ static struct imgsensor_info_struct imgsensor_info = {
 	.mipi_sensor_type = MIPI_OPHY_NCSI2,
 	.mipi_settle_delay_mode = 1,
 	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_Gr,
-	.mclk = 24,
+	.mclk = 26,
 	.mipi_lane_num = SENSOR_MIPI_2_LANE,
 	.i2c_addr_table = {0x40, 0x51, 0x50, 0xff},
 	.i2c_speed = 400,
@@ -285,6 +283,8 @@ void dumpEEPROMData1(int startAdd, int u4Length,u8* pu1Params)
 #define MODULE_INFO_SIZE 15
 #define AWB_DATA_SIZE 16
 #define LSC_DATA_SIZE 1868
+#define SN_DATA_SIZE 18
+#define SN_DATA_SIZE_HI556W 24
 
 //+bug604664, liuxingyu, add, 2020/12/18, add for hi556 eeprom bring up
 #define OTP_SET_ADDR_H 0x010a
@@ -301,6 +301,25 @@ static int awb_data_addr_tbl[MAX_GROUP_NUM] = {0x0421, 0x0C69, 0x14B1};
 
 static int lsc_flag_addr_tbl[MAX_GROUP_NUM] = {0x0B7F, 0x13C8, 0x1C10};
 static int lsc_data_addr_tbl[MAX_GROUP_NUM] = {0x0433, 0x0C7B, 0x14C3};
+
+static int SN_flag_addr_tbl[MAX_GROUP_NUM] = {0x0C47, 0x148F, 0x1CD7};
+static int SN_data_addr_tbl[MAX_GROUP_NUM] = {0x0C35, 0x147D, 0x1CC5};
+
+/*Add for hi556W*/
+static int module_flag_addr_tbl_hi556w[MAX_GROUP_NUM] = {0x0410, 0x0C5E, 0x14AC}; // 0x0410 0x0C5E 0x14AC
+static int module_data_addr_tbl_hi556w[MAX_GROUP_NUM] = {0x0401, 0x0C4F, 0x149D}; // 0x0401 0x0C4F 0x149D
+
+static int awb_flag_addr_tbl_hi556w[MAX_GROUP_NUM] = {0x0431, 0x0C7F, 0x14CD}; // 0x0431 0x0C7F 0x14CD
+static int awb_data_addr_tbl_hi556w[MAX_GROUP_NUM] = {0x0421, 0x0C6F, 0x14BD}; // 0x0421 0x0C6F 0x14BD
+
+static int lsc_flag_addr_tbl_hi556w[MAX_GROUP_NUM] = {0x0B7F, 0x13CD, 0x1C1B}; // 0x0B7F 0x13CD 0x1C1B
+static int lsc_data_addr_tbl_hi556w[MAX_GROUP_NUM] = {0x0433, 0x0C81, 0x14CF}; // 0x0433 0X0C81 0x14CF
+
+static int SN_flag_addr_tbl_hi556w[MAX_GROUP_NUM] = {0x0C4D, 0x149B, 0x1CE9}; // 0x0C4D 0x149B 0x1CE9
+static int SN_data_addr_tbl_hi556w[MAX_GROUP_NUM] = {0x0C35, 0x1483, 0x1CD1}; // 0x0C35 0x1483 0x1CD1
+
+static int Sensor_id_hi556W[MAX_GROUP_NUM] = {0x0407,0x0C55,0x14A3}; // 0x0407 0x0C55 0x14A3
+
 //-bug604664, liuxingyu, add, 2020/12/18, add for hi556 eeprom bring up
 
 #define VALID_OTP_FLAG 0x55
@@ -309,9 +328,14 @@ static int lsc_data_addr_tbl[MAX_GROUP_NUM] = {0x0433, 0x0C7B, 0x14C3};
 unsigned char hi556_data_lsc[LSC_DATA_SIZE + 2] = {0};/*Add flag and check sum*/
 unsigned char hi556_data_awb[AWB_DATA_SIZE + 2] = {0};/*Add  flag andcheck sum*/
 unsigned char hi556_data_info[MODULE_INFO_SIZE + 2] = {0};/*Add  flag and check sum*/
+unsigned char hi556_data_SN[SN_DATA_SIZE + 2] = {0};
+/*Add for Hi-556w*/
+unsigned char hi556_data_SN_HI556W[SN_DATA_SIZE_HI556W + 2] = {0};
 unsigned char hi556_module_id = 0;
 unsigned char hi556_lsc_valid = 0;
 unsigned char hi556_awb_valid = 0;
+unsigned char hi556w_flag = 0;
+unsigned char sn_length = 0;
 
 static void hi556_disable_otp_func(void)
 {
@@ -319,6 +343,23 @@ static void hi556_disable_otp_func(void)
 	mdelay(10);
 	write_cmos_sensor(0x003e, 0x00);
 	write_cmos_sensor(0x0a00, 0x00);
+}
+
+static void check_is_hi556w(void)
+{
+	unsigned char i = 0;
+	unsigned char hi_556w_sensorid = 0;
+	for(i = 0; i < MAX_GROUP_NUM; i++){
+		write_cmos_sensor_8(OTP_SET_ADDR_H, (Sensor_id_hi556W[i]>>8)&0xff);
+		write_cmos_sensor_8(OTP_SET_ADDR_L, (Sensor_id_hi556W[i])&0xff);
+		write_cmos_sensor_8(OTP_RW_FLAG, 0x01);
+		hi_556w_sensorid = read_cmos_sensor(OTP_READ_FLAG);
+		if (hi_556w_sensorid == 0x01) {
+			hi556w_flag = 1;
+			LOG_INF("=== THIS IS HI556W! sensor id : 0x%x, group : %d ===\n",hi_556w_sensorid,i);
+			break;
+		}
+	}
 }
 
 static int read_hi556_module_info(void)
@@ -329,6 +370,12 @@ static int read_hi556_module_info(void)
 	int check_sum = 0, check_sum_cal = 0;
 	int i;
 
+	if(hi556w_flag == 1){
+		memcpy(&module_flag_addr_tbl[0],&module_flag_addr_tbl_hi556w[0],sizeof(module_flag_addr_tbl_hi556w));
+		memcpy(&module_data_addr_tbl[0],&module_data_addr_tbl_hi556w[0],sizeof(module_data_addr_tbl_hi556w));
+		LOG_INF("hi_556w module info memcpy, flag: 0x%x,0x%x,0x%x;data: 0x%x,0x%x,0x%x\n",
+				module_flag_addr_tbl[0],module_flag_addr_tbl[1],module_flag_addr_tbl[2],module_data_addr_tbl[0],module_data_addr_tbl[1],module_data_addr_tbl[2]);
+	}
 	/* read flag */
 	for(i = 0; i < MAX_GROUP_NUM; i++){
 		write_cmos_sensor_8(OTP_SET_ADDR_H, (module_flag_addr_tbl[i]>>8)&0xff);
@@ -391,6 +438,12 @@ static int read_hi556_awb_info(void)
 	int r = 0,b = 0,gr = 0, gb = 0, golden_r = 0, golden_b = 0, golden_gr = 0, golden_gb = 0;
 	int i;
 
+	if(hi556w_flag == 1){
+		memcpy(&awb_flag_addr_tbl[0],&awb_flag_addr_tbl_hi556w[0],sizeof(awb_flag_addr_tbl_hi556w));
+		memcpy(&awb_data_addr_tbl[0],&awb_data_addr_tbl_hi556w[0],sizeof(awb_data_addr_tbl_hi556w));
+		LOG_INF("hi_556w awb info memcpy, flag: 0x%x,0x%x,0x%x;data: 0x%x,0x%x,0x%x\n",
+				awb_flag_addr_tbl[0],awb_flag_addr_tbl[1],awb_flag_addr_tbl[2],awb_data_addr_tbl[0],awb_data_addr_tbl[1],awb_data_addr_tbl[2]);	
+	}
 	/* read flag */
 	for(i = 0; i < MAX_GROUP_NUM; i++){
 		write_cmos_sensor_8(OTP_SET_ADDR_H, (awb_flag_addr_tbl[i]>>8)&0xff);
@@ -448,6 +501,12 @@ static int read_hi556_lsc_info(void)
 	int check_sum_lsc = 0, check_sum_lsc_cal = 0;
 	int i;
 
+	if(hi556w_flag == 1){
+		memcpy(&lsc_flag_addr_tbl[0],&lsc_flag_addr_tbl_hi556w[0],sizeof(lsc_flag_addr_tbl_hi556w));
+		memcpy(&lsc_data_addr_tbl[0],&lsc_data_addr_tbl_hi556w[0],sizeof(lsc_data_addr_tbl_hi556w));
+		LOG_INF("hi_556w lsc info memcpy, flag: 0x%x,0x%x,0x%x;data: 0x%x,0x%x,0x%x\n",
+				lsc_flag_addr_tbl[0],lsc_flag_addr_tbl[1],lsc_flag_addr_tbl[2],lsc_data_addr_tbl[0],lsc_data_addr_tbl[1],lsc_data_addr_tbl[2]);
+	}
 	/* read flag */
 	for(i = 0; i < MAX_GROUP_NUM; i++){
 		write_cmos_sensor_8(OTP_SET_ADDR_H, (lsc_flag_addr_tbl[i]>>8)&0xff);
@@ -492,6 +551,84 @@ static int read_hi556_lsc_info(void)
 	}
 }
 
+static int read_hi556_SN_Code(void)
+{
+    int otp_grp_flag = 0, SN_start_addr = 0;
+    int i;
+
+    if(hi556w_flag == 1){
+        sn_length = SN_DATA_SIZE_HI556W;
+        memcpy(&SN_flag_addr_tbl[0],&SN_flag_addr_tbl_hi556w[0],sizeof(SN_flag_addr_tbl_hi556w));
+        memcpy(&SN_data_addr_tbl[0],&SN_data_addr_tbl_hi556w[0],sizeof(SN_data_addr_tbl_hi556w));
+        LOG_INF("hi_556w sn info memcpy, sn_length %d, flag: 0x%x,0x%x,0x%x;data: 0x%x,0x%x,0x%x\n",sn_length,
+                SN_flag_addr_tbl[0],SN_flag_addr_tbl[1],SN_flag_addr_tbl[2],SN_data_addr_tbl[0],SN_data_addr_tbl[1],SN_data_addr_tbl[2]);
+    } else {
+        sn_length = SN_DATA_SIZE;
+        LOG_INF("HI556 sn_length: %d",sn_length);
+    }
+    /* read flag */
+    for(i = 0; i < MAX_GROUP_NUM; i++){
+        write_cmos_sensor_8(OTP_SET_ADDR_H, (SN_flag_addr_tbl[i]>>8)&0xff);
+        write_cmos_sensor_8(OTP_SET_ADDR_L, (SN_flag_addr_tbl[i])&0xff);
+        write_cmos_sensor_8(OTP_RW_FLAG, 0x01);
+        otp_grp_flag = read_cmos_sensor(OTP_READ_FLAG);
+        if (otp_grp_flag == 0x01) {
+            LOG_INF("SN: group %d selected\n", i);
+            SN_start_addr = SN_data_addr_tbl[i];
+            break;
+        }
+    }
+    if (SN_start_addr != 0) {
+        /* read & checksum */
+
+        write_cmos_sensor_8(OTP_SET_ADDR_H, ((SN_start_addr)>>8)&0xff);
+        write_cmos_sensor_8(OTP_SET_ADDR_L, (SN_start_addr)&0xff);
+        write_cmos_sensor_8(OTP_RW_FLAG, 0x01);
+        Oplusimgsensor_Registdeviceinfo(gImgEepromInfo.pCamModuleInfo[IMGSENSOR_SENSOR_IDX_SUB].name,
+                                        gImgEepromInfo.pCamModuleInfo[IMGSENSOR_SENSOR_IDX_SUB].version,
+                                        hi556_data_info[0]);
+        if (hi556w_flag == 1) {
+            for(i = 0; i < sn_length + 2; i++)  // add flag and checksum
+            {
+                hi556_data_SN_HI556W[i] = read_cmos_sensor(OTP_READ_FLAG);
+            }
+            #ifdef HI556_OTP_DUMP
+            dumpEEPROMData1(SN_start_addr,sn_length,&hi556_data_SN_HI556W[0]);
+            #endif
+            LOG_INF("=== HI556W SN SN_flag=0x%x ===\n", hi556_data_SN_HI556W[sn_length]);
+            if (hi556_data_SN_HI556W[sn_length] == 0x01) {
+                memcpy(&(gImgEepromInfo.camNormdata[IMGSENSOR_SENSOR_IDX_SUB][8]), hi556_data_SN_HI556W, sn_length + 2);
+                gImgEepromInfo.i4CurSensorIdx = IMGSENSOR_SENSOR_IDX_SUB;
+                gImgEepromInfo.i4CurSensorId = imgsensor_info.sensor_id;
+                return 1;
+            } else {
+                LOG_INF("HI556W SN is not invalid.");
+                return 0;
+            }
+        } else {
+            for(i = 0; i < sn_length + 2; i++)  // add flag and checksum
+            {
+                hi556_data_SN[i] = read_cmos_sensor(OTP_READ_FLAG);
+            }
+            #ifdef HI556_OTP_DUMP
+            dumpEEPROMData1(SN_start_addr,sn_length,&hi556_data_SN[0]);
+            #endif
+            LOG_INF("=== HI556 SN SN_flag=0x%x ===\n", hi556_data_SN[sn_length]);
+            if (hi556_data_SN[sn_length] == 0x01) {
+                memcpy(&(gImgEepromInfo.camNormdata[IMGSENSOR_SENSOR_IDX_SUB][8]), hi556_data_SN, sn_length + 2);
+                gImgEepromInfo.i4CurSensorIdx = IMGSENSOR_SENSOR_IDX_SUB;
+                gImgEepromInfo.i4CurSensorId = imgsensor_info.sensor_id;
+                return 1;
+            } else {
+                LOG_INF("HI556 SN is not invalid.");
+                return 0;
+            }
+        }
+    } else {
+        return 0;
+    }
+}
+
 static int hi556_sensor_otp_info(void)
 {
 	int ret = 0;
@@ -527,6 +664,9 @@ static int hi556_sensor_otp_info(void)
 	write_cmos_sensor_8(0x003e, 0x10);//OTP r/w mode
 	write_cmos_sensor_8(0x0a00, 0x01);//standby off
 
+	/* check sensor*/
+	check_is_hi556w();
+
 	/* 3. read eeprom data */
 	//minfo && awb group
 	ret = read_hi556_module_info();
@@ -548,7 +688,7 @@ static int hi556_sensor_otp_info(void)
 	}else{
 		hi556_lsc_valid = 1;
 	}
-
+	ret = read_hi556_SN_Code();
 	/* 4. disable otp function */
 	hi556_disable_otp_func();
 	if(hi556_module_id == 0 || hi556_lsc_valid == 0 || hi556_awb_valid == 0){
@@ -970,7 +1110,7 @@ kal_uint16 addr_data_pair_init_hi556[] = {
 	0x0b12, 0x000c,
 	0x0b14, 0x4068,
 	0x0b16, 0x0000,
-	0x0f30, 0x6925,
+	0x0f30, 0x8335,
 	0x0f32, 0x7067,
 	0x0954, 0x0009,
 	0x0956, 0x1100,
@@ -1203,7 +1343,7 @@ static void sensor_init(void)
 	write_cmos_sensor(0x0b12, 0x000c);
 	write_cmos_sensor(0x0b14, 0x4068);
 	write_cmos_sensor(0x0b16, 0x0000);
-	write_cmos_sensor(0x0f30, 0x6925);
+	write_cmos_sensor(0x0f30, 0x8335);
 	write_cmos_sensor(0x0f32, 0x7067);
 	write_cmos_sensor(0x0954, 0x0009);
 	write_cmos_sensor(0x0956, 0x1100);
@@ -1270,7 +1410,7 @@ static void sensor_init(void)
 #if MULTI_WRITE
 kal_uint16 addr_data_pair_preview_30fps_hi556[] = {
 	0x0b0a, 0x8252,
-	0x0f30, 0x6925,
+	0x0f30, 0x8335,//6925,
 	0x0f32, 0x7067,
 	0x004a, 0x0100,
 	0x004c, 0x0000,
@@ -1289,12 +1429,12 @@ kal_uint16 addr_data_pair_preview_30fps_hi556[] = {
 	0x002e, 0x1111,
 	0x0030, 0x1111,
 	0x0032, 0x1111,
-	0x0006, 0x0801,
+	0x0006, 0x07DA,//0x0801
 	0x0a22, 0x0000,
 	0x0a12, 0x0a20,
 	0x0a14, 0x0798,
 	0x003e, 0x0000,
-	0x0074, 0x07ff,
+	0x0074, 0x07D8,
 	0x0070, 0x0411,
 	0x0804, 0x0200,
 	0x0a04, 0x014a,
@@ -1321,7 +1461,7 @@ static void preview_setting(void)
 #else
 	LOG_INF("%s fps = 300\n", __func__);
 	write_cmos_sensor(0x0b0a, 0x8252);
-	write_cmos_sensor(0x0f30, 0x6925);
+	write_cmos_sensor(0x0f30, 0x8335);//6925);
 	write_cmos_sensor(0x0f32, 0x7067);
 	write_cmos_sensor(0x004a, 0x0100);
 	write_cmos_sensor(0x004c, 0x0000);
@@ -1340,12 +1480,12 @@ static void preview_setting(void)
 	write_cmos_sensor(0x002e, 0x1111);
 	write_cmos_sensor(0x0030, 0x1111);
 	write_cmos_sensor(0x0032, 0x1111);
-	write_cmos_sensor(0x0006, 0x0801);
+	write_cmos_sensor(0x0006, 0x07DA);
 	write_cmos_sensor(0x0a22, 0x0000);
 	write_cmos_sensor(0x0a12, 0x0a20);
 	write_cmos_sensor(0x0a14, 0x0798);
 	write_cmos_sensor(0x003e, 0x0000);
-	write_cmos_sensor(0x0074, 0x07ff);
+	write_cmos_sensor(0x0074, 0x07D8);
 	write_cmos_sensor(0x0070, 0x0411);
 	write_cmos_sensor(0x0804, 0x0200);
 	write_cmos_sensor(0x0a04, 0x014a);
@@ -1367,7 +1507,7 @@ static void preview_setting(void)
 #if MULTI_WRITE
 kal_uint16 addr_data_pair_capture_fps_hi556[] = {
 	0x0b0a, 0x8252,
-	0x0f30, 0x6825,
+	0x0f30, 0x8335,//6925,
 	0x0f32, 0x7067,
 	0x004a, 0x0100,
 	0x004c, 0x0000,
@@ -1386,12 +1526,12 @@ kal_uint16 addr_data_pair_capture_fps_hi556[] = {
 	0x002e, 0x1111,
 	0x0030, 0x1111,
 	0x0032, 0x1111,
-	0x0006, 0x1046,
+	0x0006, 0x0FB4,
 	0x0a22, 0x0000,
 	0x0a12, 0x0a20,
 	0x0a14, 0x0798,
 	0x003e, 0x0000,
-	0x0074, 0x1044,
+	0x0074, 0x0FB2,
 	0x0070, 0x0411,
 	0x0804, 0x0200,
 	0x0a04, 0x014a,
@@ -1408,7 +1548,7 @@ kal_uint16 addr_data_pair_capture_fps_hi556[] = {
 
 kal_uint16 addr_data_pair_capture_30fps_hi556[] = {
 	0x0b0a, 0x8252,
-	0x0f30, 0x6825,
+	0x0f30, 0x8335,//6925,
 	0x0f32, 0x7067,
 	0x004a, 0x0100,
 	0x004c, 0x0000,
@@ -1427,12 +1567,12 @@ kal_uint16 addr_data_pair_capture_30fps_hi556[] = {
 	0x002e, 0x1111,
 	0x0030, 0x1111,
 	0x0032, 0x1111,
-	0x0006, 0x0801,
+	0x0006, 0x07DA,
 	0x0a22, 0x0000,
 	0x0a12, 0x0a20,
 	0x0a14, 0x0798,
 	0x003e, 0x0000,
-	0x0074, 0x07ff,
+	0x0074, 0x07D8,
 	0x0070, 0x0411,
 	0x0804, 0x0200,
 	0x0a04, 0x014a,
@@ -1451,7 +1591,7 @@ kal_uint16 addr_data_pair_capture_30fps_hi556[] = {
 kal_uint16 addr_data_pair_normal_video_30fps_hi556[] = {
 0x0a00, 0x0000,
 0x0b0a, 0x8252,
-0x0f30, 0x6825,
+0x0f30, 0x8335,//6925,
 0x0f32, 0x7067,
 0x004a, 0x0100,
 0x004c, 0x0000,
@@ -1469,12 +1609,12 @@ kal_uint16 addr_data_pair_normal_video_30fps_hi556[] = {
 0x002e, 0x1111,
 0x0030, 0x1111,
 0x0032, 0x1111,
-0x0006, 0x0822,
+0x0006, 0x07DA,
 0x0a22, 0x0000,
 0x0a12, 0x0a20,
 0x0a14, 0x05b2,
 0x003e, 0x0000,
-0x0074, 0x0820,
+0x0074, 0x07D8,
 0x0070, 0x0410,
 0x0804, 0x0200,
 0x0a04, 0x014a,
@@ -1509,7 +1649,7 @@ static void video_setting(kal_uint16 currefps)
 	if (currefps == 300) {
 		LOG_INF("%s fps = 300\n", __func__);
 		write_cmos_sensor(0x0b0a, 0x8252);
-		write_cmos_sensor(0x0f30, 0x6925);
+		write_cmos_sensor(0x0f30, 0x8335);//6925,);
 		write_cmos_sensor(0x0f32, 0x7067);
 		write_cmos_sensor(0x004a, 0x0100);
 		write_cmos_sensor(0x004c, 0x0000);
@@ -1566,7 +1706,7 @@ static void video_setting(kal_uint16 currefps)
 		//BLC offset	  : 64code
 		////////////////////////////////////////////////
 		write_cmos_sensor(0x0b0a, 0x8252);
-		write_cmos_sensor(0x0f30, 0x6925);
+		write_cmos_sensor(0x0f30, 0x8335);
 		write_cmos_sensor(0x0f32, 0x7067);
 		write_cmos_sensor(0x004a, 0x0100);
 		write_cmos_sensor(0x004c, 0x0000);
@@ -1585,12 +1725,12 @@ static void video_setting(kal_uint16 currefps)
 		write_cmos_sensor(0x002e, 0x1111);
 		write_cmos_sensor(0x0030, 0x1111);
 		write_cmos_sensor(0x0032, 0x1111);
-		write_cmos_sensor(0x0006, 0x1046);
+		write_cmos_sensor(0x0006, 0x0FB4);
 		write_cmos_sensor(0x0a22, 0x0000);
 		write_cmos_sensor(0x0a12, 0x0a20);
 		write_cmos_sensor(0x0a14, 0x0798);
 		write_cmos_sensor(0x003e, 0x0000);
-		write_cmos_sensor(0x0074, 0x1044);
+		write_cmos_sensor(0x0074, 0x0FB2);
 		write_cmos_sensor(0x0070, 0x0411);
 		write_cmos_sensor(0x0804, 0x0200);
 		write_cmos_sensor(0x0a04, 0x014a);
@@ -1629,7 +1769,7 @@ static void capture_setting(kal_uint16 currefps)
 	if (currefps == 300) {
 		LOG_INF("%s fps = 300\n", __func__);
 		write_cmos_sensor(0x0b0a, 0x8252);
-		write_cmos_sensor(0x0f30, 0x6825);
+		write_cmos_sensor(0x0f30, 0x8335);
 		write_cmos_sensor(0x0f32, 0x7067);
 		write_cmos_sensor(0x004a, 0x0100);
 		write_cmos_sensor(0x004c, 0x0000);
@@ -1648,12 +1788,12 @@ static void capture_setting(kal_uint16 currefps)
 		write_cmos_sensor(0x002e, 0x1111);
 		write_cmos_sensor(0x0030, 0x1111);
 		write_cmos_sensor(0x0032, 0x1111);
-		write_cmos_sensor(0x0006, 0x0801);
+		write_cmos_sensor(0x0006, 0x07DA);
 		write_cmos_sensor(0x0a22, 0x0000);
 		write_cmos_sensor(0x0a12, 0x0a20);
 		write_cmos_sensor(0x0a14, 0x0798);
 		write_cmos_sensor(0x003e, 0x0000);
-		write_cmos_sensor(0x0074, 0x07ff);
+		write_cmos_sensor(0x0074, 0x07D8);
 		write_cmos_sensor(0x0070, 0x0411);
 		write_cmos_sensor(0x0804, 0x0200);
 		write_cmos_sensor(0x0a04, 0x014a);
@@ -1686,7 +1826,7 @@ static void capture_setting(kal_uint16 currefps)
 		//BLC offset	  : 64code
 		////////////////////////////////////////////////
 		write_cmos_sensor(0x0b0a, 0x8252);
-		write_cmos_sensor(0x0f30, 0x6925);
+		write_cmos_sensor(0x0f30, 0x8335);
 		write_cmos_sensor(0x0f32, 0x7067);
 		write_cmos_sensor(0x004a, 0x0100);
 		write_cmos_sensor(0x004c, 0x0000);
@@ -1705,12 +1845,12 @@ static void capture_setting(kal_uint16 currefps)
 		write_cmos_sensor(0x002e, 0x1111);
 		write_cmos_sensor(0x0030, 0x1111);
 		write_cmos_sensor(0x0032, 0x1111);
-		write_cmos_sensor(0x0006, 0x1046);
+		write_cmos_sensor(0x0006, 0x0FB4);
 		write_cmos_sensor(0x0a22, 0x0000);
 		write_cmos_sensor(0x0a12, 0x0a20);
 		write_cmos_sensor(0x0a14, 0x0798);
 		write_cmos_sensor(0x003e, 0x0000);
-		write_cmos_sensor(0x0074, 0x1044);
+		write_cmos_sensor(0x0074, 0x0FB2);
 		write_cmos_sensor(0x0070, 0x0411);
 		write_cmos_sensor(0x0804, 0x0200);
 		write_cmos_sensor(0x0a04, 0x014a);
@@ -1733,7 +1873,7 @@ static void capture_setting(kal_uint16 currefps)
 #if MULTI_WRITE
 kal_uint16 addr_data_pair_hs_video_hi556[] = {
 	0x0b0a, 0x8252,
-	0x0f30, 0x6925,
+	0x0f30, 0x8335,
 	0x0f32, 0x7267,
 	0x004a, 0x0100,
 	0x004c, 0x0000,
@@ -1796,7 +1936,7 @@ static void hs_video_setting(void)
 		sizeof(kal_uint16));
 #else
 	write_cmos_sensor(0x0b0a, 0x8252);
-	write_cmos_sensor(0x0f30, 0x6925);
+	write_cmos_sensor(0x0f30, 0x8335);
 	write_cmos_sensor(0x0f32, 0x7267);
 	write_cmos_sensor(0x004a, 0x0100);
 	write_cmos_sensor(0x004c, 0x0000);
@@ -1842,7 +1982,7 @@ static void hs_video_setting(void)
 #if MULTI_WRITE
 kal_uint16 addr_data_pair_slim_video_hi556[] = {
 	0x0b0a, 0x8252,
-	0x0f30, 0x6925,
+	0x0f30, 0x8335,
 	0x0f32, 0x7167,
 	0x004a, 0x0100,
 	0x004c, 0x0000,
@@ -1861,12 +2001,12 @@ kal_uint16 addr_data_pair_slim_video_hi556[] = {
 	0x002e, 0x1111,
 	0x0030, 0x1111,
 	0x0032, 0x3311,
-	0x0006, 0x0823,
+	0x0006, 0x07DA,
 	0x0a22, 0x0000,
 	0x0a12, 0x0500,
 	0x0a14, 0x02d0,
 	0x003e, 0x0000,
-	0x0074, 0x0821,
+	0x0074, 0x07D8,
 	0x0070, 0x0411,
 	0x0804, 0x0200,
 	0x0a04, 0x016a,
@@ -1906,7 +2046,7 @@ static void slim_video_setting(void)
 		sizeof(kal_uint16));
 #else
 	write_cmos_sensor(0x0b0a, 0x8252);
-	write_cmos_sensor(0x0f30, 0x6925);
+	write_cmos_sensor(0x0f30, 0x8335);
 	write_cmos_sensor(0x0f32, 0x7167);
 	write_cmos_sensor(0x004a, 0x0100);
 	write_cmos_sensor(0x004c, 0x0000);
@@ -1925,12 +2065,12 @@ static void slim_video_setting(void)
 	write_cmos_sensor(0x002e, 0x1111);
 	write_cmos_sensor(0x0030, 0x1111);
 	write_cmos_sensor(0x0032, 0x3311);
-	write_cmos_sensor(0x0006, 0x0823);
+	write_cmos_sensor(0x0006, 0x07DA);
 	write_cmos_sensor(0x0a22, 0x0000);
 	write_cmos_sensor(0x0a12, 0x0500);
 	write_cmos_sensor(0x0a14, 0x02d0);
 	write_cmos_sensor(0x003e, 0x0000);
-	write_cmos_sensor(0x0074, 0x0821);
+	write_cmos_sensor(0x0074, 0x07D8);
 	write_cmos_sensor(0x0070, 0x0411);
 	write_cmos_sensor(0x0804, 0x0200);
 	write_cmos_sensor(0x0a04, 0x016a);
@@ -1965,10 +2105,6 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 				LOG_INF(
 					"get_imgsensor_id i2c write id : 0x%x, sensor id: 0x%x\n",
 					imgsensor.i2c_write_id, *sensor_id);
-					if(deviceInfo_register_value == 0x00){
-						Eeprom_DataInit(1, HI556_SENSOR_ID_BLADE);
-						deviceInfo_register_value = 0x01;
-					}
 				    //+bug584789 chenbocheng.wt, add, 2020/10/30, add main camera s5kgm1 and wide camera hi556 otp code
 				    rc = hi556_sensor_otp_info();
 					if(rc == 0){

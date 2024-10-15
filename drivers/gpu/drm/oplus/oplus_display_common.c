@@ -11,6 +11,10 @@
 ***************************************************************/
 #include <oplus_display_common.h>
 #include "display_panel/oplus_display_panel.h"
+#ifdef CONFIG_OPLUS_OFP_V2
+/* add for ofp */
+#include "oplus_display_onscreenfingerprint.h"
+#endif
 
 #define PANEL_SERIAL_NUM_REG 0xA1
 #define PANEL_REG_READ_LEN   10
@@ -35,6 +39,9 @@ extern unsigned long aod_light_mode;
 extern bool oplus_fp_notify_down_delay;
 extern bool oplus_fp_notify_up_delay;
 extern int power_mode;
+extern unsigned int m_da;
+extern unsigned int m_db;
+extern unsigned int m_dc;
 
 char oplus_rx_reg[PANEL_TX_MAX_BUF] = {0x0};
 char oplus_rx_len = 0;
@@ -62,6 +69,8 @@ enum {
 	CABC_LEVEL_2 = 3,
 	CABC_EXIT_SPECIAL = 8,
 	CABC_ENTER_SPECIAL = 9,
+	GLOBAL_DRE_OPEN = 10,
+	GLOBAL_DRE_CLOSE = 11,
 };
 
 int oplus_display_set_brightness(void *buf)
@@ -73,7 +82,7 @@ int oplus_display_set_brightness(void *buf)
 
 	printk("%s %d\n", __func__, oplus_set_brightness);
 
-	if (oplus_set_brightness > oplus_max_brightness || oplus_set_brightness < OPLUS_MIN_BRIGHTNESS) {
+	if (oplus_set_brightness > oplus_max_brightness) {
 		printk(KERN_ERR "%s, brightness:%d out of scope\n", __func__, oplus_set_brightness);
 		return -1;
 	}
@@ -111,6 +120,7 @@ int oplus_display_panel_get_max_brightness(void *buf)
 	return 0;
 }
 
+#ifndef CONFIG_OPLUS_OFP_V2
 int oplus_display_panel_get_hbm(void *buf)
 {
 	unsigned int *hbm = buf;
@@ -145,6 +155,33 @@ int oplus_display_panel_set_hbm(void *buf)
 
 	return 0;
 }
+#endif
+
+int oplus_display_panel_get_panel_bpp(void *buf)
+{
+	unsigned int *panel_bpp = buf;
+	struct drm_crtc *crtc;
+	struct mtk_drm_crtc *mtk_crtc;
+	struct drm_device *ddev = get_drm_device();
+
+	/* this debug cmd only for crtc0 */
+	crtc = list_first_entry(&(ddev)->mode_config.crtc_list,
+				typeof(*crtc), head);
+	if (!crtc) {
+		printk(KERN_ERR "find crtc fail\n");
+		return -1;
+	}
+	mtk_crtc = to_mtk_crtc(crtc);
+	if (!mtk_crtc || !mtk_crtc->panel_ext || !mtk_crtc->panel_ext->params) {
+		pr_err("falied to get lcd proc info\n");
+		return -EINVAL;
+	}
+
+	(*panel_bpp) = mtk_crtc->panel_ext->params->panel_bpp;
+	printk("%s panel_bpp : %d\n", __func__, *panel_bpp);
+
+	return 0;
+}
 
 int oplus_display_panel_get_serial_number(void *buf)
 {
@@ -175,11 +212,15 @@ int oplus_display_set_cabc_status(void *buf)
 	cabc_mode = (unsigned long)(*c_mode);
 
 	cabc_true_mode = cabc_mode;
+	if (!ddev) {
+		printk("set cabc status ddev fail\n");
+		return 0;
+	}
 	/* this debug cmd only for crtc0 */
 	crtc = list_first_entry(&(ddev)->mode_config.crtc_list,
 				typeof(*crtc), head);
-	if (!crtc) {
-		printk(KERN_ERR "find crtc fail\n");
+	if (IS_ERR_OR_NULL(crtc)) {
+		printk("find crtc fail\n");
 		return -1;
 	}
 	mtk_crtc = to_mtk_crtc(crtc);
@@ -193,6 +234,18 @@ int oplus_display_set_cabc_status(void *buf)
 		cabc_back_flag = cabc_mode;
 	}
 
+	if (mtk_crtc->panel_ext->params->oplus_display_global_dre) {
+		if (cabc_mode == GLOBAL_DRE_OPEN) {
+			disp_aal_set_dre_en(1);
+			printk("%s adb cmd enable dre\n", __func__);
+			return 0;
+		} else if (cabc_mode == GLOBAL_DRE_CLOSE) {
+			disp_aal_set_dre_en(0);
+			printk("%s adb cmd disable dre\n", __func__);
+			return 0;
+		}
+	}
+
 	if (cabc_mode == CABC_ENTER_SPECIAL) {
 		cabc_sun_flag = 1;
 		cabc_true_mode = 0;
@@ -201,8 +254,18 @@ int oplus_display_set_cabc_status(void *buf)
 		cabc_true_mode = cabc_back_flag;
 	} else if (cabc_sun_flag == 1) {
 		if (cabc_back_flag == CABC_LEVEL_0 || mtk_crtc->panel_ext->params->oplus_display_global_dre) {
-			disp_aal_set_dre_en(1);
-			printk("%s sun enable dre\n", __func__);
+			if (mtk_crtc->panel_ext->params->backlight_dsiable_threhold) {
+				if (oplus_display_brightness < mtk_crtc->panel_ext->params->backlight_dsiable_threhold) {
+					disp_aal_set_dre_en(0);
+					printk("%s sun disable dre\n", __func__);
+				} else {
+					disp_aal_set_dre_en(1);
+					printk("%s sun enable dre\n", __func__);
+				}
+			} else {
+				disp_aal_set_dre_en(1);
+				printk("%s sun enable dre\n", __func__);
+			}
 		} else {
 			disp_aal_set_dre_en(0);
 			printk("%s sun disable dre\n", __func__);
@@ -213,8 +276,18 @@ int oplus_display_set_cabc_status(void *buf)
 	printk("%s,cabc mode is %d\n", __func__, cabc_true_mode);
 
 	if ((cabc_true_mode == CABC_LEVEL_0 && cabc_back_flag == CABC_LEVEL_0) || mtk_crtc->panel_ext->params->oplus_display_global_dre) {
-		disp_aal_set_dre_en(1);
-		printk("%s enable dre\n", __func__);
+		if (mtk_crtc->panel_ext->params->backlight_dsiable_threhold) {
+			if (oplus_display_brightness < mtk_crtc->panel_ext->params->backlight_dsiable_threhold) {
+				disp_aal_set_dre_en(0);
+				printk("%s disable dre\n", __func__);
+			} else {
+				disp_aal_set_dre_en(1);
+				printk("%s enable dre\n", __func__);
+			}
+		} else {
+			disp_aal_set_dre_en(1);
+			printk("%s sun enable dre\n", __func__);
+		}
 	} else {
 		disp_aal_set_dre_en(0);
 		printk("%s disable dre\n", __func__);
@@ -414,6 +487,20 @@ int oplus_display_panel_set_seed(void *buf)
 	return 0;
 }
 
+int oplus_display_panel_get_id(void *buf)
+{
+	struct panel_id *panel_rid = buf;
+
+	pr_err("%s: 0xDA= 0x%x, 0xDB=0x%x, 0xDC=0x%x\n", __func__, m_da, m_db, m_dc);
+
+	panel_rid->DA = (uint32_t)m_da;
+	panel_rid->DB = (uint32_t)m_db;
+	panel_rid->DC = (uint32_t)m_dc;
+
+	return 0;
+}
+
+#ifndef CONFIG_OPLUS_OFP_V2
 int oplus_panel_get_aod_light_mode(void *buf)
 {
 	unsigned int *aod_lm = buf;
@@ -465,6 +552,7 @@ int oplus_display_panel_notify_fp_press(void *buf)
 
 	return 0;
 }
+#endif
 
 extern unsigned char aod_area_set_flag;
 extern struct aod_area oplus_aod_area[RAMLESS_AOD_AREA_NUM];

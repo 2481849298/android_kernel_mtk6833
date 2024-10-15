@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2016 MediaTek Inc.
  */
 
 #include <linux/types.h>
@@ -67,7 +59,7 @@
 #include "ccu_qos.h"
 #include "ccu_ipc.h"
 //for mmdvfs
-#include <linux/pm_qos.h>
+#include <linux/soc/mediatek/mtk-pm-qos.h>
 #ifdef CONFIG_MTK_QOS_SUPPORT_ENABLE
 #include <mmdvfs_pmqos.h>
 #endif
@@ -123,8 +115,27 @@ static irqreturn_t ccu_isr_callback_xxx(int irq, void *device_id)
 	LOG_DBG("%s:0x%x\n", __func__, irq);
 	return IRQ_HANDLED;
 }
+
+static uint32_t get_checksum(uint8_t *data, uint32_t size)
+{
+	uint32_t i, val, tv, sz, *ptr;
+
+	if (!data)
+		return 0;
+
+	sz = size >> 2;
+	ptr = (uint32_t *)data;
+	for (i = 0, val = 0; i < sz; ++i)
+		val += ptr[i];
+	for (i = size & ~3, tv = 0; i < size; ++i)
+		tv += ((uint32_t)(data[i])) << ((i & 3) << 3);
+	val = (val + tv) ^ CCU_MAGIC_CHK;
+
+	return val;
+}
+
 #ifdef CONFIG_MTK_QOS_SUPPORT_ENABLE
-static struct pm_qos_request _ccu_qos_request;
+static struct mtk_pm_qos_request _ccu_qos_request;
 static u64 _g_freq_steps[MAX_FREQ_STEP];
 static u32 _step_size;
 #endif
@@ -758,16 +769,16 @@ static long ccu_ioctl(struct file *flip, unsigned int cmd,
 		LOG_DBG_MUST("request freq level: %d\n", freq_level);
 #ifdef CONFIG_MTK_QOS_SUPPORT_ENABLE
 		if (freq_level == CCU_REQ_CAM_FREQ_NONE)
-			pm_qos_update_request(&_ccu_qos_request, 0);
+			mtk_pm_qos_update_request(&_ccu_qos_request, 0);
 		else if ((freq_level < _step_size) &&
 				 (freq_level < MAX_FREQ_STEP))
-			pm_qos_update_request(&_ccu_qos_request,
+			mtk_pm_qos_update_request(&_ccu_qos_request,
 				_g_freq_steps[freq_level]);
 
 		//use pm_qos_request to get
 		//current freq setting
 		LOG_DBG_MUST("current freq: %d\n",
-			pm_qos_request(PM_QOS_CAM_FREQ));
+			mtk_pm_qos_request(PM_QOS_CAM_FREQ));
 #endif
 		break;
 	}
@@ -838,15 +849,6 @@ static long ccu_ioctl(struct file *flip, unsigned int cmd,
 		}
 		#undef SENSOR_NAME_MAX_LEN
 		break;
-	}
-
-	case CCU_READ_REGISTER:
-	{
-		int regToRead = (int)arg;
-		int rc = ccu_read_info_reg(regToRead);
-
-		mutex_unlock(&g_ccu_device->dev_mutex);
-		return rc;
 	}
 
 	case CCU_READ_STRUCT_SIZE:
@@ -988,6 +990,7 @@ static long ccu_ioctl(struct file *flip, unsigned int cmd,
 	case CCU_IOCTL_ALLOC_MEM:
 	{
 		struct CcuMemHandle handle;
+		uint32_t cs;
 
 		handle.ionHandleKd = 0;
 		ret = copy_from_user(&(handle.meminfo),
@@ -998,6 +1001,14 @@ static long ccu_ioctl(struct file *flip, unsigned int cmd,
 			ret);
 			break;
 		}
+
+		cs = get_checksum((uint8_t *)&(handle.meminfo.shareFd),
+			sizeof(struct CcuMemInfo) - sizeof(unsigned int));
+		if (cs != handle.meminfo.chksum) {
+			ret = -EINVAL;
+			break;
+		}
+
 		ret = ccu_allocate_mem(&handle, handle.meminfo.size,
 			handle.meminfo.cached);
 		if (ret != 0) {
@@ -1012,6 +1023,7 @@ static long ccu_ioctl(struct file *flip, unsigned int cmd,
 	case CCU_IOCTL_DEALLOC_MEM:
 	{
 		struct CcuMemHandle handle;
+		uint32_t cs;
 
 		ret = copy_from_user(&(handle.meminfo),
 			(void *)arg, sizeof(struct CcuMemInfo));
@@ -1021,6 +1033,14 @@ static long ccu_ioctl(struct file *flip, unsigned int cmd,
 			ret);
 			break;
 		}
+
+		cs = get_checksum((uint8_t *)&(handle.meminfo.shareFd),
+				sizeof(struct CcuMemInfo) - sizeof(unsigned int));
+		if (cs != handle.meminfo.chksum) {
+			ret = -EINVAL;
+			break;
+		}
+
 		ret = ccu_deallocate_mem(&handle);
 		if (ret != 0) {
 			LOG_ERR(
@@ -1031,8 +1051,6 @@ static long ccu_ioctl(struct file *flip, unsigned int cmd,
 		ret = copy_to_user((void *)arg, &handle.meminfo, sizeof(struct CcuMemInfo));
 		break;
 	}
-
-
 
 	default:
 		LOG_WARN("ioctl:No such command!\n");
@@ -1409,7 +1427,7 @@ if ((strcmp("ccu", g_ccu_device->dev->of_node->name) == 0)) {
 			goto EXIT;
 		}
 #ifdef CONFIG_PM_SLEEP
-	wakeup_source_init(&ccu_wake_lock, "ccu_lock_wakelock");
+	//wakeup_source_init(&ccu_wake_lock, "ccu_lock_wakelock");
 #endif
 
 		/* enqueue/dequeue control in ihalpipe wrapper */
@@ -1513,7 +1531,7 @@ static int __init CCU_INIT(void)
 #ifdef CONFIG_MTK_QOS_SUPPORT_ENABLE
 	//Call pm_qos_add_request when
 	//initialize module or driver prob
-	pm_qos_add_request(&_ccu_qos_request,
+	mtk_pm_qos_add_request(&_ccu_qos_request,
 		PM_QOS_CAM_FREQ, PM_QOS_MM_FREQ_DEFAULT_VALUE);
 
 	//Call mmdvfs_qos_get_freq_steps
@@ -1534,7 +1552,7 @@ static void __exit CCU_EXIT(void)
 #ifdef CONFIG_MTK_QOS_SUPPORT_ENABLE
 	//Call pm_qos_remove_request when
 	//de-initialize module or driver remove
-	pm_qos_remove_request(&_ccu_qos_request);
+	mtk_pm_qos_remove_request(&_ccu_qos_request);
 #endif
 	platform_driver_unregister(&ccu_driver);
 	kfree(g_ccu_device);

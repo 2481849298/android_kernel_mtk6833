@@ -1047,7 +1047,7 @@ static void read_module_data(void)
     gImgEepromInfo.camNormdata[2][39] = 2;
     //Read stereo eeprom data
     for (i = 0; i < CALI_DATA_SLAVE_LENGTH; i ++) {
-        gImgEepromInfo.stereoMWdata[CALI_DATA_MASTER_LENGTH+i] =
+        gImgEepromInfo.stereoMWdata[CALI_DATA_MASTER_LENGTH_QCOM+i] =
                     Eeprom_1ByteDataRead(IMX355_STEREO_START_ADDR+i, 0xA2);
     }
     gImgEepromInfo.i4CurSensorIdx = 2;

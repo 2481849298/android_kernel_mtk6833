@@ -13,6 +13,9 @@
 
 #ifndef __EVEN_HLT_FRONT_S5K4H7_OTP_H__
 #define __EVEN_HLT_FRONT_S5K4H7_OTP_H__
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 extern  void even_hlt_front_s5k4h7_write_cmos_sensor(u16 addr, u32 para);
 extern  unsigned char even_hlt_front_s5k4h7_read_cmos_sensor(u32 addr);
 
@@ -26,7 +29,13 @@ int GbGr_ratio;
 int VCM_start;
 int VCM_end;
 };
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define RGr_ratio_Typical    287
 #define BGr_ratio_Typical    325
 #define GbGr_ratio_Typical   515
+#else
+#define RGr_ratio_Typical    583
+#define BGr_ratio_Typical    687
+#define GbGr_ratio_Typical  1024
+#endif
 #endif

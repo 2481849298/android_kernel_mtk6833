@@ -4,6 +4,32 @@
 */
 
 /* charge start */
+&apuart0 {
+	pinctrl-names = "uart0_rx_gpio", "uart0_tx_gpio";
+	pinctrl-0 = <&uart0_rx_gpio_input>;
+	pinctrl-1 = <&uart0_tx_gpio_input>;
+	status = "okay";
+};
+
+&pio {
+	uart0_rx_gpio_input:uart0_rx_gpio@gpio92 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO92__FUNC_GPIO92>;
+			input-enable;
+			slew-rate = <0>;
+			bias-disable;
+		};
+	};
+
+	uart0_tx_gpio_input:uart0_tx_gpio@gpio93 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO93__FUNC_GPIO93>;
+			input-enable;
+			slew-rate = <0>;
+			bias-disable;
+		};
+	};
+};
 &charger {
 	io-channels =  <&auxadc 4>,
 		<&auxadc 5>;
@@ -32,7 +58,7 @@
 	qcom,usbtemp_batttemp_gap = <18>;
 
 
-	//for oppo chg framework:
+	//for oplus chg framework:
 	qcom,input_current_charger_ma = <2000>;
 	qcom,input_current_usb_ma = <500>;
 	qcom,input_current_cdp_ma = <1500>;
@@ -222,6 +248,8 @@
 	qcom,vooc_show_ui_soc_decimal;
 	qcom,ui_soc_decimal_speedmin = <20>;//2A
 
+	oplus,aging_ffc_version = <1>;
+
 	//GPIO config:
 	qcom,chargerid_switch-gpio = <&pio 192 0x00>;
 	qcom,ship-gpio = <&pio 27 0x00>;               //check
@@ -274,6 +302,7 @@
 			regulator-name = "ext_buck_vmddr";
 			regulator-min-microvolt = <300000>;
 			regulator-max-microvolt = <1300000>;
+			regulator-always-on;
 			status = "okay";
 		};
 
@@ -296,17 +325,32 @@
 	vooc_ap_data_new_function:vooc_ap_data_new_function {
 		compatible = "mediatek, VOOC_EINT_NEW_FUNCTION";
 	};
-};
 
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <6>;
-	u2_term_ref = <6>;
-	u2_enhance = <2>;
+	oplus,track-charge {
+		compatible = "oplus,track-charge";
+		track,fast_chg_break_t_thd = <1000>;
+		track,general_chg_break_t_thd = <200>;
+		track,voocphy_type = <4>;
+		track,wired_max_power = <65000>;
+		track,wired_fast_chg_scheme = <1>;
+	};
 
-	u2_vrt_ref_host = <7>;
-	u2_term_ref_host = <7>;
-	u2_enhance_host = <3>;
+/* ifdef OPLUS_FEATURE_CHG_BASIC */
+/* add for usb eye pattern */
+	mediatek_phy_tuning:mediatek_phy_tuning {
+		phy_tuning {
+			compatible = "mediatek,phy_tuning";
+			eye-vrt = <6>;
+			eye-term = <6>;
+			eye-rev6 = <2>;
+			eye-disc = <0xF>;
+			host-eye-vrt = <7>;
+			host-eye-term = <7>;
+			host-eye-rev6 = <3>;
+			host-eye-disc = <0xF>;
+		};
+	};
+/* endif */
 };
 
 &i2c7 {
@@ -2321,6 +2365,7 @@
 	};
 	chg {
 		support_hvdcp;
+		cdp_first_ignore;
 	};
 };
 
@@ -2363,8 +2408,8 @@
 	dischg_enable: dischg_enable {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO51__FUNC_GPIO51>;		//check
-			slew-rate = <1>;							//0:input direction 1:output direction
-			bias-pull-up;
+			output-enable;							//0:input direction 1:output direction
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 			output-high;
 		};
 	};
@@ -2372,8 +2417,8 @@
 	dischg_disable: dischg_disable {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO51__FUNC_GPIO51>;		//check
-			slew-rate = <1>;
-			bias-pull-down;
+			output-enable;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_01>;
 			output-low;
 		};
 	};

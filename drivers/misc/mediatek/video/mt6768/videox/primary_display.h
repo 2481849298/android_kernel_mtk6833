@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef _PRIMARY_DISPLAY_H_
 #define _PRIMARY_DISPLAY_H_
@@ -21,14 +13,16 @@
 #include "disp_lcm.h"
 #include "disp_helper.h"
 #ifdef MTK_FB_MMDVFS_SUPPORT
-#include <linux/pm_qos.h>
+#include <linux/soc/mediatek/mtk-pm-qos.h>
 #endif
+#include "mt-plat/mtk_smi.h"
+#include "mtk_smi.h"
 
 
 #ifdef MTK_FB_MMDVFS_SUPPORT
-extern struct pm_qos_request primary_display_qos_request;
-extern struct pm_qos_request primary_display_emi_opp_request;
-extern struct pm_qos_request primary_display_mm_freq_request;
+extern struct mtk_pm_qos_request primary_display_qos_request;
+extern struct mtk_pm_qos_request primary_display_emi_opp_request;
+extern struct mtk_pm_qos_request primary_display_mm_freq_request;
 #endif
 
 enum DISP_PRIMARY_PATH_MODE {
@@ -442,7 +436,11 @@ int primary_display_cmdq_set_reg(unsigned int addr, unsigned int val);
 int primary_display_vsync_switch(int method);
 int primary_display_setlcm_cmd(unsigned int *lcm_cmd, unsigned int *lcm_count,
 	unsigned int *lcm_value);
+#ifdef CONFIG_MTK_MT6382_BDG
+int primary_display_mipi_clk_change(int msg, int clk_value);
+#else
 int primary_display_mipi_clk_change(unsigned int clk_value);
+#endif
 
 void _cmdq_insert_wait_frame_done_token_mira(void *handle);
 int primary_display_get_max_layer(void);
@@ -531,6 +529,15 @@ int primary_display_get_multi_configs(struct multi_configs *p_cfgs);
 void primary_display_dynfps_chg_fps(int cfg_id);
 void primary_display_dynfps_get_vfp_info(
 	unsigned int *vfp, unsigned int *vfp_for_lp);
+
+//#ifdef OPLUS_ARCH_EXTENDS
+void oppo_cmdq_flush_config_handle_mira(void *handle, int blocking);
+void oppo_cmdq_handle_clear_dirty(struct cmdqRecStruct *cmdq_handle);
+void oppo_delayed_trigger_kick_set(int params);
+enum DISP_POWER_STATE oppo_primary_set_state(enum DISP_POWER_STATE new_state);
+void oppo_cmdq_reset_config_handle(void);
+void oppo_cmdq_build_trigger_loop(void);
+//#endif
 
 #if 0
 bool primary_display_need_update_golden_fps(

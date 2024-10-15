@@ -8,6 +8,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/mt6315-misc.h>
 #include <linux/regulator/mt6315-regulator.h>
+#include <soc/oplus/system/oplus_project.h>
+#include <mt-plat/mtk_boot.h>
 
 #define LP_INIT_SETTING_VERIFIED 1
 
@@ -127,6 +129,7 @@ static int is_mt6315_S3_exist(void)
 	return ret;
 }
 
+#if !(defined(CONFIG_MACH_MT6833) || defined(CONFIG_MACH_MT6853))
 static int is_mt6315_S6_exist(void)
 {
 	int ret = 0;
@@ -141,7 +144,10 @@ static int is_mt6315_S6_exist(void)
 
 	return ret;
 }
+#endif
 
+#if defined(CONFIG_MACH_MT6885) || defined(CONFIG_MACH_MT6873) \
+|| defined(CONFIG_MACH_MT6893)
 static int is_mt6315_S7_exist(void)
 {
 	int ret = 0;
@@ -156,6 +162,7 @@ static int is_mt6315_S7_exist(void)
 
 	return ret;
 }
+#endif
 
 int is_mt6315_exist(void)
 {
@@ -362,7 +369,8 @@ static void mt6315_S6_lp_initial_setting(void)
 	mt6315_vdig18_hw_op_set(MT6315_SLAVE_ID_6, 1);
 #elif defined(CONFIG_MACH_MT6877)
 	mt6315_vdig18_hw_op_set(MT6315_SLAVE_ID_6, 1);
-	mt6315_lp_set(MT6315_SLAVE_ID_6, 4, MT6315_SRCLKEN0, 1, 1, HW_OFF);
+	if (!(is_project(23231)))
+        	mt6315_lp_set(MT6315_SLAVE_ID_6, 4, MT6315_SRCLKEN0, 1, 1, HW_OFF);
 #endif
 #endif
 }

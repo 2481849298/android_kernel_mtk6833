@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #define LOG_TAG "DSI"
 
@@ -226,6 +218,7 @@ unsigned int data_lane2[2] = { 0 }; /* MIPITX_DSI_DATA_LANE2 */
 unsigned int data_lane3[2] = { 0 }; /* MIPITX_DSI_DATA_LANE3 */
 
 unsigned int mipitx_impedance_backup[50];
+#ifdef OPLUS_BUG_STABILITY
 //#ifdef OPLUS_FEATURE_RAMLESS_AOD
 extern bool oplus_display_aod_ramless_support;
 extern int disp_lcm_set_aod_cv_mode(struct disp_lcm_handle *plcm, void *handle, unsigned int mode);
@@ -234,7 +227,7 @@ extern int disp_lcm_set_aod_cv_mode(struct disp_lcm_handle *plcm, void *handle, 
 /* #ifdef OPLUS_BUG_STABILITY */
 extern int primary_display_set_safe_mode(unsigned int level);
 /* #endif */ /* OPLUS_BUG_STABILITY */
-
+#endif
 static void backup_mipitx_impedance(void)
 {
 	int i = 0, j = 0, cnt = 0;
@@ -547,6 +540,7 @@ static void _DSI_INTERNAL_IRQ_Handler(enum DISP_MODULE_ENUM module,
 	if (status.INP_UNFINISH_INT_EN)
 		DDP_PR_ERR("%s:input relay unfinish\n",
 			   ddp_get_module_name(module));
+#ifdef OPLUS_BUG_STABILITY
 	/* #ifdef OPLUS_FEATURE_RAMLESS_AOD */
 	if (oplus_display_aod_ramless_support) {
 		if (!primary_display_is_video_mode()) {
@@ -555,6 +549,7 @@ static void _DSI_INTERNAL_IRQ_Handler(enum DISP_MODULE_ENUM module,
 		}
 	}
 	/* #endif */ /* OPLUS_FEATURE_RAMLESS_AOD */
+#endif
 }
 
 enum DSI_STATUS DSI_Reset(enum DISP_MODULE_ENUM module,
@@ -3037,11 +3032,11 @@ int mipi_clk_change(enum DISP_MODULE_ENUM module, int en)
 		DISP_PR_ERR("%s:Fail to create cmdq handle\n", __func__);
 		return -1;
 	}
-	/* #ifdef OPLUS_BUG_STABILITY */
-	if (oplus_display_aod_ramless_support) {
-		primary_display_set_safe_mode(0);
-	}
-	/* #endif */ /* OPLUS_BUG_STABILITY */
+#ifdef OPLUS_BUG_STABILITY
+        if (oplus_display_aod_ramless_support) {
+                primary_display_set_safe_mode(0);
+        }
+#endif /* OPLUS_BUG_STABILITY */
 	cmdqRecReset(handle);
 #endif
 
@@ -3091,11 +3086,11 @@ int mipi_clk_change(enum DISP_MODULE_ENUM module, int en)
 
 	cmdqRecFlush(handle);
 	cmdqRecDestroy(handle);
-	/* #ifdef OPLUS_BUG_STABILITY */
-	if (oplus_display_aod_ramless_support) {
-		primary_display_set_safe_mode(1);
-	}
-	/* #endif */ /* OPLUS_BUG_STABILITY */
+#ifdef OPLUS_BUG_STABILITY
+        if (oplus_display_aod_ramless_support) {
+                primary_display_set_safe_mode(1);
+        }
+#endif /* OPLUS_BUG_STABILITY */
 
 	DISPMSG("%s,mipi_clk_change_sta=%d done\n",
 			__func__, mipi_clk_change_sta);
@@ -4818,7 +4813,6 @@ static void DSI_send_vm_cmd(struct cmdqRecStruct *cmdq,
  	*/
 	struct DSI_VM_CMDQ *vm_data;
 	#endif /* OPLUS_BUG_STABILITY */
-
 	if (module == DISP_MODULE_DSI0 || module == DISP_MODULE_DSIDUAL)
 		dsi_i = 0;
 	else if (module == DISP_MODULE_DSI1)
@@ -5445,17 +5439,21 @@ void DSI_set_cmdq_V4(enum DISP_MODULE_ENUM module, bool hs,
 	cmdqRecDestroy(cmdq);
 	*/
 	//#else /* OPLUS_FEATURE_RAMLESS_AOD */
+#ifdef OPLUS_BUG_STABILITY
 	if (oplus_display_aod_ramless_support) {
 		DSI_set_cmdq_serially_v1(module, hs, para_tbl, size,
 				force_update);
 	} else {
+#endif
 		cmdqRecCreate(CMDQ_SCENARIO_DISP_ESD_CHECK, &cmdq);
 		cmdqRecReset(cmdq);
 		DSI_set_cmdq_serially(module, cmdq, hs, para_tbl, size,
 				force_update);
 		cmdqRecFlush(cmdq);
 		cmdqRecDestroy(cmdq);
+#ifdef OPLUS_BUG_STABILITY
 	}
+#endif
 	//#endif /* OPLUS_FEATURE_RAMLESS_AOD */
 }
 
@@ -5596,12 +5594,12 @@ static void lcm1_set_te_pin(void)
 #endif
 }
 
-/* #ifdef OPLUS_BUG_STABILITY */
+#ifdef OPLUS_BUG_STABILITY
 void lcm_set_te_bk_gpio15_pin(void)
 {
 	disp_dts_gpio_select_state(DTS_GPIO_STATE_TE_BK_GPIO15);
 }
-/* #endif */ /* OPLUS_BUG_STABILITY */
+#endif /* OPLUS_BUG_STABILITY */
 static void lcm_udelay(UINT32 us)
 {
 	udelay(us);
@@ -6640,12 +6638,14 @@ int ddp_dsi_stop(enum DISP_MODULE_ENUM module, void *cmdq_handle)
 	} else {
 		DISPMSG("dsi stop: brust mode(vdo mode lcm)\n");
 		/* stop vdo mode */
+#ifdef OPLUS_BUG_STABILITY
 		/* #ifdef OPLUS_FEATURE_RAMLESS_AOD */
 		if (oplus_display_aod_ramless_support) {
 			DSI_OUTREGBIT(cmdq_handle, struct DSI_INT_ENABLE_REG,
 				DSI_REG[i]->DSI_INTEN, VM_DONE, 1);
 		}
 		/* #endif */ /* OPLUS_FEATURE_RAMLESS_AOD */
+#endif
 		DSI_OUTREGBIT(cmdq_handle, struct DSI_START_REG,
 			      DSI_REG[i]->DSI_START, DSI_START, 0);
 		DSI_SetMode(module, cmdq_handle, CMD_MODE);
@@ -6880,7 +6880,7 @@ int ddp_dsi_switch_mode(enum DISP_MODULE_ENUM module, void *cmdq_handle,
 
 	return 0;
 }
-
+#ifdef OPLUS_BUG_STABILITY
 //#ifdef OPLUS_FEATURE_RAMLESS_AOD
 int ddp_dsi_switch_aod_mode(enum DISP_MODULE_ENUM module, void *cmdq_handle,
 	void *params)
@@ -7018,6 +7018,7 @@ int ddp_dsi_switch_aod_mode(enum DISP_MODULE_ENUM module, void *cmdq_handle,
 	return 0;
 }
 //#endif /* OPLUS_FEATURE_RAMLESS_AOD */
+#endif
 int ddp_dsi_ioctl(enum DISP_MODULE_ENUM module, void *cmdq_handle,
 		  enum DDP_IOCTL_NAME ioctl_cmd, void *params)
 {
@@ -7037,6 +7038,7 @@ int ddp_dsi_ioctl(enum DISP_MODULE_ENUM module, void *cmdq_handle,
 		ret = ddp_dsi_switch_mode(module, cmdq_handle, params);
 		break;
 	}
+#ifdef OPLUS_BUG_STABILITY
 	//#ifdef OPLUS_FEATURE_RAMLESS_AOD
 	case DDP_SWITCH_AOD_MODE:
 	{
@@ -7044,6 +7046,7 @@ int ddp_dsi_ioctl(enum DISP_MODULE_ENUM module, void *cmdq_handle,
 		break;
 	}
 	//#endif /* OPLUS_FEATURE_RAMLESS_AOD */
+#endif
 	case DDP_SWITCH_LCM_MODE:
 	{
 		/* ret = ddp_dsi_switch_lcm_mode(module, params); */
@@ -9054,7 +9057,7 @@ void DSI_dynfps_send_cmd(
 	if (sendmode == LCM_SEND_IN_VDO) {
 		DSI_send_vm_cmd(cmdq, DISP_MODULE_DSI0, REGFLAG_ESCAPE_ID,
 		cmd, count, para_list, force_update);
-	} else{
+	} else {
 		DSI_send_cmd_cmd(cmdq, DISP_MODULE_DSI0, false, REGFLAG_ESCAPE_ID,
 		cmd, count, para_list, force_update);
 	}

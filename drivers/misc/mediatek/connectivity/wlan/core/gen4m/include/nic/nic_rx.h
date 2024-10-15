@@ -1044,6 +1044,10 @@ struct RX_CTRL {
 #if CFG_RX_PKTS_DUMP
 	uint32_t u4RxPktsDumpTypeMask;
 #endif
+//#if CFG_SUPPORT_SNIFFER
+#if 1 
+    uint32_t u4AmpduRefNum;
+#endif
 
 	/* Store SysTime of Last Rx */
 	uint32_t u4LastRxTime[MAX_BSSID_NUM];
@@ -1476,7 +1480,8 @@ struct ACTION_FRAME_SIZE_MAP {
 		TRUE : FALSE)
 
 #define RXM_IS_FROM_DS_TO_DS(_u2FrameCtrl) \
-	(RXM_IS_TO_DS(_u2FrameCtrl) && RXM_IS_FROM_DS(_u2FrameCtrl))
+	(((_u2FrameCtrl & MASK_TO_DS_FROM_DS) == MASK_TO_DS_FROM_DS) ?\
+		TRUE : FALSE)
 
 /*******************************************************************************
  *                   F U N C T I O N   D E C L A R A T I O N S

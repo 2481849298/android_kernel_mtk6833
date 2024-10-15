@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/of.h>
 #include <linux/of_address.h>
@@ -20,15 +12,20 @@
 #include <kpd.h>
 #include <hal_kpd.h>
 #include <mt-plat/mtk_boot_common.h>
-//#ifdef OPLUS_FEATURE_STABIITY
-#include <linux/of_device.h>
-//endif /*OPLUS_FEATURE_STABIITY*/
+
 #ifdef CONFIG_MTK_PMIC_NEW_ARCH /*for pmic not ready*/
 static int kpd_enable_lprst = 1;
 #endif
 static u16 kpd_keymap_state[KPD_NUM_MEMS] = {
 	0xffff, 0xffff, 0xffff, 0xffff, 0x00ff
 };
+
+/*remove for build error
+unsigned int get_boot_mode(void)
+{
+	return 0;
+}
+*/
 
 static void enable_kpd(int enable)
 {
@@ -56,26 +53,9 @@ void kpd_get_keymap_state(u16 state[])
 /********************************************************************/
 void long_press_reboot_function_setting(void)
 {
-//#ifdef OPLUS_FEATURE_STABIITY
-	struct device_node *np = NULL;
-	int ret = 0;
-	unsigned int long_press_switch = 1;
-	np = of_find_node_by_name(NULL, "long_press_contorl");
-	if(!np){
-		kpd_info("get long press contorl node failed\n");
-	} else {
-	ret = of_property_read_u32(np,"long_press_switch",&long_press_switch);
-	if(ret) {
-		kpd_info("get long_press_switch failed\n");
-	}
-	}
-//endif /*OPLUS_FEATURE_STABIITY*/
 #ifdef CONFIG_MTK_PMIC_NEW_ARCH /*for pmic not ready*/
 	/* unlock PMIC protect key */
 	pmic_set_register_value(PMIC_RG_CPS_W_KEY, 0x4729);
-//#ifdef OPLUS_FEATURE_STABIITY
-	if (long_press_switch != 0) {
-//endif /*OPLUS_FEATURE_STABIITY*/
 	if (kpd_enable_lprst && get_boot_mode() == NORMAL_BOOT) {
 		kpd_info("Normal Boot long press reboot selection\n");
 
@@ -117,12 +97,6 @@ void long_press_reboot_function_setting(void)
 #endif
 
 	}
-//#ifdef OPLUS_FEATURE_STABIITY
-	} else {
-		kpd_info("disable normal or other mode LPRST\n");
-		pmic_set_register_value(PMIC_RG_PWRKEY_RST_EN, 0x00);
-	}
-//endif /*OPLUS_FEATURE_STABIITY*/
 	/* lock PMIC protect key */
 	pmic_set_register_value(PMIC_RG_CPS_W_KEY, 0);
 #endif

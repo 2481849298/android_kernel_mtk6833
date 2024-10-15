@@ -220,7 +220,7 @@ BOOLEAN rsnParseRsnIE(IN P_ADAPTER_T prAdapter, IN P_RSN_INFO_ELEM_T prInfoElem,
 				u2PmkidCount);
 			return FALSE;
 		}
-		if (u2PmkidCount > 0) {
+		if (u2PmkidCount > 0 && cp != NULL) {
 			kalMemCopy(prRsnInfo->aucPmkid, cp, IW_PMKID_LEN);
 			cp += IW_PMKID_LEN;
 			u4RemainRsnIeLen -= IW_PMKID_LEN;
@@ -2323,9 +2323,8 @@ P_PMKID_ENTRY_T rsnSearchPmkidEntry(IN P_ADAPTER_T prAdapter,
 	P_BSS_INFO_T prBssInfo;
 	P_PMKID_ENTRY_T entry;
 	P_LINK_T cache;
-	P_STA_RECORD_T prStaRec;
 
-	prBssInfo = &(prAdapter->rWifiVar.arBssInfo[prStaRec->ucNetTypeIndex]);
+	prBssInfo = &prAdapter->rWifiVar.arBssInfo[NETWORK_TYPE_AIS_INDEX];
 	cache = &prBssInfo->rPmkidCache;
 
 	LINK_FOR_EACH_ENTRY(entry, cache, rLinkEntry, PMKID_ENTRY_T) {
@@ -2393,9 +2392,8 @@ uint32_t rsnSetPmkid(IN P_ADAPTER_T prAdapter,
 	P_BSS_INFO_T prBssInfo;
 	P_PMKID_ENTRY_T entry;
 	P_LINK_T cache;
-	P_STA_RECORD_T prStaRec;
 
-	prBssInfo = &(prAdapter->rWifiVar.arBssInfo[prStaRec->ucNetTypeIndex]);
+	prBssInfo = &prAdapter->rWifiVar.arBssInfo[NETWORK_TYPE_AIS_INDEX];
 	cache = &prBssInfo->rPmkidCache;
 
 	entry = rsnSearchPmkidEntry(prAdapter, prPmkid->arBSSID);
@@ -2436,7 +2434,6 @@ uint32_t rsnDelPmkid(IN P_ADAPTER_T prAdapter,
 	P_BSS_INFO_T prBssInfo;
 	P_PMKID_ENTRY_T entry;
 	P_LINK_T cache;
-	P_STA_RECORD_T prStaRec;
 
 	if (!prPmkid)
 		return WLAN_STATUS_INVALID_DATA;
@@ -2445,7 +2442,7 @@ uint32_t rsnDelPmkid(IN P_ADAPTER_T prAdapter,
 		prPmkid->ucBssIdx,
 		MAC2STR(prPmkid->arBSSID));
 
-	prBssInfo = &(prAdapter->rWifiVar.arBssInfo[prStaRec->ucNetTypeIndex]);
+	prBssInfo = &prAdapter->rWifiVar.arBssInfo[NETWORK_TYPE_AIS_INDEX];
 	cache = &prBssInfo->rPmkidCache;
 	entry = rsnSearchPmkidEntry(prAdapter, prPmkid->arBSSID);
 	if (entry) {
@@ -2473,9 +2470,8 @@ uint32_t rsnFlushPmkid(IN P_ADAPTER_T prAdapter)
 	P_BSS_INFO_T prBssInfo;
 	P_PMKID_ENTRY_T entry;
 	P_LINK_T cache;
-	P_STA_RECORD_T prStaRec;
 
-	prBssInfo = &(prAdapter->rWifiVar.arBssInfo[prStaRec->ucNetTypeIndex]);
+	prBssInfo = &prAdapter->rWifiVar.arBssInfo[NETWORK_TYPE_AIS_INDEX];
 	cache = &prBssInfo->rPmkidCache;
 
 	DBGLOG(RSN, INFO, "Flush Pmkid total:%d\n",

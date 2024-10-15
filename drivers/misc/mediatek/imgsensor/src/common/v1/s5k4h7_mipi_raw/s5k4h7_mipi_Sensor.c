@@ -1,15 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2018 MediaTek Inc.
  */
+
+
 /*****************************************************************************
  *
  * Filename:
@@ -119,37 +113,6 @@ static struct imgsensor_info_struct imgsensor_info = {
 		/*following for GetDefaultFramerateByScenario()  */
 		.max_framerate = 300,
 		},
-#if   0
-	.cap1 = {
-		.pclk = 279919200,	/*record different mode's pclk */
-		.linelength = 3688,	/*record different mode's linelength */
-		.framelength = 2530,	/*record different mode's framelength */
-		.startx = 0,	/*record different mode's startx of grabwindow */
-		.starty = 0,	/*record different mode's starty of grabwindow */
-		.grabwindow_width = 1632,	/*record different mode's width of grabwindow */
-		.grabwindow_height = 1224,	/*record different mode's height of grabwindow */
-		/*  following for MIPIDataLowPwr2HighSpeedSettleDelayCount*/
-		/*by different scenario   */
-		.mipi_data_lp2hs_settle_dc = 85,
-		.mipi_pixel_rate = 700000000,
-		/*following for*/
-		/*GetDefaultFramerateByScenario()  */
-		.max_framerate = 300,
-		},
-	.cap2 = {
-		.pclk = 279919200,	/*record different mode's pclk */
-		.linelength = 3688,	/*record different mode's linelength */
-		.framelength = 2530,	/*record different mode's framelength */
-		.startx = 0,
-		.starty = 0,
-		.grabwindow_width = 1632,	/*record different mode's width of grabwindow */
-		.grabwindow_height = 1224,	/*record different mode's height of grabwindow */
-		.mipi_data_lp2hs_settle_dc = 85,
-		.mipi_pixel_rate = 700000000,
-		/*following for GetDefaultFramerateByScenario()  */
-		.max_framerate = 300,
-		},
-#endif
 	.normal_video = {
 		.pclk = 280000000,	/*record different mode's pclk */
 		.linelength = 3688,	/*record different mode's linelength */
@@ -921,18 +884,6 @@ static void sensor_init(void)
 	write_cmos_sensor_8(0x3C09, 0xFF);
 	write_cmos_sensor_8(0x3C31, 0xFF);
 	write_cmos_sensor_8(0x3C32, 0xFF);
-#if 0
-	write_cmos_sensor_8(0x300A, 0x50);
-	write_cmos_sensor_8(0x3012, 0x50);
-	write_cmos_sensor_8(0x3013, 0x35);
-	write_cmos_sensor_8(0x3019, 0x56);
-	write_cmos_sensor_8(0x301A, 0x4E);
-	write_cmos_sensor_8(0x3024, 0x10);
-	write_cmos_sensor_8(0x3025, 0x4C);
-	write_cmos_sensor_8(0x3026, 0x95);
-	write_cmos_sensor_8(0x302D, 0x0A);
-	write_cmos_sensor_8(0x302E, 0x09);
-#endif
 
 	write_cmos_sensor_8(0x0100, 0x00);
 

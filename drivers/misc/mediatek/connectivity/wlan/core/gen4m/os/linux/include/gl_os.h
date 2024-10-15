@@ -458,6 +458,14 @@ enum ENUM_NET_REG_STATE {
 	ENUM_NET_REG_STATE_UNREGISTERING,
 	ENUM_NET_REG_STATE_NUM
 };
+
+enum ENUM_P2P_REG_STATE {
+	ENUM_P2P_REG_STATE_UNREGISTERED,
+	ENUM_P2P_REG_STATE_REGISTERING,
+	ENUM_P2P_REG_STATE_REGISTERED,
+	ENUM_P2P_REG_STATE_UNREGISTERING,
+	ENUM_P2P_REG_STATE_NUM
+};
 #endif
 
 enum ENUM_PKT_FLAG {
@@ -475,7 +483,7 @@ enum ENUM_PKT_FLAG {
 #if CFG_SUPPORT_TPENHANCE_MODE
 	ENUM_PKT_TCP_ACK,
 #endif /* CFG_SUPPORT_TPENHANCE_MODE */
-
+	ENUM_PKT_ICMPV6,		/* ICMPV6 */
 	ENUM_PKT_FLAG_NUM
 };
 
@@ -579,6 +587,7 @@ struct GL_SCAN_CACHE_INFO {
 		uint8_t ucCurRxRCPI1[BSSID_NUM];
 		uint8_t ucCurRxNss[BSSID_NUM]; /* 1NSS Data Counter */
 		uint8_t ucCurRxNss2[BSSID_NUM]; /* 2NSS Data Counter */
+		uint8_t ucCurRxMcs0[BSSID_NUM]; /* MCS0 Data Counter */
 	};
 #endif /* CFG_SUPPORT_SCAN_CACHE_RESULT */
 
@@ -810,8 +819,8 @@ struct GLUE_INFO {
 	uint16_t u2MetUdpPort;
 #endif
 
-#ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
 	uint8_t fgIsEnableMon;
+#ifdef CFG_SUPPORT_SNIFFER_RADIOTAP
 	uint8_t ucPriChannel;
 	uint8_t ucChannelS1;
 	uint8_t ucChannelS2;

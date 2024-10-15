@@ -9,12 +9,12 @@ obj-y				+= bcm/
 obj-$(CONFIG_ARCH_DOVE)		+= dove/
 obj-$(CONFIG_MACH_DOVE)		+= dove/
 obj-y				+= fsl/
-obj-y				+= mediatek/
+obj-$(CONFIG_ARCH_GEMINI)	+= gemini/
 obj-$(CONFIG_ARCH_MXC)		+= imx/
 obj-$(CONFIG_SOC_XWAY)		+= lantiq/
-obj-y						+= mediatek/
-obj-$(CONFIG_ARCH_MESON)	+= amlogic/
-obj-$(CONFIG_ARCH_QCOM)		+= qcom/
+obj-y				+= mediatek/
+obj-y				+= amlogic/
+obj-y				+= qcom/
 obj-y				+= renesas/
 obj-$(CONFIG_ARCH_ROCKCHIP)	+= rockchip/
 obj-$(CONFIG_SOC_SAMSUNG)	+= samsung/
@@ -23,6 +23,7 @@ obj-$(CONFIG_ARCH_TEGRA)	+= tegra/
 obj-$(CONFIG_SOC_TI)		+= ti/
 obj-$(CONFIG_ARCH_U8500)	+= ux500/
 obj-$(CONFIG_PLAT_VERSATILE)	+= versatile/
+obj-y				+= xilinx/
 obj-$(CONFIG_ARCH_ZX)		+= zte/
 
 #ifdef OPLUS_FEATURE_LOWMEM_DBG
@@ -47,6 +48,10 @@ obj-y += oplus/system/
 obj-y +=   oplus/device_info/
 ##endif /* OPLUS_FEATURE_TP_BASIC */
 
+#ifdef OPLUS_FEATURE_GAME_OPT
+obj-$(CONFIG_OPLUS_FEATURE_GAME_OPT) += oplus/game_opt/
+#endif /* OPLUS_FEATURE_GAME_OPT */
+
 #ifdef OPLUS_FEATURE_HEALTHINFO
 obj-y  +=  oplus/healthinfo/
 #endif /* OPLUS_FEATURE_HEALTHINFO */
@@ -55,9 +60,15 @@ obj-y  +=  oplus/healthinfo/
 obj-$(CONFIG_OPLUS_FEATURE_MIDAS)    += oplus/midas/
 #endif
 
+obj-$(CONFIG_OPLUS_FEATURE_ABNORMAL_FLAG) += oplus/oplus_overload/
+
 #ifdef OPLUS_BUG_STABILITY
 obj-y +=  oplus/oplus_custom/
 #endif /* OPLUS_BUG_STABILITY */
+
+# ifdef OPLUS_FEATURE_SENSOR 
+obj-$(CONFIG_OPLUS_ALS_CALI)   +=  oplus/oplus_als_cali_value/
+# endif /* OPLUS_FEATURE_SENSOR */
 
 #Add for NandSwap
 obj-$(CONFIG_NANDSWAP)		+= oplus/oplus_nandswap/
@@ -66,7 +77,8 @@ obj-$(CONFIG_NANDSWAP)		+= oplus/oplus_nandswap/
 obj-y += oplus/oplus_criticallog/
 #endif OPLUS_FEATURE_MODEM_MINIDUMP
 
-# ifdef OPLUS_FEATURE_SENSOR 
-obj-$(CONFIG_OPLUS_ALS_CALI)   +=  oplus/oplus_als_cali_value/
-# endif /* OPLUS_FEATURE_SENSOR */
+#ifdef OPLUS_FEATURE_TMEMORY
+obj-y += oplus/tmemory/
+#endif OPLUS_FEATURE_TMEMORY
 
+obj-y				+= oplus/storage/

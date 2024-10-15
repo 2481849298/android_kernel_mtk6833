@@ -476,8 +476,8 @@ static int sla_skb_reroute(struct sk_buff *skb, struct nf_conn *ct,
 {
 	int err;
 
-	//err = ip_route_me_harder(state->net, state->sk, skb, RTN_UNSPEC);
-	err = ip_route_me_harder(state->net, skb, RTN_UNSPEC);
+	err = ip_route_me_harder(state->net, state->sk, skb, RTN_UNSPEC);
+	//err = ip_route_me_harder(state->net, skb, RTN_UNSPEC);
 
 	if (err < 0) {
 		return NF_DROP_ERR(err);
@@ -737,15 +737,14 @@ static int mark_game_app_skb(struct nf_conn *ct, struct sk_buff *skb,
 		if (iph &&
 			(IPPROTO_UDP == iph->protocol ||
 				IPPROTO_TCP == iph->protocol)) {
-
-			//WZRY can not switch tcp packets
+			/*For WZRY, switch tcp and udp packets*/
+			/*
 			if (GAME_WZRY == game_index &&
 				IPPROTO_TCP == iph->protocol) {
 				return SLA_SKB_ACCEPT;
 			}
-
+			*/
 			ct_mark	= get_ct_mark(ct) & MARK_MASK;
-
 			if (GAME_CJZC == game_index &&
 				IPPROTO_TCP == iph->protocol &&
 				((XT_STATE_BIT(ctinfo) & XT_STATE_BIT(IP_CT_ESTABLISHED)) ||

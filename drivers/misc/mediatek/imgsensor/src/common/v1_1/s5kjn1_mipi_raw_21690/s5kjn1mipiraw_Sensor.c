@@ -6321,7 +6321,7 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 		imgsensor.i2c_write_id = imgsensor_info.i2c_addr_table[i];
 		spin_unlock(&imgsensor_drv_lock);
 		do {
-			*sensor_id = return_sensor_id();
+			*sensor_id = return_sensor_id() + 6;
 
 			if (*sensor_id == imgsensor_info.sensor_id) {
 				pr_err("s5kjn1  get_imgsensor_id i2c write id: 0x%x, sensor id: 0x%x\n",
@@ -6387,7 +6387,7 @@ static kal_uint32 open(void)
 		imgsensor.i2c_write_id = imgsensor_info.i2c_addr_table[i];
 		spin_unlock(&imgsensor_drv_lock);
 		do {
-			sensor_id = return_sensor_id();
+			sensor_id = return_sensor_id() + 6;
 			if (sensor_id == imgsensor_info.sensor_id) {
 				pr_debug("s5kjn1 open i2c write id: 0x%x, sensor id: 0x%x\n",
 					imgsensor.i2c_write_id, sensor_id);
@@ -7752,7 +7752,7 @@ UINT8 *feature_para, UINT32 *feature_para_len)
 	}
 	/*add for ITS--sensor_fusion*/
 	case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
-		*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -16550000;
+		*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -540000;
 		break;
 
 	case SENSOR_FEATURE_GET_PERIOD_BY_SCENARIO:

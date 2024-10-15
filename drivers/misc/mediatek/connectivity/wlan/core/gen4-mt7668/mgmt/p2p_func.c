@@ -1242,7 +1242,11 @@ VOID p2pFuncDfsSwitchCh(IN P_ADAPTER_T prAdapter, IN P_BSS_INFO_T prBssInfo, IN 
 	 */
 	cfg80211_ch_switch_notify(
 		prGlueInfo->prP2PInfo[role_idx]->aprRoleHandler,
-		prGlueInfo->prP2PInfo[role_idx]->chandef);
+		prGlueInfo->prP2PInfo[role_idx]->chandef
+#if defined(ANDROID) && (KERNEL_VERSION(5, 15, 0) <= CFG80211_VERSION_CODE)
+		, 0
+#endif
+		);
 	DBGLOG(P2P, INFO, "p2pFuncDfsSwitchCh: Update to OS Done\n");
 
 } /* p2pFuncDfsSwitchCh */
@@ -4415,6 +4419,9 @@ BOOLEAN p2pFuncIsBufferableMMPDU(IN P_MSDU_INFO_T prMgmtTxMsdu)
 
 	switch (u2TxFrameCtrl) {
 	case MAC_FRAME_ACTION:
+		fgIsBufferableMMPDU = FALSE;
+		DBGLOG(P2P, INFO, "send act %u\n", fgIsBufferableMMPDU);
+		break;
 	case MAC_FRAME_DISASSOC:
 	case MAC_FRAME_DEAUTH:
 		DBGLOG(P2P, TRACE, "u2TxFrameCtrl = %u\n", u2TxFrameCtrl);

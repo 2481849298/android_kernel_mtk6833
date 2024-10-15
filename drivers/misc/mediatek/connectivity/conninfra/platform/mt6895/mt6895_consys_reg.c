@@ -17,6 +17,7 @@
 #include "mt6895_debug_gen.h"
 #include "osal.h"
 #include "mt6895_pmic.h"
+#include "conn_dbg.h"
 
 #define CONSYS_DUMP_BUF_SIZE 800
 
@@ -240,19 +241,31 @@ static int __consys_check_reg_readable(int check_type)
 	int ret = 1;
 
 	if (consys_check_conninfra_on_domain() == 0) {
+		//#ifndef OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR
+		//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR, "check conninfra on failed");
+		//#else
+		conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR, "conninfra+on-domain\n");
+		//#endif /* OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR */
 		consys_print_debug_mt6895(0);
 		return 0;
 	}
 
 	if (consys_check_conninfra_off_domain() == 0) {
 		pr_info("%s: check conninfra off failed\n", __func__);
+		//#ifndef OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR
+		//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR, "check conninfra off failed");
+		//#else
+		conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR, "conninfra+off-domain\n");
+		//#endif /* OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR */
 		consys_print_debug_mt6895(1);
 		if (check_type == 0 || check_type == 2)
 			return 0;
 
 		/* wake up conninfra to read off register */
+		if (consys_hw_force_conninfra_wakeup() != 0)
+			return 0;
+
 		wakeup_conninfra = 1;
-		consys_hw_force_conninfra_wakeup();
 		ret = 0;
 	}
 

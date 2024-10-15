@@ -1077,6 +1077,13 @@ static inline int32_t bgfsys_power_on(void)
 
 	if (0 == retry) {
 		BTMTK_ERR("consys power states = 0x%08x", value);
+		//#ifndef OPLUS_FEATURE_BT_HW_ERROR_DETECT
+		//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+		//	"[bt] consys power states failed!");
+		//#else
+		conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+			"bluetooth+consys-states-failed\n");
+		//#endif /* OPLUS_FEATURE_BT_HW_ERROR_DETECT */
 		goto error;
 	}
 
@@ -1086,6 +1093,13 @@ static inline int32_t bgfsys_power_on(void)
 	if (!conninfra_reg_readable()) {
 		if (conninfra_is_bus_hang() > 0) {
 			BTMTK_ERR("%s: check conninfra status fail after set CONN_INFRA_CFG_BT_PWRCTLCR0!", __func__);
+			//#ifndef OPLUS_FEATURE_BT_HW_ERROR_DETECT
+			//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+			//	"[bt] check conninfra status failed!");
+			//#else
+			conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+				"bluetooth+conninfra-states-failed\n");
+			//#endif /* OPLUS_FEATURE_BT_HW_ERROR_DETECT */
 			goto error;
 		}
 	}
@@ -1102,6 +1116,13 @@ static inline int32_t bgfsys_power_on(void)
 
 	if (0 == retry) {
 		BTMTK_ERR("bgfsys off top power ack_b = 0x%08x", value);
+		//#ifndef OPLUS_FEATURE_BT_HW_ERROR_DETECT
+		//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+		//	"[bt] bgfsys off top power ack_b failed!");
+		//#else
+		conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+			"bluetooth+power-ack_b-failed\n");
+		//#endif /* OPLUS_FEATURE_BT_HW_ERROR_DETECT */
 		goto error;
 	}
 
@@ -1116,6 +1137,13 @@ static inline int32_t bgfsys_power_on(void)
 
 	if (0 == retry) {
 		BTMTK_ERR("bgfsys off top power ack_s = 0x%08x", value);
+		//#ifndef OPLUS_FEATURE_BT_HW_ERROR_DETECT
+		//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+		//	"[bt] bgfsys off top power ack_s failed!");
+		//#else
+		conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+			"bluetooth+power-ack_s-failed\n");
+		//#endif /* OPLUS_FEATURE_BT_HW_ERROR_DETECT */
 		goto error;
 	}
 
@@ -1133,6 +1161,13 @@ static inline int32_t bgfsys_power_on(void)
 
 	if (0 == retry) {
 		BTMTK_ERR("conn2bt slp_prot rx ack = 0x%08x", value);
+		//#ifndef OPLUS_FEATURE_BT_HW_ERROR_DETECT
+		//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+		//	"[bt] conn2bt slp_prot rx ack failed!");
+		//#else
+		conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+			"bluetooth+slp_prot-rx-failed\n");
+		//#endif /* OPLUS_FEATURE_BT_HW_ERROR_DETECT */
 		goto error;
 	}
 
@@ -1150,6 +1185,13 @@ static inline int32_t bgfsys_power_on(void)
 
 	if (0 == retry) {
 		BTMTK_ERR("conn2bt slp_prot tx ack = 0x%08x", value);
+		//#ifndef OPLUS_FEATURE_BT_HW_ERROR_DETECT
+		//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+		//	"[bt] conn2bt slp_prot tx ack failed!")
+		//#else
+		conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+			"bluetooth+slp_prot-tx-failed\n");
+		//#endif /* OPLUS_FEATURE_BT_HW_ERROR_DETECT */
 		goto error;
 	}
 
@@ -1167,6 +1209,13 @@ static inline int32_t bgfsys_power_on(void)
 
 	if (0 == retry) {
 		BTMTK_ERR("bt2conn slp_prot rx ack = 0x%08x", value);
+		//#ifndef OPLUS_FEATURE_BT_HW_ERROR_DETECT
+		//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+		//	"[bt] bt2conn slp_prot rx ack failed!");
+		//#else
+		conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+			"bluetooth+bt2_slp_prot-rx-failed\n");
+		//#endif /* OPLUS_FEATURE_BT_HW_ERROR_DETECT */
 		goto error;
 	}
 
@@ -1184,6 +1233,13 @@ static inline int32_t bgfsys_power_on(void)
 
 	if (0 == retry) {
 		BTMTK_ERR("bt2conn slp_prot tx ack = 0x%08x", value);
+		//#ifndef OPLUS_FEATURE_BT_HW_ERROR_DETECT
+		//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+		//	"[bt] bt2conn slp_prot tx ack failed!");
+		//#else
+		conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+			"bluetooth+bt2_slp_prot-tx-failed\n");
+		//#endif /* OPLUS_FEATURE_BT_HW_ERROR_DETECT */
 		goto error;
 	}
 
@@ -1225,6 +1281,13 @@ static inline int32_t bgfsys_power_on(void)
 
 	if (0 == retry) {
 		BTMTK_ERR("signal is conn_infra_rdy = 0x%08x", value);
+		//#ifndef OPLUS_FEATURE_BT_HW_ERROR_DETECT
+		//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+		//	"[bt] signal is conn_infra_rdy failed!");
+		//#else
+		conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+			"bluetooth+conn_infra_rdy-failed\n");
+		//#endif /* OPLUS_FEATURE_BT_HW_ERROR_DETECT */
 		goto error;
 	}
 

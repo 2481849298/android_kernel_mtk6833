@@ -40,7 +40,6 @@
 #endif
 
 #include <mt-plat/mtk_boot_common.h>
-#include <soc/oppo/oppo_project.h>
 static char bl_tb0[] = { 0x51, 0xff };
 extern int __attribute((weak)) tp_gesture_enable_flag(void) { return 0; };
 extern unsigned int __attribute((weak)) is_project(int project)  { return 0; }
@@ -63,7 +62,7 @@ static void cabc_switch(void *dsi, dcs_write_gce cb,
 /* #endif */
 static int backlight_gamma = 0;
 extern unsigned int g_shutdown_flag;
-extern int tp_control_reset_gpio(bool enable);
+extern int __attribute((weak)) tp_control_reset_gpio(bool enable) { return 0; };
 
 struct lcm {
 	struct device *dev;
@@ -587,6 +586,8 @@ static struct mtk_panel_params ext_params = {
 		.vfp = 1373,
 		.pll_clk = 454,
 	},
+	.vendor = "ili9883a_boe",
+	.manufacture = "BOE",
 	//.oplus_teot_ns_multiplier = 90,
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
@@ -619,6 +620,8 @@ static struct mtk_panel_params ext_params_90hz = {
 		.vfp = 370,
 		.pll_clk = 454,
 	},
+        .vendor = "ili9883a_boe",
+        .manufacture = "BOE",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -665,17 +668,17 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 		level = 2047;
 	}
 
-	if(level < 14 && level > 0){
+	if (level < 14 && level > 0) {
 		backlight_gamma = 1;
 		cb(dsi, handle, bl_tb4, ARRAY_SIZE(bl_tb4));
 		cb(dsi, handle, bl_tb5, ARRAY_SIZE(bl_tb5));
 		cb(dsi, handle, bl_tb6, ARRAY_SIZE(bl_tb6));
-	}else if(level > 13 && backlight_gamma == 1){
+	} else if (level > 13 && backlight_gamma == 1) {
 		backlight_gamma = 0;
 		cb(dsi, handle, bl_tb4, ARRAY_SIZE(bl_tb4));
 		cb(dsi, handle, bl_tb8, ARRAY_SIZE(bl_tb8));
 		cb(dsi, handle, bl_tb9, ARRAY_SIZE(bl_tb9));
-	}else if(level == 0){
+	} else if (level == 0) {
 		backlight_gamma = 0;
 	}
 
@@ -701,7 +704,7 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 	return 0;
 }
 
-static int oppo_esd_backlight_check(void *dsi, dcs_write_gce cb,
+static int oplus_esd_backlight_check(void *dsi, dcs_write_gce cb,
 		void *handle)
 {
 	char bl_tb0[] = {0x51, 0x07, 0xff};
@@ -738,6 +741,17 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 	int ret = 0;
 	struct drm_display_mode *m = get_mode_by_id(panel, mode);
 	pr_err("%s ,%d\n", __func__,mode);
+
+	if (!m) {
+		pr_err("%s, get mode failed\n", __func__);
+		return 1;
+	}
+
+	if (!ext) {
+		pr_err("%s, find_panel_ext failed\n", __func__);
+		return 1;
+	}
+
 	if (mode == 0)
 		ext->params = &ext_params;
 	else if (mode == 1)
@@ -774,10 +788,9 @@ static void cabc_switch(void *dsi, dcs_write_gce cb,
 	char bl_tb0[] = {0x55, 0x00};
 	char bl_tb3[] = {0x53, 0x2C};
 	pr_err("%s cabc = %d\n", __func__, cabc_mode);
-	if(cabc_mode == 3)
+	if (cabc_mode == 3)
 		cabc_mode = 2;
 	bl_tb0[1] = (u8)cabc_mode;
-    msleep(5);
 	cb(dsi, handle, bl_tb3, ARRAY_SIZE(bl_tb3));//FB 01
 	cb(dsi, handle, bl_tb0, ARRAY_SIZE(bl_tb0));//55 0X
 /* #ifdef OPLUS_BUG_STABILITY */
@@ -800,7 +813,7 @@ static int panel_ext_reset(struct drm_panel *panel, int on)
 static struct mtk_panel_funcs ext_funcs = {
 	.reset = panel_ext_reset,
 	.set_backlight_cmdq = lcm_setbacklight_cmdq,
-	.esd_backlight_recovery = oppo_esd_backlight_check,
+	.esd_backlight_recovery = oplus_esd_backlight_check,
 	.panel_poweron = lcm_panel_poweron,
 	.panel_poweroff = lcm_panel_poweroff,
 	.ext_param_set = mtk_panel_ext_param_set,

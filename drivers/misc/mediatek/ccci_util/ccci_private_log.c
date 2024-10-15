@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
  */
 
 #include <linux/slab.h>
@@ -25,8 +17,7 @@
 #include <linux/ktime.h>
 #include <linux/delay.h>
 #include <linux/vmalloc.h>
-#include <mt-plat/mtk_ccci_common.h>
-#include <mt-plat/mtk_rtc.h>
+#include "mt-plat/mtk_ccci_common.h"
 #include <linux/rtc.h>
 #include "ccci_util_log.h"
 
@@ -276,14 +267,22 @@ static const struct file_operations ccci_log_fops = {
 /******************************************************************************/
 /* Dump buffer part, this type log is NON block read, used for AED dump       */
 /******************************************************************************/
-#define CCCI_INIT_SETTING_BUF		(4096 * 2)
-#define CCCI_BOOT_UP_BUF		(4096 * 16)
-#define CCCI_NORMAL_BUF			(4096 * 2)
-#define CCCI_REPEAT_BUF			(4096 * 32)
-#define CCCI_HISTORY_BUF		(4096 * 128)
-#define CCCI_REG_DUMP_BUF		(4096 * 64 * 2)
+#define CCCI_INIT_SETTING_BUF		(4096*2)
+#define CCCI_BOOT_UP_BUF		(4096*16)
+
+#ifdef CCCI_LOG_DISABLE
+#define CCCI_NORMAL_BUF			(0)
+#define CCCI_REPEAT_BUF			(0)
+#define CCCI_HISTORY_BUF		(0)
+#else
+#define CCCI_NORMAL_BUF			(4096*2)
+#define CCCI_REPEAT_BUF			(4096*32)
+#define CCCI_HISTORY_BUF		(4096*128)
+#endif
+
+#define CCCI_REG_DUMP_BUF		(4096*128 * 2)
 #define CCCI_DPMA_DRB_BUF		(1024 * 16 * 16)
-#define CCCI_DUMP_MD_INIT_BUF		(1024 * 16)
+#define CCCI_DUMP_MD_INIT_BUF		(1024*16)
 #define CCCI_KE_DUMP_BUF                (1024 * 32)
 
 #define MD3_CCCI_INIT_SETTING_BUF	(64)
@@ -293,6 +292,7 @@ static const struct file_operations ccci_log_fops = {
 #define MD3_CCCI_REG_DUMP_BUF		(64)
 #define MD3_CCCI_HISTORY_BUF		(64)
 
+
 struct ccci_dump_buffer {
 	void *buffer;
 	unsigned int buf_size;
@@ -300,7 +300,6 @@ struct ccci_dump_buffer {
 	unsigned int write_pos;
 	unsigned int max_num;
 	unsigned int attr;
-	unsigned long long buf_pa;
 	spinlock_t lock;
 };
 
@@ -445,10 +444,10 @@ int ccci_dump_write(int md_id, int buf_type,
 		return -1;
 	if (unlikely(md_id < 0))
 		md_id = 0;
-	if (unlikely(buf_type >= CCCI_DUMP_MAX))
+	if (unlikely((buf_type >= CCCI_DUMP_MAX) || (buf_type < 0)))
 		return -2;
 	buf_id = buff_bind_md_id[md_id];
-	if (buf_id < 0 || buf_id >= 2 || buf_type < 0)
+	if (buf_id < 0 || buf_id >= ARRAY_SIZE(node_array))
 		return -3;
 	if (unlikely(node_array[buf_id][buf_type].index != buf_type))
 		return -4;
@@ -486,7 +485,7 @@ int ccci_dump_write(int md_id, int buf_type,
 			rtc_time_to_tm(savetv.tv_sec, &now_time);
 
 			write_len = scnprintf(temp_log, CCCI_LOG_MAX_WRITE,
-					     "[%04d-%02d-%02d %02d:%02d:%02d.%03d]",
+					     "[%04ld-%02d-%02d %02d:%02d:%02d.%03d]",
 					     now_time.tm_year + 1900,
 					     now_time.tm_mon + 1,
 					     now_time.tm_mday,
@@ -580,6 +579,7 @@ int ccci_dump_write(int md_id, int buf_type,
 
 	return write_len;
 }
+EXPORT_SYMBOL(ccci_dump_write);
 
 static void format_separate_str(char str[], int type)
 {
@@ -928,30 +928,12 @@ static void ccci_dump_buffer_init(void)
 			node_ptr++;
 		}
 	}
-
-	/*
-	 *kernel __pa is available for LM VA
-	 *so, if it's belongs to ioremap/vmap for DTS reserved memory
-	 *it should not use mrdump_mini_add_misc() directly
-	 *instead of it, it should fill pa explicitly
-	 */
-	if (reg_dump_ctlb[0].buf_pa) {
-		mrdump_mini_add_misc_pa((unsigned long)reg_dump_ctlb[0].buffer,
-				(unsigned long)reg_dump_ctlb[0].buf_pa,
-				CCCI_REG_DUMP_BUF, 0, "_EXTRA_MD_");
-	} else {
-		mrdump_mini_add_misc((unsigned long)reg_dump_ctlb[0].buffer, CCCI_REG_DUMP_BUF,
-			0, "_EXTRA_MD_");
-	}
-
-	if (ke_dump_ctlb[0].buf_pa) {
-		mrdump_mini_add_misc_pa((unsigned long)ke_dump_ctlb[0].buffer,
-				(unsigned long)ke_dump_ctlb[0].buf_pa,
-				CCCI_KE_DUMP_BUF, 0, "_EXTRA_CCCI_");
-	} else {
-		mrdump_mini_add_misc((unsigned long)ke_dump_ctlb[0].buffer, CCCI_KE_DUMP_BUF,
-			0, "_EXTRA_CCCI_");
-	}
+#if IS_ENABLED(CONFIG_MTK_AEE_IPANIC)
+	mrdump_mini_add_misc((unsigned long)reg_dump_ctlb[0].buffer, CCCI_REG_DUMP_BUF,
+		0, "_EXTRA_MD_");
+	mrdump_mini_add_misc((unsigned long)ke_dump_ctlb[0].buffer, CCCI_KE_DUMP_BUF,
+		0, "_EXTRA_CCCI_");
+#endif
 }
 
 /* functions will be called by external */
@@ -1001,8 +983,7 @@ void ccci_util_mem_dump(int md_id, int buf_type, void *start_addr, int len)
 		return;
 	}
 
-	ccci_dump_write(md_id, buf_type, 0, "Base:%lx\n",
-					(unsigned long)start_addr);
+	ccci_dump_write(md_id, buf_type, 0, "Base: %p\n", start_addr);
 	/* Fix section */
 	for (i = 0; i < _16_fix_num; i++) {
 		ccci_dump_write(md_id, buf_type, 0,
@@ -1028,6 +1009,7 @@ void ccci_util_mem_dump(int md_id, int buf_type, void *start_addr, int len)
 				*(curr_p + 2), *(curr_p + 3));
 	}
 }
+EXPORT_SYMBOL(ccci_util_mem_dump);
 
 void ccci_util_cmpt_mem_dump(int md_id, int buf_type,
 	void *start_addr, int len)
@@ -1205,6 +1187,7 @@ int ccci_event_log(const char *fmt, ...)
 
 	return write_len;
 }
+EXPORT_SYMBOL(ccci_event_log);
 
 int ccci_event_log_cpy(char buf[], int size)
 {
@@ -1266,3 +1249,28 @@ void ccci_log_init(void)
 	ccci_event_buffer_init();
 }
 
+void get_ccci_aee_buffer(unsigned long *vaddr, unsigned long *size)
+{
+	unsigned long data_size = ke_dump_ctlb[0].data_size;
+
+	if (data_size > ke_dump_ctlb[0].buf_size)
+		data_size = ke_dump_ctlb[0].buf_size;
+
+	*vaddr = (unsigned long)ke_dump_ctlb[0].buffer;
+	*size = data_size;
+
+}
+EXPORT_SYMBOL(get_ccci_aee_buffer);
+
+void get_md_aee_buffer(unsigned long *vaddr, unsigned long *size)
+{
+	unsigned long data_size = reg_dump_ctlb[0].data_size;
+
+	if (data_size > reg_dump_ctlb[0].buf_size)
+		data_size = reg_dump_ctlb[0].buf_size;
+
+	*vaddr = (unsigned long)reg_dump_ctlb[0].buffer;
+	*size = data_size;
+
+}
+EXPORT_SYMBOL(get_md_aee_buffer);

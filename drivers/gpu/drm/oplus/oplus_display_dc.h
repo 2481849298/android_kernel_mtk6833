@@ -19,6 +19,7 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/device.h>
+#include "mtk_drm_crtc.h"
 
 int oplus_display_panel_set_dc_alpha(void *buf);
 int oplus_display_panel_get_dc_alpha(void *buf);
@@ -26,6 +27,4 @@ int oplus_display_panel_get_dimlayer_enable(void *buf);
 int oplus_display_panel_set_dimlayer_enable(void *buf);
 int oplus_display_panel_set_dim_alpha(void *buf);
 int oplus_display_panel_get_dim_alpha(void *buf);
-//int oplus_display_panel_set_dim_dc_alpha(void *buf);
-//int oplus_display_panel_get_dim_dc_alpha(void *buf);
 #endif /*_OPLUS_DISPLAY_DC_H_*/

@@ -6,10 +6,12 @@
 **
 ** Version: 1.0
 ** Date : 2020/07/27
+** CONNECTIVITY.WIFI.BASIC.26106
 ** TAG: OPLUS_FEATURE_WIFI_CAPCENTER
 ** ------------------------------- Revision History: ----------------------------
 ** <author>                                <data>        <version>       <desc>
 ** ------------------------------------------------------------------------------
+**CONNECTIVITY.WIFI.BASIC.26106 2020/07/27     1.0      OPLUS_FEATURE_WIFI_OPLUSWFD
  *******************************************************************************/
 #ifdef OPLUS_FEATURE_WIFI_OPLUSWFD
 #include <linux/version.h>

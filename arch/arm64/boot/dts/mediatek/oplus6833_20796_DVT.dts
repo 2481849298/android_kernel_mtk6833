@@ -135,13 +135,6 @@
 	};
 };
 
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <6>;
-	u2_term_ref = <6>;
-	u2_enhance = <3>;
-};
-
 &lk_charger {
         support_tuv_authentication;
 };
@@ -897,6 +890,7 @@
 			match-projects = <20795 20796 0x2070C 0x206F0 0x206FF>;
 		};
 	};
+
 	kpd_volume_up:kpd_volume_up {
 		compatible = "mediatek, VOLUME_UP-eint";
 		interrupt-parent = <&pio>;
@@ -1111,6 +1105,27 @@
         Hw,sim_det = <&pio 77 0x00>;
     };
 //#endif /* OPLUS_FEATURE_TP_BASIC */
+
+	oplus,track-charge {
+                compatible = "oplus,track-charge";
+                track,fast_chg_break_t_thd = <1000>;
+                track,general_chg_break_t_thd = <200>;
+                track,voocphy_type = <0>;
+                track,wired_max_power = <18000>;
+                track,wired_fast_chg_scheme = <6>;
+        };
+
+        mediatek_phy_tuning: mediatek_phy_tuning {
+                phy_tuning {
+                        compatible = "mediatek,phy_tuning";
+                        eye-vrt = <6>;
+                        eye-term = <6>;
+                        eye-rev6 = <3>;
+                        host-eye-vrt = <6>;
+                        host-eye-term = <6>;
+                        host-eye-rev6 = <3>;
+                };
+        };
 };
 
 /* GPS GPIO standardization start */
@@ -1369,5 +1384,13 @@ oplus_fp: fingerprint@0 {
 #include "mediatek/cust_mt6833_camera_20796.dtsi"
 #include <oplus6833_20796_DVT/cust.dtsi>
 #include "mediatek/cust_mt6833_nfc_20796.dtsi"
-
+&mmc1 {
+    cd-gpios = <&pio 4 0>;
+    status = "okay";
+    vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
+};
+&mt6360_ldo {
+	sdcard_det_en = <1>;
+	sdcard_hlact = <0>;
+};
 /*End of this file, DO NOT ADD ANYTHING HERE*/

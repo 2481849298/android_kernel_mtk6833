@@ -97,6 +97,7 @@ static DEFINE_MUTEX(btmtk_fops_state_mutex);
 static int btmtk_proc_show(struct seq_file *m, void *v);
 static int btmtk_proc_open(struct inode *inode, struct  file *file);
 static void btmtk_proc_create_new_entry(void);
+static void btmtk_proc_release_new_entry(void);
 static int btmtk_sdio_trigger_fw_assert(void);
 
 static int btmtk_sdio_RegisterBTIrq(struct btmtk_sdio_card *data);
@@ -5468,6 +5469,8 @@ static int btmtk_sdio_probe(struct sdio_func *func,
 	if (fw_download_fail)
 		btmtk_sdio_start_reset_dongle_progress();
 
+	btmtk_proc_create_new_entry();
+
 	return 0;
 
 unreg_dev:
@@ -5483,6 +5486,7 @@ static void btmtk_sdio_remove(struct sdio_func *func)
 
 	BTMTK_INFO("begin user_rmmod %d", user_rmmod);
 	probe_ready = false;
+	btmtk_proc_release_new_entry();
 
 	btmtk_sdio_set_no_fw_own(g_priv, FALSE);
 	if (func) {
@@ -7367,7 +7371,7 @@ static int btmtk_proc_open(struct inode *inode, struct  file *file)
 	return single_open(file, btmtk_proc_show, NULL);
 }
 
-void btmtk_proc_create_new_entry(void)
+static void btmtk_proc_create_new_entry(void)
 {
 	struct proc_dir_entry *proc_show_entry;
 
@@ -7378,7 +7382,17 @@ void btmtk_proc_create_new_entry(void)
 		BTMTK_ERR("Unable to creat dir");
 		return;
 	}
-	proc_show_entry =  proc_create("bt_fw_version", 0644, g_proc_dir, &BT_proc_fops);
+	proc_show_entry =  proc_create("bt_fw_version", 0640, g_proc_dir, &BT_proc_fops);
+}
+
+static void btmtk_proc_release_new_entry(void)
+{
+	if (g_proc_dir != NULL) {
+		remove_proc_entry("bt_fw_version", g_proc_dir);
+		remove_proc_entry("stpbt", NULL);
+		g_proc_dir = NULL;
+		BTMTK_INFO("proc device node and folder removed!!");
+	}
 }
 
 static int BTMTK_major;
@@ -7427,8 +7441,6 @@ static int BTMTK_init(void)
 	fw_dump_file = NULL;
 	g_priv = NULL;
 	probe_counter = 0;
-
-	btmtk_proc_create_new_entry();
 
 	ret = alloc_chrdev_region(&devID, 0, 1, "BT_chrdev");
 	if (ret) {
@@ -7524,13 +7536,6 @@ static void BTMTK_exit(void)
 	dev_t devIDfwlog = g_devIDfwlog;
 
 	BTMTK_INFO("begin");
-
-	if (g_proc_dir != NULL) {
-		remove_proc_entry("bt_fw_version", g_proc_dir);
-		remove_proc_entry("stpbt", NULL);
-		g_proc_dir = NULL;
-		BTMTK_INFO("proc device node and folder removed!!");
-	}
 
 	if (pBTDevfwlog) {
 		BTMTK_INFO("6");

@@ -1,12 +1,27 @@
 #ifndef _ZRAM_DRV_INTERNAL_H_
 #define _ZRAM_DRV_INTERNAL_H_
-
-#include "zram_drv.h"
-
 #ifdef BIT
 #undef BIT
 #define BIT(nr)		(1lu << (nr))
 #endif
+#include <linux/genhd.h>
+
+enum {
+	ZRAM_TYPE_BASEPAGE,
+#ifdef CONFIG_CONT_PTE_HUGEPAGE_64K_ZRAM
+	ZRAM_TYPE_CHP,
+#endif
+	ZRAM_TYPE_MAX,
+};
+
+enum {
+	ZRAM_STATE_TOTAL,
+	ZRAM_STATE_USED,
+	ZRAM_STATE_SAME_PAGE,
+	ZRAM_STATE_COMPRESSED_PAGE,
+};
+
+extern struct zram *zram_arr[ZRAM_TYPE_MAX];
 
 #define zram_slot_lock(zram, index) (bit_spin_lock(ZRAM_LOCK, &zram->table[index].flags))
 
@@ -16,9 +31,9 @@
 
 #define dev_to_zram(dev) ((struct zram *)dev_to_disk(dev)->private_data)
 
-#define zram_get_handle(zram, index) ((unsigned long)(zram->table[index].handle))
+#define zram_get_handle(zram, index) (zram->table[index].handle)
 
-#define zram_set_handle(zram, index, handle_val) (zram->table[index].handle = (unsigned long)handle_val)
+#define zram_set_handle(zram, index, handle_val) (zram->table[index].handle = handle_val)
 
 #define zram_test_flag(zram, index,  flag) (zram->table[index].flags & BIT(flag))
 
@@ -35,8 +50,11 @@
 	zram->table[index].flags = (flags << ZRAM_FLAG_SHIFT) | size; \
 } while(0)
 
-#ifdef CONFIG_HYBRIDSWAP_ASYNC_COMPRESS
-extern int async_compress_page(struct zram *zram, struct page* page);
-extern void update_zram_index(struct zram *zram, u32 index, unsigned long page);
+extern bool chp_supported;
+#ifdef CONFIG_CONT_PTE_HUGEPAGE_64K_ZRAM
+extern struct huge_page_pool *chp_pool;
 #endif
-#endif /* _ZRAM_DRV_INTERNAL_H_ */
+
+extern inline bool is_thp_zram(struct zram *zram);
+extern inline unsigned long zram_page_state(struct zram *zram, int type);
+#endif

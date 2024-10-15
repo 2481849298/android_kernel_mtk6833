@@ -224,7 +224,7 @@ static struct imgsensor_info_struct imgsensor_info = {
     .mclk = 24, /* mclk value, suggest 24 or 26 for 24Mhz or 26Mhz */
     .mipi_lane_num = SENSOR_MIPI_4_LANE,
     .i2c_addr_table = {0x5B, 0x5A,0xff},
-    .i2c_speed = 1000, /* i2c read/write speed */
+    .i2c_speed = 400, /* i2c read/write speed */
 };
 
 static struct imgsensor_struct imgsensor = {
@@ -310,7 +310,7 @@ static kal_uint16 read_cmos_eeprom_8(kal_uint16 addr)
 {
     kal_uint16 get_byte=0;
     char pusendcmd[2] = {(char)(addr >> 8) , (char)(addr & 0xFF) };
-    iReadRegI2CTiming(pusendcmd , 2, (u8*)&get_byte, 1, 0xA0, imgsensor_info.i2c_speed);
+    iReadRegI2C(pusendcmd , 2, (u8*)&get_byte, 1, 0xA0);
     return get_byte;
 }
 
@@ -360,7 +360,7 @@ static kal_uint16 read_cmos_sensor(kal_uint32 addr)
     kal_uint16 get_byte = 0;
     char pusendcmd[2] = {(char)(addr >> 8), (char)(addr & 0xFF)};
 
-    iReadRegI2CTiming(pusendcmd, 2, (u8 *)&get_byte, 2, imgsensor.i2c_write_id, imgsensor_info.i2c_speed);
+    iReadRegI2C(pusendcmd, 2, (u8 *)&get_byte, 2, imgsensor.i2c_write_id);
     return ((get_byte<<8)&0xff00) | ((get_byte>>8)&0x00ff);
 }
 
@@ -371,7 +371,7 @@ static void write_cmos_sensor(kal_uint16 addr, kal_uint16 para)
 
     /*kdSetI2CSpeed(imgsensor_info.i2c_speed);*/
     /* Add this func to set i2c speed by each sensor */
-    iWriteRegI2CTiming(pusendcmd, 4, imgsensor.i2c_write_id, imgsensor_info.i2c_speed);
+    iWriteRegI2C(pusendcmd, 4, imgsensor.i2c_write_id);
 }
 
 
@@ -380,7 +380,7 @@ static kal_uint16 read_cmos_sensor_8(kal_uint16 addr)
     kal_uint16 get_byte = 0;
     char pusendcmd[2] = {(char)(addr >> 8), (char)(addr & 0xFF) };
 
-    iReadRegI2CTiming(pusendcmd, 2, (u8 *)&get_byte, 1, imgsensor.i2c_write_id, imgsensor_info.i2c_speed);
+    iReadRegI2C(pusendcmd, 2, (u8 *)&get_byte, 1, imgsensor.i2c_write_id);
     return get_byte;
 }
 
@@ -389,7 +389,7 @@ static void write_cmos_sensor_8(kal_uint16 addr, kal_uint8 para)
     char pusendcmd[3] = {(char)(addr >> 8), (char)(addr & 0xFF),
             (char)(para & 0xFF)};
 
-    iWriteRegI2CTiming(pusendcmd, 3, imgsensor.i2c_write_id, imgsensor_info.i2c_speed);
+    iWriteRegI2C(pusendcmd, 3, imgsensor.i2c_write_id);
 }
 
 static void set_dummy(void)
@@ -5682,9 +5682,9 @@ static void sensor_init(void)
     write_cmos_sensor(0x602A, 0x5BAC);
 
     LOG_INF("sensor_init start\n");
-    iWriteRegI2CTiming((u8*)uTnpArrayInit1, (u16)sizeof(uTnpArrayInit1), imgsensor.i2c_write_id, imgsensor_info.i2c_speed); // TNP burst
+    iWriteRegI2C((u8*)uTnpArrayInit1, (u16)sizeof(uTnpArrayInit1), imgsensor.i2c_write_id); // TNP burst
     LOG_INF("sensor_init uTnpArrayInit1 finish && start uTnpArrayInit2\n");
-    iWriteRegI2CTiming((u8*)uTnpArrayInit2, (u16)sizeof(uTnpArrayInit2), imgsensor.i2c_write_id, imgsensor_info.i2c_speed); // TNP burst
+    iWriteRegI2C((u8*)uTnpArrayInit2, (u16)sizeof(uTnpArrayInit2), imgsensor.i2c_write_id); // TNP burst
     write_cmos_sensor(0x6028, 0x2400);
     write_cmos_sensor(0x602A, 0x1BEA);
     write_cmos_sensor(0x6F12, 0x0101);

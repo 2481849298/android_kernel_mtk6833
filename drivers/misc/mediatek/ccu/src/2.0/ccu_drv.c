@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/types.h>
 #include <linux/device.h>
@@ -777,15 +769,6 @@ static long ccu_ioctl(struct file *flip, unsigned int cmd, unsigned long arg)
 	break;
 	}
 
-	case CCU_READ_REGISTER:
-	{
-		int regToRead = (int)arg;
-		int rc = ccu_read_info_reg(regToRead);
-
-		mutex_unlock(&g_ccu_device->dev_mutex);
-		return rc;
-	}
-
 	case CCU_IOCTL_PRINT_REG:
 	{
 		uint32_t *Reg;
@@ -1259,7 +1242,7 @@ static int ccu_probe(struct platform_device *pdev)
 			goto EXIT;
 		}
 #ifdef CONFIG_PM_SLEEP
-		wakeup_source_init(&ccu_wake_lock, "ccu_lock_wakelock");
+		//wakeup_source_init(&ccu_wake_lock, "ccu_lock_wakelock");
 #endif
 
 		/* enqueue/dequeue control in ihalpipe wrapper */

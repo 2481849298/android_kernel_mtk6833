@@ -1,17 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
-* Copyright (c) 2016 MediaTek Inc.
-* Author: PC Chen <pc.chen@mediatek.com>
-*         Tiffany Lin <tiffany.lin@mediatek.com>
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License version 2 as
-* published by the Free Software Foundation.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*/
+ * Copyright (c) 2019 MediaTek Inc.
+ */
 
 #include <media/v4l2-event.h>
 #include <media/v4l2-mem2mem.h>
@@ -372,7 +362,6 @@ static int vidioc_venc_s_ctrl(struct v4l2_ctrl *ctrl)
 		p->nonrefpfreq = ctrl->val;
 		ctx->param_change |= MTK_ENCODE_PARAM_NONREFPFREQ;
 		break;
-
 	case V4L2_CID_MPEG_MTK_ENCODE_DETECTED_FRAMERATE:
 		mtk_v4l2_debug(2,
 			"V4L2_CID_MPEG_MTK_ENCODE_DETECTED_FRAMERATE: %d",
@@ -697,6 +686,9 @@ static int vidioc_venc_g_parm(struct file *file, void *priv,
 static struct mtk_q_data *mtk_venc_get_q_data(struct mtk_vcodec_ctx *ctx,
 					      enum v4l2_buf_type type)
 {
+	if (ctx == NULL)
+		return NULL;
+
 	if (V4L2_TYPE_IS_OUTPUT(type))
 		return &ctx->q_data[MTK_Q_DATA_SRC];
 
@@ -717,6 +709,7 @@ static int vidioc_try_fmt(struct v4l2_format *f, struct mtk_video_fmt *fmt,
 	unsigned int step_height_in_pixel;
 	unsigned int saligned;
 	unsigned int imagePixels;
+	unsigned int calc_max_height;
 	// for AFBC
 	unsigned int block_w = 16;
 	unsigned int block_h = 16;
@@ -748,12 +741,14 @@ static int vidioc_try_fmt(struct v4l2_format *f, struct mtk_video_fmt *fmt,
 		}
 
 		mtk_v4l2_debug(1,
-			       "pix_fmt_mp->pixelformat %d bs fmt %d min_w %d min_h %d max_w %d max_h %d\n",
+			       "pix_fmt_mp->pixelformat %d bs fmt %d min_w %d min_h %d max_w %d max_h %d step_w %d step_h %d\n",
 			       pix_fmt_mp->pixelformat, bs_fourcc,
 			       spec_size_info->stepwise.min_width,
 			       spec_size_info->stepwise.min_height,
 			       spec_size_info->stepwise.max_width,
-			       spec_size_info->stepwise.max_height);
+			       spec_size_info->stepwise.max_height,
+			       spec_size_info->stepwise.step_width,
+			       spec_size_info->stepwise.step_height);
 
 		if ((spec_size_info->stepwise.step_width &
 		     (spec_size_info->stepwise.step_width - 1)) != 0)
@@ -840,70 +835,40 @@ static int vidioc_try_fmt(struct v4l2_format *f, struct mtk_video_fmt *fmt,
 		 * (with MBAFF height align should be 32)
 		 * width height swappable
 		 */
-
-		if (pix_fmt_mp->height > pix_fmt_mp->width) {
-			pix_fmt_mp->height = clamp(pix_fmt_mp->height,
-				(spec_size_info->stepwise.min_height),
-				(spec_size_info->stepwise.max_width));
-			pix_fmt_mp->width = clamp(pix_fmt_mp->width,
-				(spec_size_info->stepwise.min_width),
-				(spec_size_info->stepwise.max_height));
-			org_w = pix_fmt_mp->width;
-			org_h = pix_fmt_mp->height;
-			v4l_bound_align_image(&pix_fmt_mp->width,
-				spec_size_info->stepwise.min_width,
-				spec_size_info->stepwise.max_height,
-				log2_enc(step_width_in_pixel),
-				&pix_fmt_mp->height,
-				spec_size_info->stepwise.min_height,
-				spec_size_info->stepwise.max_width,
-				log2_enc(step_height_in_pixel),
-				saligned);
-
-			if (pix_fmt_mp->width < org_w &&
-			    (pix_fmt_mp->width +
-			     step_width_in_pixel) <=
-			    spec_size_info->stepwise.max_height)
-				pix_fmt_mp->width +=
-					step_width_in_pixel;
-			if (pix_fmt_mp->height < org_h &&
-			    (pix_fmt_mp->height +
-			     step_height_in_pixel) <=
-			    spec_size_info->stepwise.max_width)
-				pix_fmt_mp->height +=
-					step_height_in_pixel;
-		} else {
-			pix_fmt_mp->height = clamp(pix_fmt_mp->height,
-				(spec_size_info->stepwise.min_height),
-				(spec_size_info->stepwise.max_height));
-			pix_fmt_mp->width = clamp(pix_fmt_mp->width,
-				(spec_size_info->stepwise.min_width),
-				(spec_size_info->stepwise.max_width));
-			org_w = pix_fmt_mp->width;
-			org_h = pix_fmt_mp->height;
-			v4l_bound_align_image(&pix_fmt_mp->width,
-				spec_size_info->stepwise.min_width,
-				spec_size_info->stepwise.max_width,
-				log2_enc(step_width_in_pixel),
-				&pix_fmt_mp->height,
-				spec_size_info->stepwise.min_height,
-				spec_size_info->stepwise.max_height,
-				log2_enc(step_height_in_pixel),
-				saligned);
-
-			if (pix_fmt_mp->width < org_w &&
-			    (pix_fmt_mp->width +
-			     step_width_in_pixel) <=
-			    spec_size_info->stepwise.max_width)
-				pix_fmt_mp->width +=
-					step_width_in_pixel;
-			if (pix_fmt_mp->height < org_h &&
-			    (pix_fmt_mp->height +
-			     step_height_in_pixel) <=
-			    spec_size_info->stepwise.max_height)
-				pix_fmt_mp->height +=
-					step_height_in_pixel;
-		}
+		pix_fmt_mp->width = clamp(ALIGN(pix_fmt_mp->width,
+			spec_size_info->stepwise.step_width),
+			spec_size_info->stepwise.min_width,
+			spec_size_info->stepwise.max_width);
+		calc_max_height = ALIGN_DOWN(spec_size_info->stepwise.max_width
+			* spec_size_info->stepwise.max_height
+			/ pix_fmt_mp->width,
+			spec_size_info->stepwise.step_height);
+		pix_fmt_mp->height = clamp(pix_fmt_mp->height,
+			spec_size_info->stepwise.min_height,
+			calc_max_height);
+		org_w = pix_fmt_mp->width;
+		org_h = pix_fmt_mp->height;
+		v4l_bound_align_image(&pix_fmt_mp->width,
+			spec_size_info->stepwise.min_width,
+			spec_size_info->stepwise.max_width,
+			log2_enc(step_width_in_pixel),
+			&pix_fmt_mp->height,
+			spec_size_info->stepwise.min_height,
+			calc_max_height,
+			log2_enc(step_height_in_pixel),
+			saligned);
+		if (pix_fmt_mp->width < org_w &&
+			(pix_fmt_mp->width +
+			step_width_in_pixel) <=
+			spec_size_info->stepwise.max_width)
+			pix_fmt_mp->width +=
+				step_width_in_pixel;
+		if (pix_fmt_mp->height < org_h &&
+			(pix_fmt_mp->height +
+			step_height_in_pixel) <=
+			calc_max_height)
+			pix_fmt_mp->height +=
+				step_height_in_pixel;
 
 		pix_fmt_mp->num_planes = fmt->num_planes;
 		imagePixels = pix_fmt_mp->width * pix_fmt_mp->height;
@@ -1515,7 +1480,7 @@ static int vidioc_venc_qbuf(struct file *file, void *priv,
 			&ctx->dev->plat_dev->dev);
 		sgt = dma_buf_map_attachment(buf_att, DMA_TO_DEVICE);
 		if (IS_ERR_OR_NULL(sgt)) {
-			mtk_v4l2_err("dma_buf_map_attachment fail %p.\n", sgt);
+			mtk_v4l2_err("dma_buf_map_attachment fail %d.\n", sgt);
 			dma_buf_detach(mtkbuf->frm_buf.meta_dma, buf_att);
 			return -EINVAL;
 		}
@@ -1656,14 +1621,23 @@ static int vb2ops_venc_queue_setup(struct vb2_queue *vq,
 				   unsigned int sizes[],
 				   struct device *alloc_devs[])
 {
-	struct mtk_vcodec_ctx *ctx = vb2_get_drv_priv(vq);
+	struct mtk_vcodec_ctx *ctx;
 	struct mtk_q_data *q_data;
 	unsigned int i;
 
-	q_data = mtk_venc_get_q_data(ctx, vq->type);
-
-	if (q_data == NULL)
+	if (IS_ERR_OR_NULL(vq) || IS_ERR_OR_NULL(nbuffers) ||
+	    IS_ERR_OR_NULL(nplanes) || IS_ERR_OR_NULL(alloc_devs)) {
+		mtk_v4l2_err("vq %p, nbuffers %p, nplanes %p, alloc_devs %p",
+			vq, nbuffers, nplanes, alloc_devs);
 		return -EINVAL;
+	}
+
+	ctx = vb2_get_drv_priv(vq);
+	q_data = mtk_venc_get_q_data(ctx, vq->type);
+	if (q_data == NULL || (*nplanes) > MTK_VCODEC_MAX_PLANES) {
+		mtk_v4l2_err("vq->type=%d nplanes %d err", vq->type, *nplanes);
+		return -EINVAL;
+	}
 
 	if (*nplanes) {
 		for (i = 0; i < *nplanes; i++)
@@ -1728,7 +1702,7 @@ static int vb2ops_venc_buf_prepare(struct vb2_buffer *vb)
 				&ctx->dev->plat_dev->dev);
 			sgt = dma_buf_map_attachment(buf_att, DMA_TO_DEVICE);
 			if (IS_ERR_OR_NULL(sgt)) {
-				mtk_v4l2_err("dma_buf_map_attachment fail %p.\n", sgt);
+				mtk_v4l2_err("dma_buf_map_attachment fail %d.\n", sgt);
 				dma_buf_detach(vb->planes[i].dbuf, buf_att);
 				return -EINVAL;
 			}
@@ -1779,7 +1753,7 @@ static void vb2ops_venc_buf_finish(struct vb2_buffer *vb)
 				&ctx->dev->plat_dev->dev);
 			sgt = dma_buf_map_attachment(buf_att, DMA_FROM_DEVICE);
 			if (IS_ERR_OR_NULL(sgt)) {
-				mtk_v4l2_err("dma_buf_map_attachment fail %p.\n", sgt);
+				mtk_v4l2_err("dma_buf_map_attachment fail %d.\n", sgt);
 				dma_buf_detach(vb->planes[0].dbuf, buf_att);
 				return;
 			}
@@ -1833,8 +1807,8 @@ static int vb2ops_venc_start_streaming(struct vb2_queue *q, unsigned int count)
 
 	mtk_v4l2_debug(4, "[%d] (%d) state=(%x)", ctx->id, q->type, ctx->state);
 	/* Once state turn into MTK_STATE_ABORT, we need stop_streaming
-	  * to clear it
-	  */
+	 * to clear it
+	 */
 	if (ctx->state == MTK_STATE_ABORT || ctx->state == MTK_STATE_FREE) {
 		ret = -EIO;
 		goto err_set_param;
@@ -2634,28 +2608,10 @@ static void m2mops_venc_job_abort(void *priv)
 	ctx->state = MTK_STATE_ABORT;
 }
 
-static void m2mops_venc_lock(void *m2m_priv)
-{
-	struct mtk_vcodec_ctx *ctx = m2m_priv;
-
-	mtk_v4l2_debug(4, "[%d]", ctx->id);
-	mutex_lock(&ctx->dev->dev_mutex);
-}
-
-static void m2mops_venc_unlock(void *m2m_priv)
-{
-	struct mtk_vcodec_ctx *ctx = m2m_priv;
-
-	mtk_v4l2_debug(4, "[%d]", ctx->id);
-	mutex_unlock(&ctx->dev->dev_mutex);
-}
-
 const struct v4l2_m2m_ops mtk_venc_m2m_ops = {
 	.device_run     = m2mops_venc_device_run,
 	.job_ready      = m2mops_venc_job_ready,
 	.job_abort      = m2mops_venc_job_abort,
-	.lock           = m2mops_venc_lock,
-	.unlock         = m2mops_venc_unlock,
 };
 
 void mtk_vcodec_enc_set_default_params(struct mtk_vcodec_ctx *ctx)
@@ -2784,7 +2740,7 @@ int mtk_vcodec_enc_ctrls_setup(struct mtk_vcodec_ctx *ctx)
 	v4l2_ctrl_new_std_menu(handler, ops,
 		V4L2_CID_MPEG_VIDEO_HEVC_LEVEL,
 		V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1,
-		0, V4L2_MPEG_VIDEO_HEVC_LEVEL_4);
+		0, V4L2_MPEG_VIDEO_HEVC_LEVEL_1);
 	v4l2_ctrl_new_std_menu(handler, ops,
 		V4L2_CID_MPEG_VIDEO_HEVC_TIER,
 		V4L2_MPEG_VIDEO_HEVC_TIER_HIGH,

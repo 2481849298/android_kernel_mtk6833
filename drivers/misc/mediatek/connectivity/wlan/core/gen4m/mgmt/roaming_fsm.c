@@ -143,6 +143,12 @@ void roamingFsmInit(IN struct ADAPTER *prAdapter, IN uint8_t ucBssIndex)
 	prRoamingFsmInfo->eCurrentState = ROAMING_STATE_IDLE;
 	prRoamingFsmInfo->rRoamingDiscoveryUpdateTime = 0;
 	prRoamingFsmInfo->fgDrvRoamingAllow = TRUE;
+#if CFG_SUPPORT_802_11V_BTM_OFFLOAD
+	kalMemZero(&prRoamingFsmInfo->rSkipBtmInfo,
+		sizeof(struct ROAMING_SKIP_BTM));
+	kalMemZero(&prRoamingFsmInfo->rSkipPerInfo,
+		sizeof(struct ROAMING_SKIP_PER));
+#endif
 }				/* end of roamingFsmInit() */
 
 /*----------------------------------------------------------------------------*/
@@ -444,6 +450,7 @@ void roamingFsmRunEventStart(IN struct ADAPTER *prAdapter,
 
 	prRoamingFsmInfo =
 		aisGetRoamingInfo(prAdapter, ucBssIndex);
+	kalMemZero(&rTransit, sizeof(struct CMD_ROAMING_TRANSIT));
 
 	/* Check Roaming Conditions */
 	if (!(prRoamingFsmInfo->fgIsEnableRoaming))
@@ -604,6 +611,7 @@ void roamingFsmRunEventRoam(IN struct ADAPTER *prAdapter,
 
 	prRoamingFsmInfo =
 		aisGetRoamingInfo(prAdapter, ucBssIndex);
+	kalMemZero(&rTransit, sizeof(struct CMD_ROAMING_TRANSIT));
 
 	/* Check Roaming Conditions */
 	if (!(prRoamingFsmInfo->fgIsEnableRoaming))
@@ -633,6 +641,14 @@ void roamingFsmRunEventRoam(IN struct ADAPTER *prAdapter,
 		roamingFsmSteps(prAdapter, eNextState, ucBssIndex);
 	}
 }				/* end of roamingFsmRunEventRoam() */
+
+void roamingFsmLogEvent(IN struct ADAPTER *adapter, uint8_t *event)
+{
+	char uevent[64];
+
+	kalSnprintf(uevent, sizeof(uevent), "roam=Event:%s", event);
+	kalSendUevent(uevent);
+}
 
 void roamingFsmNotifyEvent(
 	IN struct ADAPTER *adapter, IN uint8_t bssIndex, IN uint8_t ucFail,
@@ -687,6 +703,7 @@ void roamingFsmRunEventFail(IN struct ADAPTER *prAdapter,
 
 	prRoamingFsmInfo =
 		aisGetRoamingInfo(prAdapter, ucBssIndex);
+	kalMemZero(&rTransit, sizeof(struct CMD_ROAMING_TRANSIT));
 
 	/* Check Roaming Conditions */
 	if (!(prRoamingFsmInfo->fgIsEnableRoaming))
@@ -735,11 +752,11 @@ void roamingFsmRunEventAbort(IN struct ADAPTER *prAdapter,
 
 	prRoamingFsmInfo =
 		aisGetRoamingInfo(prAdapter, ucBssIndex);
+	kalMemZero(&rTransit, sizeof(struct CMD_ROAMING_TRANSIT));
 
 	/* Check Roaming Conditions */
 	if (!(prRoamingFsmInfo->fgIsEnableRoaming))
 		return;
-
 
 	DBGLOG(ROAMING, EVENT,
 	       "[%d] EVENT-ROAMING ABORT: Current Time = %d\n",

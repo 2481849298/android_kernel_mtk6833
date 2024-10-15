@@ -145,6 +145,7 @@
 #define WIFI_FEATURE_P2P_RAND_MAC  (0x80000000)
 
 #ifdef OPLUS_BUG_COMPATIBILITY
+//CONNECTIVITY.WIFI.BASIC.HARDWARE.1130116, 2019/03/22
 /* Support DBDC */
 #define WIFI_FEATURE_DBDC               (0x200000000L)
 #endif /* OPLUS_BUG_COMPATIBILITY */
@@ -214,6 +215,7 @@
 #define WLAN_CFG_VALUE_LEN_MAX	128	/* include \x00 EOL */
 #define WLAN_CFG_FLAG_SKIP_CB	BIT(0)
 //#ifdef VENDOR_EDIT
+/* CONNECTIVITY.WIFI.BASIC.Crash.336013 2020/08/31 modify for memory out of bounds */
 //#define WLAN_CFG_FILE_BUF_SIZE	2048
 //#else
 #define WLAN_CFG_FILE_BUF_SIZE	4096
@@ -1288,12 +1290,36 @@ struct TRX_INFO {
 	uint32_t u4RxOk[MAX_BSSID_NUM];	/* By BSSIDX */
 };
 
+struct ENV_INFO {
+	struct timespec64 rLongestTxTime;
+	uint32_t u4Snr;
+	uint32_t u4Noise;
+	uint32_t u4RxListenTime;
+	uint32_t u4TxTimeCount;
+	uint32_t u4Idle;
+};
+
 struct RateInfo {
 	uint32_t u4Mode;
 	uint32_t u4Nss;
 	uint32_t u4Bw;
 	uint32_t u4Gi;
 	uint32_t u4Rate;
+};
+
+enum ENUM_CHANNEL_SWITCH_SETTING {
+	CHANNEL_SWITCH_ALWAYS = 0,
+	CHANNEL_SWITCH_IF_NSS1
+};
+
+/* Consistent order with delayTypeChar */
+enum ENUM_AVERAGE_TX_DELAY_TYPE {
+	DRIVER_TX_DELAY,
+	CONNSYS_TX_DELAY,
+	MAC_TX_DELAY,
+	AIR_TX_DELAY,
+	FAIL_CONNSYS_TX_DELAY,
+	MAX_AVERAGE_TX_DELAY_TYPE,
 };
 
 /*******************************************************************************
@@ -1377,6 +1403,12 @@ void wlanClearPendingCommandQueue(IN struct ADAPTER *prAdapter);
 void wlanReleaseCommand(IN struct ADAPTER *prAdapter,
 			IN struct CMD_INFO *prCmdInfo,
 			IN enum ENUM_TX_RESULT_CODE rTxDoneStatus);
+
+void wlanReleaseCommandEx(IN struct ADAPTER *prAdapter,
+			IN struct CMD_INFO *prCmdInfo,
+			IN enum ENUM_TX_RESULT_CODE rTxDoneStatus,
+			IN u_int8_t fgIsNeedHandler);
+
 
 void wlanReleasePendingOid(IN struct ADAPTER *prAdapter,
 			   IN unsigned long ulParamPtr);
@@ -1873,8 +1905,8 @@ int wlanGetMaxTxRate(IN struct ADAPTER *prAdapter,
 
 #ifdef CFG_SUPPORT_LINK_QUALITY_MONITOR
 int wlanGetRxRate(IN struct GLUE_INFO *prGlueInfo, IN uint8_t ucBssIdx,
-	OUT uint32_t *pu4CurRate, OUT uint32_t *pu4MaxRate,
-	OUT struct RateInfo *prRateInfo);
+		OUT uint32_t *pu4CurRate, OUT uint32_t *pu4MaxRate,
+		OUT struct RateInfo *prRateInfo);
 uint32_t wlanLinkQualityMonitor(struct GLUE_INFO *prGlueInfo, bool bFgIsOid);
 void wlanFinishCollectingLinkQuality(struct GLUE_INFO *prGlueInfo);
 #endif /* CFG_SUPPORT_LINK_QUALITY_MONITOR */
@@ -1920,11 +1952,17 @@ u_int8_t wlanWfdEnabled(struct ADAPTER *prAdapter);
 
 int wlanChipConfig(struct ADAPTER *prAdapter,
 	char *pcCommand, int i4TotalLen);
+int wlanChipCommand(struct ADAPTER *prAdapter,
+	char *pcCommand, int i4TotalLen);
 
 uint32_t wlanSetRxBaSize(IN struct GLUE_INFO *prGlueInfo,
 	int8_t i4Type, uint16_t u2BaSize);
 uint32_t wlanSetTxBaSize(IN struct GLUE_INFO *prGlueInfo,
 	int8_t i4Type, uint16_t u2BaSize);
+
+void
+wlanGetEnvInfo(IN struct ADAPTER *prAdapter,
+	OUT struct ENV_INFO *prEnvInfo);
 
 void
 wlanGetTRXInfo(IN struct ADAPTER *prAdapter,
@@ -1955,4 +1993,21 @@ uint32_t wlanSendFwLogControlCmd(IN struct ADAPTER *prAdapter,
 				uint32_t u4SetQueryInfoLen,
 				int8_t *pucInfoBuffer);
 
+enum ENUM_TX_OVER_LIMIT_STATS_TYPE {
+	REPORT_IMMEDIATE,
+	REPORT_AVERAGE,
+};
+
+enum ENUM_TX_OVER_LIMIT_DELAY_TYPE {
+	DRIVER_DELAY,
+	MAC_DELAY,
+	MAX_TX_OVER_LIMIT_TYPE,
+};
+
+void reportTxDelayOverLimit(IN struct ADAPTER *prAdapter,
+	IN enum ENUM_TX_OVER_LIMIT_DELAY_TYPE type, IN uint32_t delay);
+
+int wlanSetTxDelayOverLimitReport(IN struct ADAPTER *prAdapter,
+		bool enable, bool isAverage,
+		uint32_t interval, uint32_t driver_limit, uint32_t mac_limit);
 #endif /* _WLAN_LIB_H */

@@ -45,8 +45,6 @@
 #include "logging.h"
 #include "nq.h"
 
-#include <soc/oppo/oppo_project.h>
-
 #define NQ_NUM_ELEMS		64
 #define DEFAULT_TIMEOUT_MS	20000	/* We do nothing on timeout anyway */
 
@@ -305,11 +303,7 @@ cpumask_t tee_set_affinity(void)
 		     l_ctx.default_affinity_mask,
 		     cpumask_pr_args(&old_affinity),
 		     current->pid);
-	if (current->flags & PF_NO_SETAFFINITY) {
-		mc_dev_devel("Skip set_cpus_allowed_ptr as PF_NO_SETAFFINITY masked (pid = %u)", current->pid);
-	} else {
-		set_cpus_allowed_ptr(current, to_cpumask(&affinity));
-	}
+	set_cpus_allowed_ptr(current, to_cpumask(&affinity));
 
 	return old_affinity;
 }
@@ -324,11 +318,7 @@ void tee_restore_affinity(cpumask_t old_affinity)
 		     l_ctx.default_affinity_mask,
 		     cpumask_pr_args(&current_affinity),
 		     current->pid);
-	if (current->flags & PF_NO_SETAFFINITY) {
-		mc_dev_devel("Skip set_cpus_allowed_ptr as PF_NO_SETAFFINITY masked (pid = %u)", current->pid);
-	} else {
-		set_cpus_allowed_ptr(current, &old_affinity);
-	}
+	set_cpus_allowed_ptr(current, &old_affinity);
 }
 
 void nq_session_init(struct nq_session *session, bool is_gp)
@@ -516,7 +506,6 @@ static void nq_dump_status(void)
 	int ret = 0;
 	size_t i;
 	cpumask_t old_affinity;
-
 //#ifdef OPLUS_FEATURE_SECURITY_COMMON
 	int boot_completed_tee = 0;
 //#endif /* OPLUS_FEATURE_SECURITY_COMMON */
@@ -566,7 +555,7 @@ static void nq_dump_status(void)
 	tee_restore_affinity(old_affinity);
 
 	mc_dev_info("  %-22s= 0x%s", "mcExcep.uuid", uuid_str);
-	//#ifdef OPLUS_FEATURE_SECURITY_COMMON
+  	//#ifdef OPLUS_FEATURE_SECURITY_COMMON
 	if(0 == strcmp(uuid_str, "07170000000000000000000000000000")) {
 		boot_completed_tee = phx_is_system_boot_completed();
 		if(boot_completed_tee == 1) {

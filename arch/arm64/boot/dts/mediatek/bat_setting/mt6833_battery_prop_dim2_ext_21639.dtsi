@@ -81,7 +81,7 @@ g_FG_charge_PSEUDO100_col = <10>;
 battery0_g_FG_charge_PSEUDO100 =
 <
 	97   97   97   97
-	100   98   96   96
+	97   98   96   96
 	100   98   96   96
 	99   98   93   93
 	93   93   93   93

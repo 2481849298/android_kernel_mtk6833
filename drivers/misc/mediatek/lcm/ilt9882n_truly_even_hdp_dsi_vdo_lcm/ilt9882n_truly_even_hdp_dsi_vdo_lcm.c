@@ -99,6 +99,7 @@ static struct LCM_UTIL_FUNCS lcm_util;
 
 extern int gesture_flag;
 extern int tp_gesture_enable_flag(void);
+extern int shut_down_flag;
 
 struct LCM_setting_table {
 	unsigned int cmd;
@@ -409,6 +410,12 @@ static struct LCM_setting_table init_setting_vdo[] = {
         {0xB2, 01, {0x66}},
         {0x86, 01, {0x6C}},
         {0x87, 01, {0x6C}},
+        /* cabc 1 */
+        {0xFF, 0x03, {0x98, 0x82, 0x03}},
+        {0xAC, 0x01, {0xFA}},
+        {0xFF, 0x03, {0x98, 0x82, 0x00}},
+        {0x55, 0x01, {0x01}},
+
 	{0xFF, 03, {0x98, 0x82, 0x00}},
 	/*{0x68, 02, {0x04, 0x00}},*/
 	{0x51, 02, {0x00, 0x00}},
@@ -517,6 +524,7 @@ static void lcm_get_params(struct LCM_PARAMS *params)
 	params->dsi.horizontal_sync_active_dyn = 8;
 	params->dsi.horizontal_backporch_dyn = 11;
 	params->dsi.data_rate_dyn = 720;
+	params->lcd_serial_number = 1;
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
 #if (LCM_DSI_CMD_MODE)
@@ -565,7 +573,7 @@ static void lcm_init_power(void)
 static void lcm_suspend_power(void)
 {
 	pr_debug("lcm_suspend_power\n");
-	if(!tp_gesture_enable_flag()) {
+	if ((!shut_down_flag) && (!tp_gesture_enable_flag())) {
 		printk("lcm_tp_suspend_power_on\n");
 		SET_LCM_VSN_PIN(0);
 		MDELAY(2);

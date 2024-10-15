@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--dct_version="2.5" buid_sn="161102" dws_modification_time="06.06.2022.15:52:34"-->
+<!--dct_version="2.5" buid_sn="161102" dws_modification_time="09.30.2020.18:31:50"-->
 <dct_cfg>
     <general chip="MT6833">
         <proj>P21_Phone1</proj>
@@ -50,13 +50,6 @@
                 <sensitive_level>Level</sensitive_level>
                 <debounce_en>Enable</debounce_en>
             </eint1>
-            <eint5>
-                <varName>IRQ_NFC</varName>
-                <debounce_time>0</debounce_time>
-                <polarity>High</polarity>
-                <sensitive_level>Level</sensitive_level>
-                <debounce_en>Disable</debounce_en>
-            </eint5>
             <eint7>
                 <varName>SWTP</varName>
                 <debounce_time>512</debounce_time>
@@ -149,18 +142,16 @@
                 <inpull_selhigh>false</inpull_selhigh>
                 <def_dir>IN</def_dir>
                 <out_high>false</out_high>
-                <varName0>GPIO_IRQ_NFC_PIN</varName0>
                 <smt>true</smt>
                 <ies>true</ies>
             </gpio5>
             <gpio6>
-                <eint_mode>false</eint_mode>
+                <eint_mode>true</eint_mode>
                 <def_mode>0</def_mode>
                 <inpull_en>true</inpull_en>
-                <inpull_selhigh>false</inpull_selhigh>
-                <def_dir>OUT</def_dir>
+                <inpull_selhigh>true</inpull_selhigh>
+                <def_dir>IN</def_dir>
                 <out_high>false</out_high>
-                <varName0>NFC_DWL</varName0>
                 <smt>true</smt>
                 <ies>true</ies>
             </gpio6>
@@ -192,7 +183,6 @@
                 <inpull_selhigh>true</inpull_selhigh>
                 <def_dir>IN</def_dir>
                 <out_high>false</out_high>
-                <varName0>GPIO_TCPC_PD_IRQB</varName0>
                 <smt>true</smt>
                 <ies>true</ies>
             </gpio9>
@@ -214,7 +204,6 @@
                 <inpull_selhigh>false</inpull_selhigh>
                 <def_dir>OUT</def_dir>
                 <out_high>false</out_high>
-
                 <smt>false</smt>
                 <ies>true</ies>
             </gpio11>
@@ -776,12 +765,13 @@
             </gpio64>
             <gpio65>
                 <eint_mode>false</eint_mode>
-                <def_mode>2</def_mode>
-                <inpull_en>true</inpull_en>
+                <def_mode>1</def_mode>
+                <inpull_en>false</inpull_en>
                 <inpull_selhigh>false</inpull_selhigh>
                 <def_dir>IN</def_dir>
                 <out_high>false</out_high>
-                <smt>true</smt>
+                <varName0>GPIO_MSDC0_DSL</varName0>
+                <smt>false</smt>
                 <ies>true</ies>
             </gpio65>
             <gpio66>
@@ -950,12 +940,12 @@
             </gpio80>
             <gpio81>
                 <eint_mode>false</eint_mode>
-                <def_mode>3</def_mode>
+                <def_mode>1</def_mode>
                 <inpull_en>true</inpull_en>
                 <inpull_selhigh>false</inpull_selhigh>
                 <def_dir>IN</def_dir>
                 <out_high>false</out_high>
-                <varName0>GPIO_NFC_CLKREQ_PIN</varName0>
+                <varName0>GPIO_NFC_SRCLKENAI_PIN</varName0>
                 <smt>false</smt>
                 <ies>true</ies>
             </gpio81>
@@ -1030,7 +1020,7 @@
                 <inpull_selhigh>false</inpull_selhigh>
                 <def_dir>IN</def_dir>
                 <out_high>false</out_high>
-
+                <varName0>GPIO_NFC_EINT_PIN</varName0>
                 <smt>true</smt>
                 <ies>true</ies>
             </gpio88>
@@ -1041,6 +1031,7 @@
                 <inpull_selhigh>false</inpull_selhigh>
                 <def_dir>IN</def_dir>
                 <out_high>false</out_high>
+                <varName0>GPIO_NFC_VENB_PIN</varName0>
                 <smt>true</smt>
                 <ies>true</ies>
             </gpio89>
@@ -1083,8 +1074,7 @@
                 <inpull_selhigh>false</inpull_selhigh>
                 <def_dir>OUT</def_dir>
                 <out_high>false</out_high>
-                <varName0>GPIO_NFC_VENB_PIN</varName0>
-                <smt>false</smt>
+                <smt>true</smt>
                 <ies>true</ies>
             </gpio93>
             <gpio94>

@@ -618,6 +618,8 @@ void rlmHandleObssStatusEventPkt(struct ADAPTER *prAdapter,
 	prBssInfo =
 		GET_BSS_INFO_BY_INDEX(prAdapter, prObssStatus->ucBssIndex);
 
+	if (!prBssInfo)
+		return;
 	if (prBssInfo->eCurrentOPMode != OP_MODE_ACCESS_POINT)
 		return;
 
@@ -1591,7 +1593,13 @@ void rlmGetChnlInfoForCSA(struct ADAPTER *prAdapter,
 	/* temp replace BSS eBand to get BW of CSA band */
 	eBandOrig = prBssInfo->eBand;
 	prBssInfo->eBand = eBandCsa;
-	prRfChnlInfo->ucChnlBw = cnmGetBssMaxBw(prAdapter, ucBssIdx);
+	if (prRfChnlInfo->eBand == BAND_5G &&
+		prRfChnlInfo->ucChannelNum == 165)
+		prRfChnlInfo->ucChnlBw =
+			cnmOpModeGetMaxBw(prAdapter, prBssInfo);
+	else
+		prRfChnlInfo->ucChnlBw =
+			cnmGetBssMaxBw(prAdapter, ucBssIdx);
 	prBssInfo->eBand = eBandOrig; /* Restore BSS eBand */
 
 	prRfChnlInfo->u2PriChnlFreq =
@@ -1602,4 +1610,10 @@ void rlmGetChnlInfoForCSA(struct ADAPTER *prAdapter,
 			prRfChnlInfo->ucChannelNum,
 			rlmGetVhtOpBwByBssOpBw(prRfChnlInfo->ucChnlBw));
 	prRfChnlInfo->u4CenterFreq2 = 0;
+
+	if ((eBand == BAND_5G) &&
+		(ucCh >= 52 && ucCh <= 144))
+		prRfChnlInfo->eDFS = NL80211_DFS_USABLE;
+	else
+		prRfChnlInfo->eDFS = NL80211_DFS_AVAILABLE;
 }

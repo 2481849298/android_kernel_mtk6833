@@ -296,6 +296,10 @@ struct BSS_INFO {
 	enum ENUM_OP_MODE eIntendOPMode;
 #endif
 
+	/* STBC MRC */
+	enum ENUM_STBC_MRC_STATE eForceStbc;
+	enum ENUM_STBC_MRC_STATE eForceMrc;
+
 #if (CFG_SUPPORT_DFS_MASTER == 1)
 	u_int8_t fgIsDfsActive;
 #endif
@@ -419,6 +423,10 @@ struct BSS_INFO {
 	 */
 	u_int8_t fgIsQBSS;
 	u_int8_t fgIsNetAbsent;	/* TRUE: BSS is absent, FALSE: BSS is present */
+
+	/* Stop/Start Subqueue threshold */
+	uint32_t u4NetifStopTh;
+	uint32_t u4NetifStartTh;
 
 	uint32_t u4RsnSelectedGroupCipher;
 	uint32_t u4RsnSelectedPairwiseCipher;
@@ -1005,6 +1013,8 @@ struct WIFI_VAR {
 	uint16_t u2ApFreq;
 	uint8_t ucApAcsChannel[3];
 
+	uint16_t u2Ap2gDisableChannel;
+
 	uint8_t ucApSco;
 	uint8_t ucP2pGoSco;
 
@@ -1069,8 +1079,6 @@ struct WIFI_VAR {
 
 	uint32_t u4NetifStopTh;
 	uint32_t u4NetifStartTh;
-	uint32_t u4NetifStopThBackup;
-	uint32_t u4NetifStartThBackup;
 	struct PARAM_GET_CHN_INFO rChnLoadInfo;
 
 #if CFG_SUPPORT_MTK_SYNERGY
@@ -1224,6 +1232,7 @@ struct WIFI_VAR {
 	uint8_t fgEnDefaultIotApRule;
 #endif
 	uint8_t ucMsduReportTimeout;
+	uint8_t ucMsduReportTimeoutSerTime;
 
 #if CFG_SUPPORT_DATA_STALL
 	uint32_t u4PerHighThreshole;
@@ -1268,6 +1277,7 @@ struct WIFI_VAR {
 	uint8_t ucDfsRegion;
 	uint32_t u4ByPassCacTime;
 	uint32_t u4CC2Region;
+	uint32_t u4ApChnlHoldTime;
 	uint8_t fgAllowSameBandDualSta;
 
 #if CFG_SUPPORT_NAN
@@ -1302,8 +1312,9 @@ struct WIFI_VAR {
 
 #define LATENCY_STATS_MAX_SLOTS 5
 #if CFG_SUPPORT_TX_LATENCY_STATS
-	bool fgPacketLatencyLog;
-	bool fgTxLatencyKeepCounting;
+	u_int8_t fgPacketLatencyLog;
+	u_int8_t fgTxLatencyKeepCounting;
+	u_int8_t fgTxLatencyPerBss;
 	uint32_t u4MsduStatsUpdateInterval; /* in ms */
 	uint32_t u4ContinuousTxFailThreshold;
 
@@ -1347,6 +1358,18 @@ struct WIFI_VAR {
 	/* Only scan all 6g channels, including PSC and non-PSC */
 	u_int8_t fgEnOnlyScan6g;
 #endif
+#if CFG_SUPPORT_802_11V_BTM_OFFLOAD
+	uint8_t fgAggressiveLoadBanalancing;
+	uint16_t u2DisallowBtmTimeout;
+	uint16_t u2ConsecutiveBtmReqTimeout;
+	uint8_t ucConsecutiveBtmReqNum;
+	uint16_t u2DisallowPerTimeout;
+	uint16_t u2ConsecutivePerReqTimeout;
+	uint8_t ucConsecutivePerReqNum;
+	uint8_t ucBTMOffloadEnabled;
+#endif
+
+    enum ENUM_CHANNEL_SWITCH_SETTING eChannelSwitchSetting;
 };
 
 /* cnm_timer module */
@@ -1551,29 +1574,66 @@ struct OID_HANDLER_RECORD {
  * @au4ConnsysLatency: Counter distribution of TX delay in Connsys
  * @au4MacLatency: Counter distribution of TX delay logged in MSDU report
  * @au4FailConnsysLatency: Counter distribution of TX Failed delay in Connsys
+ *
+ * @au8AccumulatedDelay: accumulated delay for counting average
+ *
  * @u4TxFail: Number of TX failed count
+ *
  */
 struct TX_LATENCY_STATS {
-	uint32_t au4DriverLatency[LATENCY_STATS_MAX_SLOTS];
-	uint32_t au4ConnsysLatency[LATENCY_STATS_MAX_SLOTS];
-	uint32_t au4MacLatency[LATENCY_STATS_MAX_SLOTS];
-	uint32_t au4FailConnsysLatency[LATENCY_STATS_MAX_SLOTS];
+	uint32_t au4DriverLatency[BSSID_NUM][LATENCY_STATS_MAX_SLOTS];
+	uint32_t au4ConnsysLatency[BSSID_NUM][LATENCY_STATS_MAX_SLOTS];
+	uint32_t au4MacLatency[BSSID_NUM][LATENCY_STATS_MAX_SLOTS];
+	uint32_t au4FailConnsysLatency[BSSID_NUM][LATENCY_STATS_MAX_SLOTS];
+
+	uint64_t au8AccumulatedDelay[MAX_AVERAGE_TX_DELAY_TYPE][BSSID_NUM];
+
 	uint32_t u4TxFail;
+};
+
+/**
+ * A 2-dimentional array storing calculated TX avearge values
+ */
+struct TX_LATENCY_AVERAGE {
+	uint32_t au4AverageTxDelay[MAX_AVERAGE_TX_DELAY_TYPE][BSSID_NUM + 1];
 };
 
 /**
  * struct TX_LATENCY_REPORT_STATS - TX latency for reporting
  * @rCounting: Continuous counting counters of each TX delay metrics
  * @rReported: Reported counters of each TX delay metrics
+ * @rTxAverage: Store TX average for returning by function call
  * @u4ContinuousTxFail: Continuous TX fail monitor abnormal TX fail cases
  * @fgTxLatencyEnabled: A on/off switch controlling the reporting mechanism
  */
 struct TX_LATENCY_REPORT_STATS {
 	struct TX_LATENCY_STATS rCounting;
 	struct TX_LATENCY_STATS rReported;
+	struct TX_LATENCY_AVERAGE rAverage;
 	uint32_t u4ContinuousTxFail;
 	u_int8_t fgTxLatencyEnabled;
+
 };
+
+/**
+ * @u4Delay: accumulated delay for counting average (ms)
+ * @u4DelayNum: accumulated TX count for counting average
+ * @u4DelayLimit: delay limit triggering indication (ms)
+ * @fgTxDelayOverLimitReportInterval: interval for counting average report (ms)
+ * @eTxDelayOverLimitStatsType: choice of report types, average or immediate
+ * @fgTxDelayOverLimitReportEnabled: switching the report on/off
+ * @fgReported: mark if the error has been reported in that interval
+ */
+struct TX_DELAY_OVER_LIMIT_REPORT_STATS {
+	uint32_t u4Delay[MAX_TX_OVER_LIMIT_TYPE];
+	uint32_t u4DelayNum[MAX_TX_OVER_LIMIT_TYPE];
+	uint32_t u4DelayLimit[MAX_TX_OVER_LIMIT_TYPE];
+	uint32_t fgTxDelayOverLimitReportInterval; /* if REPORT_AVERAGE */
+	enum ENUM_TX_OVER_LIMIT_STATS_TYPE eTxDelayOverLimitStatsType;
+	bool fgTxDelayOverLimitReportEnabled;
+	bool fgReported[MAX_TX_OVER_LIMIT_TYPE];
+};
+
 
 /*
  * Major ADAPTER structure
@@ -1645,6 +1705,9 @@ struct ADAPTER {
 
 	/* Element for RX PATH */
 	struct RX_CTRL rRxCtrl;
+
+	/* bitmap for hif adjust control */
+	uint32_t u4AdjustCtrlBitmap;
 
 	/* Timer for restarting RFB setup procedure */
 	struct TIMER rPacketDelaySetupTimer;
@@ -1746,6 +1809,7 @@ struct ADAPTER {
 	/* flag to report all networks in p2p scan */
 	u_int8_t p2p_scan_report_all_bss;
 	enum ENUM_NET_REG_STATE rP2PNetRegState;
+	enum ENUM_P2P_REG_STATE rP2PRegState;
 	/* BOOLEAN             fgIsWlanLaunched; */
 	struct P2P_INFO *prP2pInfo;
 #if CFG_SUPPORT_P2P_RSSI_QUERY
@@ -2039,6 +2103,8 @@ struct ADAPTER {
 	struct HIF_STATS rHifStats;
 
 	struct TX_LATENCY_REPORT_STATS rMsduReportStats;
+
+	struct TX_DELAY_OVER_LIMIT_REPORT_STATS rTxDelayOverLimitStats;
 
 	unsigned int u4FWLastUpdateTime;
 

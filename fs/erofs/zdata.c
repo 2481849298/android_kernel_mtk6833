@@ -1,9 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (C) 2018 HUAWEI, Inc.
- *             https://www.huawei.com/
- * Created by Gao Xiang <gaoxiang25@huawei.com>
- */
 #include "zdata.h"
 #include "compress.h"
 #include <linux/prefetch.h>

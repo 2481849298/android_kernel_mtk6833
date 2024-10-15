@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/delay.h>
 #include <linux/sched.h>
@@ -85,7 +77,7 @@ static unsigned int esd_check_mode;
 static unsigned int esd_check_enable;
 unsigned int esd_checking;
 static int te_irq;
-
+extern bool oplus_display_mt6382_esd_check;
 #if defined(CONFIG_MTK_DUAL_DISPLAY_SUPPORT) && \
 	(CONFIG_MTK_DUAL_DISPLAY_SUPPORT == 2)
 /***********external display dual LCM ESD check******************/
@@ -230,12 +222,17 @@ int _esd_check_config_handle_vdo(struct cmdqRecStruct *qhandle)
 	/* mutex sof wait*/
 	ddp_mutex_set_sof_wait(dpmgr_path_get_mutex(phandle), qhandle, 0);
 
+	if (!oplus_display_mt6382_esd_check) {
+		primary_display_manual_unlock();
+	}
 	/* 6.flush instruction */
 	dprec_logger_start(DPREC_LOGGER_ESD_CMDQ, 0, 0);
 	ret = cmdqRecFlush(qhandle);
 	dprec_logger_done(DPREC_LOGGER_ESD_CMDQ, 0, 0);
 	DISPINFO("[ESD]%s ret=%d\n", __func__, ret);
-	primary_display_manual_unlock();
+	if (oplus_display_mt6382_esd_check) {
+		primary_display_manual_unlock();
+	}
 
 	if (ret)
 		ret = 1;
@@ -774,13 +771,20 @@ int primary_display_esd_recovery(void)
 	DISPDBG("[POWER]lcm suspend[begin]\n");
 	/*after dsi_stop, we should enable the dsi basic irq.*/
 	dsi_basic_irq_enable(DISP_MODULE_DSI0, NULL);
+#ifdef OPLUS_BUG_STABILITY
+	disp_lcm_set_esd_flag(primary_get_lcm(),1);
+#endif
 	disp_lcm_suspend(primary_get_lcm());
+#ifdef OPLUS_BUG_STABILITY
+	disp_lcm_set_esd_flag(primary_get_lcm(),0);
+#endif
 	DISPCHECK("[POWER]lcm suspend[end]\n");
 
 	mmprofile_log_ex(mmp_r, MMPROFILE_FLAG_PULSE, 0, 7);
 
 	DISPDBG("[ESD]dsi power reset[begine]\n");
 	dpmgr_path_dsi_power_off(primary_get_dpmgr_handle(), NULL);
+	disp_lcm_suspend_1p8(primary_get_lcm());
 	if (bdg_is_bdg_connected() == 1) {
 		struct disp_ddp_path_config *data_config = NULL;
 

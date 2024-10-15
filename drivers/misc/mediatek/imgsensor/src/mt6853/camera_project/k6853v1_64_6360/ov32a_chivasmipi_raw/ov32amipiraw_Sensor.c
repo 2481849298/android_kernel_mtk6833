@@ -57,7 +57,7 @@
 	pr_debug(PFX "[%s] " format, __func__, ##args)
 
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-#define SENSOR_FUSION_THRESHOLD 1300000
+#define SENSOR_FUSION_THRESHOLD -836400
 static kal_uint8 xtalk_flag = 0;
 #endif
 
@@ -1712,8 +1712,8 @@ static void set_mirror_flip(kal_uint8 image_mirror)
 	value_3821 = read_cmos_sensor(0x3821);
 	switch (image_mirror) {
 	case IMAGE_NORMAL:
-		write_cmos_sensor(0x3820, value_3820&(~(1<<2)));//bit2Çå0
-		write_cmos_sensor(0x3821, value_3821|(1<<2));//bit2ÖÃ1
+		write_cmos_sensor(0x3820, value_3820&(~(1<<2)));//bit2æ¸…0
+		write_cmos_sensor(0x3821, value_3821|(1<<2));//bit2ç½®1
 		break;
 
 	case IMAGE_V_MIRROR:

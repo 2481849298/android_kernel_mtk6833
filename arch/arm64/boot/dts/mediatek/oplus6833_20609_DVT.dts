@@ -135,13 +135,6 @@
 	};
 };
 
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <6>;
-	u2_term_ref = <6>;
-	u2_enhance = <3>;
-};
-
 &lk_charger {
         support_tuv_authentication;
 };
@@ -897,6 +890,7 @@ pinctrl-names = "default", "dischg_enable", "dischg_disable";
 			match-projects = <20608 20609 0x2060A 0x2060B 0x2070B 0x2070E>;
 		};
 	};
+
 	kpd_volume_up:kpd_volume_up {
 		compatible = "mediatek, VOLUME_UP-eint";
 		interrupt-parent = <&pio>;

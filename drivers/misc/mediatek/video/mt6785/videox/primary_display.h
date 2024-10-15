@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef _PRIMARY_DISPLAY_H_
 #define _PRIMARY_DISPLAY_H_
@@ -280,12 +272,14 @@ struct display_primary_path_context {
 	cmdqBackupSlotHandle hrt_idx_id;
 	cmdqBackupSlotHandle trigger_record_slot;
 	/*ToDo: ARR whether need free these slot*/
+#ifdef OPLUS_BUG_STABILITY
 	/* #ifdef OPLUS_FEATURE_ONSCREENFINGERPRINT */
 	/*
 	* add for fingerprint notify frigger
 	*/
 	cmdqBackupSlotHandle fpd_fence;
 	/* #endif */ /* OPLUS_FEATURE_ONSCREENFINGERPRINT */
+#endif
 	int is_primary_sec;
 	int primary_display_scenario;
 #ifdef CONFIG_MTK_DISPLAY_120HZ_SUPPORT
@@ -474,7 +468,7 @@ int do_primary_display_switch_mode(int sess_mode, unsigned int session,
 int primary_display_check_test(void);
 void _primary_path_switch_dst_lock(void);
 void _primary_path_switch_dst_unlock(void);
-
+#ifdef OPLUS_BUG_STABILITY
 /* #ifdef OPLUS_FEATURE_ONSCREENFINGERPRINT */
 /*
 * add for get dimming layer hbm state
@@ -488,7 +482,7 @@ int notify_display_fpd(bool mode);
 void fpd_notify_check_trig(void);
 void fpd_notify(void);
 /* #endif */ /* OPLUS_FEATURE_ONSCREENFINGERPRINT */
-
+#endif
 /* AOD */
 enum lcm_power_state primary_display_set_power_state(
 enum lcm_power_state new_state);
@@ -500,10 +494,11 @@ enum mtkfb_power_mode primary_display_check_power_mode(void);
 void debug_print_power_mode_check(enum mtkfb_power_mode prev,
 				  enum mtkfb_power_mode cur);
 bool primary_is_aod_supported(void);
+#ifdef OPLUS_BUG_STABILITY
 /* #ifdef OPLUS_FEATURE_AOD */
 int primary_display_set_aod_mode_nolock(unsigned int mode);
 /* #endif */ /* OPLUS_FEATURE_AOD */
-
+#endif
 /* legancy */
 struct LCM_PARAMS *DISP_GetLcmPara(void);
 struct LCM_DRIVER *DISP_GetLcmDrv(void);

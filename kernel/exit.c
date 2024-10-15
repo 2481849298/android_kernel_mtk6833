@@ -68,6 +68,10 @@
 #include <asm/pgtable.h>
 #include <asm/mmu_context.h>
 
+#ifdef CONFIG_KERNEL_LOCK_OPT
+#include <linux/klockopt/klockopt.h>
+#endif
+
 #ifdef OPLUS_BUG_STABILITY
 #include <soc/oplus/system/oppo_process.h>
 #endif
@@ -76,12 +80,12 @@
 extern void uid_check_out_pevent(struct task_struct *task);
 #endif
 
-
 static void __unhash_process(struct task_struct *p, bool group_dead)
 {
 	nr_threads--;
 	detach_pid(p, PIDTYPE_PID);
 	if (group_dead) {
+		detach_pid(p, PIDTYPE_TGID);
 		detach_pid(p, PIDTYPE_PGID);
 		detach_pid(p, PIDTYPE_SID);
 
@@ -501,6 +505,7 @@ assign_new_owner:
 		goto retry;
 	}
 	mm->owner = c;
+	lru_gen_migrate_mm(mm);
 	task_unlock(c);
 	put_task_struct(c);
 }
@@ -534,7 +539,10 @@ static void exit_mm(void)
 		up_read(&mm->mmap_sem);
 
 		self.task = current;
-		self.next = xchg(&core_state->dumper.next, &self);
+		if (self.task->flags & PF_SIGNALED)
+			self.next = xchg(&core_state->dumper.next, &self);
+		else
+			self.task = NULL;
 		/*
 		 * Implies mb(), the result of xchg() must be visible
 		 * to core_state->dumper.
@@ -707,7 +715,8 @@ static void forget_original_parent(struct task_struct *father,
 				t->parent = t->real_parent;
 			if (t->pdeath_signal)
 				group_send_sig_info(t->pdeath_signal,
-						    SEND_SIG_NOINFO, t);
+						    SEND_SIG_NOINFO, t,
+						    PIDTYPE_TGID);
 		}
 		/*
 		 * If this is a threaded reparent there is no need to
@@ -882,7 +891,9 @@ void __noreturn do_exit(long code)
 	taskstats_exit(tsk, group_dead);
 
 	exit_mm();
-
+#ifdef CONFIG_KERNEL_LOCK_OPT
+	exit_rwsem();
+#endif
 	if (group_dead)
 		acct_process();
 	trace_sched_process_exit(tsk);
@@ -907,7 +918,6 @@ void __noreturn do_exit(long code)
 
 	sched_autogroup_exit_task(tsk);
 	cgroup_exit(tsk);
-	uclamp_exit_task(tsk);
 
 	/*
 	 * FIXME: do that only when needed, using sched_exit tracepoint
@@ -1027,14 +1037,6 @@ struct wait_opts {
 	wait_queue_entry_t		child_wait;
 	int			notask_error;
 };
-
-static inline
-struct pid *task_pid_type(struct task_struct *task, enum pid_type type)
-{
-	if (type != PIDTYPE_PID)
-		task = task->group_leader;
-	return task->pids[type].pid;
-}
 
 static int eligible_pid(struct wait_opts *wo, struct task_struct *p)
 {
@@ -1366,7 +1368,7 @@ static int wait_consider_task(struct wait_opts *wo, int ptrace,
 	 * Ensure that EXIT_ZOMBIE -> EXIT_DEAD/EXIT_TRACE transition
 	 * can't confuse the checks below.
 	 */
-	int exit_state = ACCESS_ONCE(p->exit_state);
+	int exit_state = READ_ONCE(p->exit_state);
 	int ret;
 
 	if (unlikely(exit_state == EXIT_DEAD))
@@ -1717,7 +1719,7 @@ SYSCALL_DEFINE4(wait4, pid_t, upid, int __user *, stat_addr,
  */
 SYSCALL_DEFINE3(waitpid, pid_t, pid, int __user *, stat_addr, int, options)
 {
-	return sys_wait4(pid, stat_addr, options, NULL);
+	return kernel_wait4(pid, stat_addr, options, NULL);
 }
 
 #endif

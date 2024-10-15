@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef _KD_SENINF_H_
@@ -47,3 +39,5 @@
 #define KDSENINFIOC_SET_CAM_MUX_FOR_SWITCH \
 	_IOWR(SENINFMAGIC, 110, unsigned int)
 #endif
+#define KDSENINFIOC_X_SET_SWITCH_TG_FOR_STAGGER   \
+	_IOWR(SENINFMAGIC, 115, u32)

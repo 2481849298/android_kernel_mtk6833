@@ -1,16 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
-
 /* #define DEBUG 1 */
 #include <linux/version.h>
 #include <linux/kernel.h>
@@ -293,7 +284,7 @@ static unsigned int g_lvts_controller_value_e[LVTS_CONTROLLER_NUM]
 #endif
 
 #if LVTS_VALID_DATA_TIME_PROFILING
-unsigned long long int SODI3_count, noValid_count;
+unsigned long long SODI3_count, noValid_count;
 /* If isTempValid is 0, it means no valid temperature data
  * between two SODI3 entry points.
  */
@@ -325,8 +316,8 @@ static unsigned int latency_array[NUM_TIME_TH][2] = {
 	{10000, 0},
 	{-1, 0}
 };
-long long int start_timestamp;
-static long long int end_timestamp, time_diff;
+long long start_timestamp;
+static long long end_timestamp, time_diff;
 /* count if start_timestamp is bigger than end_timestamp */
 int diff_error_count;
 #endif
@@ -344,10 +335,10 @@ int diff_error_count;
  * Local function declartation
  *=============================================================
  */
-static unsigned int  lvts_temp_to_raw(int ret, enum lvts_sensor_enum ts_name);
+//MTK static unsigned int  lvts_temp_to_raw(int ret, enum lvts_sensor_enum ts_name);
 
-static void lvts_set_tc_trigger_hw_protect(
-		int temperature, int temperature2, int tc_num);
+//MTK static void lvts_set_tc_trigger_hw_protect(
+//MTK		int temperature, int temperature2, int tc_num);
 /*=============================================================
  *Weak functions
  *=============================================================
@@ -473,7 +464,7 @@ int lvts_raw_to_temp(unsigned int msr_raw, enum lvts_sensor_enum ts_name)
 	int temp_mC = 0;
 	int temp1 = 0;
 
-	temp1 = (LVTS_COEFF_A_X_1000 * ((unsigned long long int)msr_raw)) >> 14;
+	temp1 = (LVTS_COEFF_A_X_1000 * ((unsigned long long)msr_raw)) >> 14;
 
 	temp_mC = temp1 + g_golden_temp * 500 + LVTS_COEFF_B_X_1000;
 
@@ -591,7 +582,8 @@ static void dump_lvts_register_value(void)
 		for (j = 0; j < NUM_LVTS_CONTROLLER_REG; j++) {
 
 			if (((sizeof(buffer) - offset) <= 0) || (offset < 0)) {
-				lvts_printk("%s %d error\n", __func__, __LINE__);
+				lvts_printk("%s %d error\n", __func__,
+					__LINE__);
 				break;
 			}
 
@@ -608,7 +600,8 @@ static void dump_lvts_register_value(void)
 		for (j = 0; j < NUM_LVTS_DEVICE_REG; j++) {
 
 			if (((sizeof(buffer) - offset) <= 0) || (offset < 0)) {
-				lvts_printk("%s %d error\n", __func__, __LINE__);
+				lvts_printk("%s %d error\n", __func__,
+					__LINE__);
 				break;
 			}
 
@@ -624,6 +617,7 @@ static void dump_lvts_register_value(void)
 
 void dump_lvts_error_info(void)
 {
+	lvts_printk(" %s\n",__func__);
 	read_controller_reg_when_error();
 
 	lvts_disable_all_sensing_points();
@@ -965,7 +959,7 @@ void lvts_efuse_setting(void)
 
 #if LVTS_DEVICE_AUTO_RCK == 0
 			efuse_data =
-			(((unsigned long long int)g_count_rc_now[s_index]) *
+			(((unsigned long long)g_count_rc_now[s_index]) *
 				g_count_r[s_index]) >> 14;
 #else
 			efuse_data = g_count_r[s_index];
@@ -1319,6 +1313,7 @@ void lvts_ipi_send_sspm_thermal_suspend_resume(int is_suspend)
 #endif
 #endif
 
+#if 0 //MTK
 static unsigned int lvts_temp_to_raw(int temp, enum lvts_sensor_enum ts_name)
 {
 	/* MSR_RAW = ((temp[i] - GOLDEN_TEMP/2 - b) * 16384) / a
@@ -1327,18 +1322,20 @@ static unsigned int lvts_temp_to_raw(int temp, enum lvts_sensor_enum ts_name)
 	 */
 	unsigned int msr_raw = 0;
 
-	msr_raw = ((long long int)(((long long int)g_golden_temp * 500 +
+	msr_raw = ((long long)(((long long)g_golden_temp * 500 +
 		LVTS_COEFF_B_X_1000 - temp)) << 14)/(-1 * LVTS_COEFF_A_X_1000);
 
 	lvts_dbg_printk("%s msr_raw = 0x%x,temp=%d\n", __func__, msr_raw, temp);
 
 	return msr_raw;
 }
+#endif
 
 static void lvts_interrupt_handler(int tc_num)
 {
 	unsigned int  ret = 0;
 	int offset;
+	lvts_printk("[Thermal IRQ] %s\n",__func__);
 
 	if (tc_num < ARRAY_SIZE(lvts_tscpu_g_tc) && (tc_num >= 0)) {
 		offset = lvts_tscpu_g_tc[tc_num].tc_offset;
@@ -1518,7 +1515,7 @@ static void lvts_configure_polling_speed_and_filter(int tc_num)
 
 		/*
 		 * bus clock 66M counting unit is
-		 *			12 * 1/66M * 256 = 12 * 3.879us = 46.545 us
+		 * 12 * 1/66M * 256 = 12 * 3.879us = 46.545 us
 		 */
 		mt_reg_sync_writel_print(lvtsMonCtl1, offset + LVTSMONCTL1_0);
 		/*
@@ -1546,6 +1543,7 @@ static void lvts_configure_polling_speed_and_filter(int tc_num)
  * temperature2 to set the middle threshold for interrupting CPU.
  * -275000 to disable it.
  */
+#if 0 //MTK
 static void lvts_set_tc_trigger_hw_protect(
 int temperature, int temperature2, int tc_num)
 {
@@ -1554,10 +1552,11 @@ int temperature, int temperature2, int tc_num)
 	unsigned int d_index;
 	enum lvts_sensor_enum ts_name;
 #endif
+	lvts_printk("%s 222\n", __func__);
 	if (tc_num < ARRAY_SIZE(lvts_tscpu_g_tc) && (tc_num >= 0)) {
 		offset = lvts_tscpu_g_tc[tc_num].tc_offset;
 
-		lvts_dbg_printk("%s t1=%d t2=%d\n",
+		lvts_printk("%s t1=%d t2=%d\n",
 					__func__, temperature, temperature2);
 
 #if LVTS_USE_DOMINATOR_SENSING_POINT
@@ -1587,14 +1586,40 @@ int temperature, int temperature2, int tc_num)
 		raw_high = lvts_temp_to_raw(temperature, 0);
 #endif
 
+#if 1 //MTK
+
+	/* After adding the huge offset 0x3FFF, LVTS alawys adds the
+	 * offset to MSR_RAW.
+	 * When MSR_RAW is larger, SW will convert lower temperature/
+	 */
+	temp = readl(LVTSPROTCTL_0 + offset);
+	mt_reg_sync_writel_print(temp | 0x3FFF, LVTSPROTCTL_0 + offset);
+
+	/* Disable the interrupt of AP SW */
+	temp = readl(LVTSMONINT_0 + offset);
+
+	temp = temp & ~(STAGE3_INT_EN);
+
+	temp = temp & ~(HIGH_OFFSET3_INT_EN |
+					HIGH_OFFSET2_INT_EN |
+					HIGH_OFFSET1_INT_EN |
+					HIGH_OFFSET0_INT_EN);
+
+	temp = temp & ~(LOW_OFFSET3_INT_EN |
+					LOW_OFFSET2_INT_EN |
+					LOW_OFFSET1_INT_EN |
+					LOW_OFFSET0_INT_EN);
+
+	mt_reg_sync_writel_print(temp, LVTSMONINT_0 + offset);
+#endif
 #ifndef CONFIG_LVTS_DYNAMIC_ENABLE_REBOOT
-		temp = readl(offset + LVTSMONINT_0);
+//MTK		temp = readl(offset + LVTSMONINT_0);
 		/* disable trigger SPM interrupt */
-			mt_reg_sync_writel_print(temp & 0x00000000,
-				offset + LVTSMONINT_0);
+//MTK			mt_reg_sync_writel_print(temp & 0x00000000,
+//MTK				offset + LVTSMONINT_0);
 #endif
 
-		temp = readl(offset + LVTSPROTCTL_0) & ~(0xF << 16);
+//MTK		temp = readl(offset + LVTSPROTCTL_0) & ~(0xF << 16);
 #if LVTS_USE_DOMINATOR_SENSING_POINT
 		/* Select protection sensor */
 		config = ((d_index << 2) + 0x2) << 16;
@@ -1607,18 +1632,54 @@ int temperature, int temperature2, int tc_num)
 				offset + LVTSPROTCTL_0);
 #endif
 
+#if 1 //MTK
+		/* high offset INT */
+		mt_reg_sync_writel_print(raw_high, LVTSOFFSETH_0 + offset);
+
+		/*
+		 * lowoffset INT
+		 * set a big msr_raw = 0xffff(very low temperature)
+		 * to let lowoffset INT not be triggered
+		 */
+		mt_reg_sync_writel_print(0xffff, LVTSOFFSETL_0 + offset);
+#endif
+
 		/* set hot to HOT wakeup event */
-		mt_reg_sync_writel_print(raw_high, offset + LVTSPROTTC_0);
+//MTK		mt_reg_sync_writel_print(raw_high, offset + LVTSPROTTC_0);
 
 #ifndef CONFIG_LVTS_DYNAMIC_ENABLE_REBOOT
 		/* enable trigger Hot SPM interrupt */
-			mt_reg_sync_writel_print(temp | 0x80000000,
-				offset + LVTSMONINT_0);
+//MTK			mt_reg_sync_writel_print(temp | 0x80000000,
+//MTK				offset + LVTSMONINT_0);
+#endif
+
+#if 1 //MTK
+		/* Enable the interrupt of AP SW */
+		temp = readl(LVTSMONINT_0 + offset);
+
+
+		temp = temp | HIGH_OFFSET3_INT_EN |
+				HIGH_OFFSET2_INT_EN |
+				HIGH_OFFSET1_INT_EN |
+				HIGH_OFFSET0_INT_EN;
+
+		temp = temp | LOW_OFFSET3_INT_EN |
+				LOW_OFFSET2_INT_EN |
+				LOW_OFFSET1_INT_EN |
+				LOW_OFFSET0_INT_EN;
+
+		mt_reg_sync_writel_print(temp, LVTSMONINT_0 + offset);
+
+		/* Clear the offset */
+		temp = readl(LVTSPROTCTL_0 + offset);
+		mt_reg_sync_writel_print(temp & ~PROTOFFSET, LVTSPROTCTL_0 + offset);
+
 #endif
 	} else
 		pr_notice("Error: %d wrong tc_num value: %d\n",
 			__LINE__, tc_num);
 }
+#endif
 
 static void dump_lvts_device(int tc_num, __u32 offset)
 {
@@ -1685,13 +1746,13 @@ void lvts_dump_time_profiling_result(struct seq_file *m)
 	seq_printf(m, "Current time_diff= %lldus\n", time_diff);
 }
 
-static void lvts_count_valid_temp_latency(long long int time_diff)
+static void lvts_count_valid_temp_latency(long long time_diff)
 {
 	/* time_diff is in microseconds */
 	int i;
 
 	for (i = 0; i < (NUM_TIME_TH - 1); i++) {
-		if (time_diff < (((long long int)latency_array[i][0])
+		if (time_diff < (((long long)latency_array[i][0])
 			* 1000)) {
 			latency_array[i][1]++;
 			break;
@@ -2064,6 +2125,7 @@ void lvts_tscpu_thermal_initial_all_tc(void)
 #endif
 }
 
+#if 0 //MTK
 static void lvts_disable_rgu_reset(void)
 {
 	struct wd_api *wd_api;
@@ -2092,6 +2154,7 @@ static void lvts_enable_rgu_reset(void)
 		WARN_ON_ONCE(1);
 	}
 }
+#endif
 
 void lvts_config_all_tc_hw_protect(int temperature, int temperature2)
 {
@@ -2104,7 +2167,7 @@ void lvts_config_all_tc_hw_protect(int temperature, int temperature2)
 	/*Thermal need to config to direct reset mode
 	 *this API provide by Weiqi Fu(RGU SW owner).
 	 */
-	lvts_disable_rgu_reset();
+//MTK	lvts_disable_rgu_reset();
 
 	/* if high temp aging version, disable thermal protection */
 	if (get_eng_version() == HIGH_TEMP_AGING)
@@ -2114,14 +2177,14 @@ void lvts_config_all_tc_hw_protect(int temperature, int temperature2)
 		if (lvts_tscpu_g_tc[i].ts_number == 0)
 			continue;
 		/* Move thermal HW protection ahead... */
-		lvts_set_tc_trigger_hw_protect(temperature, temperature2, i);
+//MTK		lvts_set_tc_trigger_hw_protect(temperature, temperature2, i);
 	}
 
 #ifndef CONFIG_LVTS_DYNAMIC_ENABLE_REBOOT
 	/* Thermal need to config to direct reset mode
 	 * this API provide by Weiqi Fu(RGU SW owner).
 	 */
-	lvts_enable_rgu_reset();
+//MTK	lvts_enable_rgu_reset();
 #else
 	hw_protect_setting_done = 1;
 #endif

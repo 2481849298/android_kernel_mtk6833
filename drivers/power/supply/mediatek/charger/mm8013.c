@@ -1,16 +1,4 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/*
- * Copyright (C) 2021 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
 
 #include <linux/module.h>
 #include <linux/param.h>
@@ -21,7 +9,7 @@
 #include <linux/i2c.h>
 #include <linux/slab.h>
 #include <asm/unaligned.h>
-#include <mt-plat/mtk_battery.h>
+#include <mt-plat/v1/mtk_battery.h>
 #include "mtk_battery_internal.h"
 #include <linux/time.h>
 
@@ -296,17 +284,17 @@ int mm8013_get_info(enum power_supply_property info_type, int *val)
 
 static int force_get_tbat_mm8013(bool update, int *temp)
 {
-	static pre_bat_temp = -1000;
+	static int pre_bat_temp = -50;
 	static struct timespec pre_time;
 	struct timespec ctime, dtime;
 	int bat_temp;
 	int ret;
 
-	if (update || pre_bat_temp == -1000) {
+	if (update || pre_bat_temp == -50) {
 		ret = mm8013_get_info(POWER_SUPPLY_PROP_TEMP, &bat_temp);
 		if (ret)
 			return ret;
-		if (pre_bat_temp == -1000) {
+		if (pre_bat_temp == -50) {
 			get_monotonic_boottime(&pre_time);
 		} else {
 			get_monotonic_boottime(&ctime);
@@ -314,8 +302,8 @@ static int force_get_tbat_mm8013(bool update, int *temp)
 
 			if (((dtime.tv_sec <= 20) &&
 				(abs(pre_bat_temp-bat_temp) >= 50)) || bat_temp >= 580) {
-				bm_err("[%s] battery temperature %.1f, raise from %.1f in %d sec!\n",
-				__func__, bat_temp*0.1f, pre_bat_temp*0.1f, dtime.tv_sec);
+				bm_err("[%s] battery temperature %d, raise from %d in %d sec!\n",
+				__func__, bat_temp, pre_bat_temp, dtime.tv_sec);
 				WARN_ON_ONCE(1);
 			}
 		}
@@ -334,6 +322,7 @@ static int force_get_tbat_mm8013(bool update, int *temp)
  * below 4250mV. To avoid capacity jump, only 1% change is
  * allowed in 1 minute.
  */
+#if defined(BAT_CAPACITY_ADJUST)
 bool battery_adjust_capacity(int *capacity)
 {
 	static bool keep_full;
@@ -392,17 +381,23 @@ bool battery_adjust_capacity(int *capacity)
 
 	return false;
 }
-
+#endif
 
 static void mm8013_battery_update_work(struct work_struct *work)
 {
 	struct mm8013_chip *chip = container_of(to_delayed_work(work),
 			struct mm8013_chip, battery_update_work);
-	int battery_temp, cycle_count, capacity;
+	int ret;
+	int battery_temp = 0, cycle_count = 0, capacity = 0;
 
 	bm_notice("[%s] enter\n", __func__);
 
-	force_get_tbat_mm8013(1, &battery_temp);
+	ret = force_get_tbat_mm8013(1, &battery_temp);
+	if (ret) {
+		bm_err("[%s] force_get_tbat_mm8013 fail, ret(%d)\n", __func__, ret);
+		battery_temp = 500;
+	}
+
 	gm.fixed_bat_tmp = (battery_temp / 10);
 	battery_main.BAT_batt_temp = gm.fixed_bat_tmp;
 
@@ -410,7 +405,9 @@ static void mm8013_battery_update_work(struct work_struct *work)
 		gm.bat_cycle = cycle_count;
 
 	if (!mm8013_get_info(POWER_SUPPLY_PROP_CAPACITY, &capacity)) {
+#if defined(BAT_CAPACITY_ADJUST)
 		battery_adjust_capacity(&capacity);
+#endif
 		battery_main.BAT_CAPACITY = capacity;
 		gm.ui_soc = capacity;
 		gm.fixed_uisoc = capacity;
@@ -445,6 +442,7 @@ static int mm8013_probe(struct i2c_client *client,
 	if (!chip)
 		return -ENOMEM;
 
+	mutex_init(&chip->i2c_rw_lock);
 	chip->client = client;
 
 	i2c_set_clientdata(client, chip);
@@ -468,7 +466,6 @@ static int mm8013_probe(struct i2c_client *client,
 		break;
 	}
 
-	mutex_init(&chip->i2c_rw_lock);
 	_chip = chip;
 	INIT_DELAYED_WORK(&chip->battery_update_work, mm8013_battery_update_work);
 	schedule_delayed_work(&chip->battery_update_work, msecs_to_jiffies(5*1000));

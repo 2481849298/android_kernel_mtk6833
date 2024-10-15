@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2021 MediaTek Inc.
+*/
 
 #include <generated/autoconf.h>
 #include <linux/cdev.h>
@@ -51,7 +43,11 @@
  ***********************************************************/
 static struct mt6358_chip *chip;
 struct regmap *pmic_nolock_regmap;
-
+#ifdef OPLUS_FEATURE_CHG_BASIC
+/*********workaround：error code start issue NO.230506103757615893********/
+bool pmic_not_support_lpm = false;
+/*********workaround：error code end********/
+#endif
 static int pmic_read_device(struct regmap *map,
 			    unsigned int RegNum,
 			    unsigned int *val,
@@ -499,14 +495,17 @@ static int pmic_ipi_reg_read(void *context,
 			     void *val_buf, size_t val_size)
 {
 	unsigned short reg = *(unsigned short *)reg_buf;
+	unsigned int val = 0;
+	int ret = 0;
 
 	if (reg_size != 2 || val_size != 2) {
 		pr_notice("%s: reg=0x%x, reg_size=%zu, val_size=%zu\n",
 			__func__, reg, reg_size, val_size);
 		return -EINVAL;
 	}
-
-	return regmap_read(pmic_read_regmap, reg, val_buf);
+	ret = regmap_read(pmic_read_regmap, reg, &val);
+	*(u16 *)val_buf = val;
+	return ret;
 }
 
 static int pmic_ipi_reg_update_bits(void *context, unsigned int reg,
@@ -562,7 +561,7 @@ static struct regmap_bus regmap_pmic_ipi_bus = {
 static int pmic_mt_probe(struct platform_device *pdev)
 {
 	int ret = 0;
-
+	struct device_node *np = NULL;
 	chip = dev_get_drvdata(pdev->dev.parent);
 #ifdef IPIMB
 	pmic_read_regmap = dev_get_regmap(chip->dev->parent, NULL);
@@ -586,6 +585,12 @@ static int pmic_mt_probe(struct platform_device *pdev)
 	}
 #else
 	pmic_nolock_regmap = chip->regmap;
+#endif
+#ifdef OPLUS_FEATURE_CHG_BASIC
+/*********workaround：error code start issue NO.230506103757615893********/
+	np = of_find_node_by_name(NULL, "oplus_project");
+	pmic_not_support_lpm = of_property_read_bool(np, "qcom,pmic_not_support_lpm");
+/*********workaround：error code end********/
 #endif
 
 	pr_info("******** MT pmic driver probe!! ********\n");

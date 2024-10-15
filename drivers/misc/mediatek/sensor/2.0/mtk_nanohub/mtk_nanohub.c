@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (C) 2020 MediaTek Inc.
  */
 
 #define pr_fmt(fmt) "[mtk_nanohub]" fmt
@@ -22,35 +14,27 @@
 #include <linux/types.h>
 #include <linux/module.h>
 #include <linux/suspend.h>
-#include <linux/time.h>
+#include <linux/pm_wakeup.h>
+#include <linux/timer.h>
+#include <linux/timekeeping.h>
 #include <asm/arch_timer.h>
 #include <linux/math64.h>
 #include <linux/delay.h>
 #include <uapi/linux/sched/types.h>
-
-#include "scp_ipi.h"
-#include "scp_helper.h"
-#include "scp_excep.h"
+#include <scp.h>
+#include <soc/oplus/system/oppo_project.h>
 #include "mtk_nanohub.h"
 #include "comms.h"
 #include "hf_manager.h"
 #include "sensor_list.h"
 #include "mtk_nanohub_ipi.h"
-#include <linux/of_gpio.h>
-#include <linux/regulator/consumer.h>
-#include <mt-plat/upmu_common.h>
-#include <linux/hrtimer.h>
 
+extern int __init nanohub_init(void);
 #ifdef OPLUS_FEATURE_SENSOR_ALGORITHM
 #include "../oplus_sensor_devinfo/sensor_devinfo.h"
-#endif
-
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-#include <soc/oplus/system/oplus_project.h>
-#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
-
-#ifdef OPLUS_FEATURE_SENSOR
-#include <soc/oplus/system/kernel_fb.h>
+#include <mt-plat/upmu_common.h>
+#include <linux/regulator/consumer.h>
+#include <linux/of_gpio.h>
 #endif
 
 /* ALGIN TO SCP SENSOR_IPI_SIZE AT FILE CONTEXTHUB_FW.H, ALGIN
@@ -75,11 +59,7 @@
 
 #define SYNC_TIME_CYCLC 10000
 #define SYNC_TIME_START_CYCLC 3000
-#ifdef OPLUS_FEATURE_SENSOR
-#define LIGHT_MONITOR_TIME_CYCLC 5000
-static int recovery_remain = 2;
-static bool light_data_update = false;
-#endif
+
 enum {
 	CUST_CMD_CALI,
 	MAX_CUST_CMD,
@@ -97,12 +77,9 @@ struct mtk_nanohub_device {
 	struct hf_device hf_dev;
 	struct timer_list sync_time_timer;
 	struct work_struct sync_time_worker;
-	struct wakeup_source time_sync_wakeup_src;
-	struct wakeup_source data_notify_wakeup_src;
-#ifdef OPLUS_FEATURE_SENSOR
-	struct timer_list light_monitor_timer;
-	struct work_struct light_monitor_worker;
-#endif
+	struct wakeup_source *time_sync_wakeup_src;
+	struct wakeup_source *data_notify_wakeup_src;
+
 	struct sensor_fifo *scp_sensor_fifo;
 	struct curr_wp_queue wp_queue;
 	phys_addr_t shub_dram_phys;
@@ -127,13 +104,11 @@ struct mtk_nanohub_device {
 	int32_t ois_config_data[12];
 #ifdef OPLUS_FEATURE_SENSOR
 	int32_t cct_config_data[6];
-#endif /*OPLUS_FEATURE_SENSOR*/
 	int32_t rear_als_config_data[1];
 	int32_t sars_config_data[4];
-#ifdef OPLUS_FEATURE_SENSOR
 	struct regulator *power_3v;
 	int infrared_power_ctrl;
-	struct hrtimer infrared_power_timer;
+	struct delayed_work infrared_power_work;
 #endif
 };
 
@@ -166,15 +141,15 @@ extern void virtual_sensor_report_data(struct data_unit_t *data,int handle);
 #endif /*OPLUS_FEATURE_SENSOR_ALGORITHM*/
 
 enum scp_ipi_status __attribute__((weak)) scp_ipi_registration(enum ipi_id id,
-	void (*ipi_handler)(int id, void *data, unsigned int len),
-	const char *name)
+        void (*ipi_handler)(int id, void *data, unsigned int len),
+        const char *name)
 {
-	return SCP_IPI_ERROR;
+        return SCP_IPI_ERROR;
 }
 
 enum scp_ipi_status __attribute__((weak)) scp_ipi_unregistration(enum ipi_id id)
 {
-	return SCP_IPI_ERROR;
+        return SCP_IPI_ERROR;
 }
 
 void __attribute__((weak)) scp_A_register_notify(struct notifier_block *nb)
@@ -188,21 +163,21 @@ void __attribute__((weak)) scp_A_unregister_notify(struct notifier_block *nb)
 }
 
 phys_addr_t __attribute__((weak))
-	scp_get_reserve_mem_virt(enum scp_reserve_mem_id_t id)
+        scp_get_reserve_mem_virt(enum scp_reserve_mem_id_t id)
 {
-	return 0;
+        return 0;
 }
 
 phys_addr_t __attribute__((weak))
-	scp_get_reserve_mem_phys(enum scp_reserve_mem_id_t id)
+        scp_get_reserve_mem_phys(enum scp_reserve_mem_id_t id)
 {
-	return 0;
+        return 0;
 }
 
 phys_addr_t __attribute__((weak))
-	scp_get_reserve_mem_size(enum scp_reserve_mem_id_t id)
+        scp_get_reserve_mem_size(enum scp_reserve_mem_id_t id)
 {
-	return 0;
+        return 0;
 }
 
 void __attribute__((weak)) scp_register_feature(enum feature_id id)
@@ -219,7 +194,7 @@ static inline uint64_t arch_counter_to_ns(uint64_t cyc)
 
 #define FILTER_DATAPOINTS	16
 #define FILTER_TIMEOUT		10000000000ULL /* 10 seconds, ~100us drift */
-#define FILTER_FREQ			10000000ULL /* 10 ms */
+#define FILTER_FREQ		10000000ULL /* 10 ms */
 struct moving_average {
 	uint64_t last_time;
 	int64_t input[FILTER_DATAPOINTS];
@@ -230,6 +205,7 @@ struct moving_average {
 };
 static struct moving_average moving_average_algo;
 static uint8_t rtc_compensation_suspend;
+
 static void moving_average_filter(struct moving_average *filter,
 		uint64_t ap_time, uint64_t hub_time)
 {
@@ -251,8 +227,6 @@ static void moving_average_filter(struct moving_average *filter,
 	filter->tail &= (FILTER_DATAPOINTS - 1);
 	if (filter->cnt < FILTER_DATAPOINTS)
 		filter->cnt++;
-
-	/* pr_err("hongxu raw_offset=%lld\n", ap_time - hub_time); */
 
 	for (i = 1, avg = 0; i < filter->cnt; i++)
 		avg += (filter->input[i] - filter->input[0]);
@@ -289,7 +263,8 @@ int mtk_nanohub_req_send(union SCP_SENSOR_HUB_DATA *data)
 	int ret = 0;
 
 	if (data->req.sensorType >= ID_SENSOR_MAX) {
-		pr_err("invalid sensor type %d\n", data->rsp.sensorType);
+		pr_err("invalid sensor type %d when req send ipi\n",
+			data->rsp.sensorType);
 		return -1;
 	}
 	ret = mtk_nanohub_ipi_sync((unsigned char *)data,
@@ -349,16 +324,7 @@ static void mtk_nanohub_sync_time_work(struct work_struct *work)
 	mtk_nanohub_send_timestamp_to_hub();
 }
 
-#ifdef OPLUS_FEATURE_SENSOR
-static void mtk_nanohub_light_monitor_work(struct work_struct *work)
-{
-	unsigned char *fb_str = "Auto Trigger wdt$$module@@scp";
-
-	oplus_kevent_fb_str(FB_SENSOR,FB_SENSOR_ID_CRASH,fb_str);
-	pr_info("scp exception remain %d\n", recovery_remain);
-}
-#endif
-static void mtk_nanohub_sync_time_func(unsigned long data)
+static void mtk_nanohub_sync_time_func(struct timer_list *list)
 {
 	struct mtk_nanohub_device *device = mtk_nanohub_dev;
 
@@ -368,25 +334,15 @@ static void mtk_nanohub_sync_time_func(unsigned long data)
 		jiffies +  msecs_to_jiffies(SYNC_TIME_CYCLC));
 }
 
-#ifdef OPLUS_FEATURE_SENSOR
-static void mtk_nanohub_light_monitor_time_func(unsigned long data)
-{
-	struct mtk_nanohub_device *device = mtk_nanohub_dev;
-
-	if (device && !light_data_update && (recovery_remain > 0)) {
-		recovery_remain--;
-		schedule_work(&device->light_monitor_worker);
-	}
-}
-#endif
-
 static int mtk_nanohub_direct_push_work(void *data)
 {
-	for (;;) {
-		if (wait_event_interruptible(chre_kthread_wait,
-			READ_ONCE(chre_kthread_wait_condition)))
-			continue;
+	int ret = 0;
 
+	for (;;) {
+		ret = wait_event_interruptible(chre_kthread_wait,
+			READ_ONCE(chre_kthread_wait_condition));
+		if (ret)
+			continue;
 		WRITE_ONCE(chre_kthread_wait_condition, false);
 		mtk_nanohub_read_wp_queue();
 	}
@@ -398,14 +354,15 @@ static void mtk_nanohub_common_cmd(union SCP_SENSOR_HUB_DATA *rsp,
 {
 	mtk_nanohub_ipi_complete((unsigned char *)rsp, rx_len);
 }
-//#ifdef OPLUS_FEATURE_SENSOR
+
+#ifdef OPLUS_FEATURE_SENSOR
 static void
 SCP_sensorHub_set_oplus_cmd(union SCP_SENSOR_HUB_DATA *rsp,
 					int rx_len)
 {
 	mtk_nanohub_ipi_complete((unsigned char *)rsp, rx_len);
 }
-//#endif
+#endif
 
 static void mtk_nanohub_moving_average(union SCP_SENSOR_HUB_DATA *rsp)
 {
@@ -413,10 +370,12 @@ static void mtk_nanohub_moving_average(union SCP_SENSOR_HUB_DATA *rsp)
 	uint64_t scp_raw_time = 0, scp_now_time = 0;
 	uint64_t ipi_transfer_time = 0;
 
-	if (!timekeeping_rtc_skipresume()) {
-		if (READ_ONCE(rtc_compensation_suspend))
-			return;
-	}
+	/*
+	 *if (!timekeeping_rtc_skipresume()) {
+	 *	if (READ_ONCE(rtc_compensation_suspend))
+	 *		return;
+	 *}
+	 */
 	ap_now_time = ktime_get_boot_ns();
 	arch_counter = arch_counter_get_cntvct();
 	scp_raw_time = rsp->notify_rsp.scp_timestamp;
@@ -442,6 +401,7 @@ static void mtk_nanohub_notify_cmd(union SCP_SENSOR_HUB_DATA *rsp,
 	case SCP_NOTIFY:
 		break;
 	case SCP_INIT_DONE:
+		pr_info("notify cmd SCP_INIT_DONE\n");
 		spin_lock_irqsave(&scp_state_lock, flags);
 		WRITE_ONCE(scp_chre_ready, true);
 		if (READ_ONCE(scp_system_ready) && READ_ONCE(scp_chre_ready)) {
@@ -494,27 +454,21 @@ static void mtk_nanohub_ipi_handler(int id,
 	const struct mtk_nanohub_cmd *cmd;
 
 	if (len > SENSOR_IPI_SIZE) {
-		pr_err("%s len=%d error\n", __func__, len);
+		pr_err("IPI_SENSOR len=%d error\n", len);
 		return;
 	}
 	/*pr_err("sensorType:%d, action=%d event:%d len:%d\n",
-	 *rsp->rsp.sensorType, rsp->rsp.action, rsp->notify_rsp.event, len);
+	 * rsp->rsp.sensorType, rsp->rsp.action, rsp->notify_rsp.event, len);
 	 */
-	//#ifndef OPLUS_FEATURE_SENSOR
-	/*cmd = mtk_nanohub_find_cmd(rsp->rsp.action);
-	if (cmd != NULL)
-		cmd->handler(rsp, len);
-	else
-		pr_err("cannot find cmd!\n");*/
-	//#else
 	cmd = mtk_nanohub_find_cmd(rsp->rsp.action);
 	if (cmd != NULL)
 		cmd->handler(rsp, len);
 	else {
-		pr_err("cannot find cmd! try to find oplus cmd\n");
+		pr_err("IPI_SENSOR cannot find cmd!\n");
+#ifdef OPLUS_FEATURE_SENSOR
 		SCP_sensorHub_set_oplus_cmd(rsp,len);
+#endif
 	}
-	//#endif
 }
 
 static void mtk_nanohub_get_sensor_info(void)
@@ -758,7 +712,11 @@ static void mtk_nanohub_init_sensor_info(void)
 
 	p = &sensor_state[SENSOR_TYPE_OIS];
 	p->sensorType = SENSOR_TYPE_OIS;
-	p->gain = 100000;
+	if (is_project(0x2169E) || is_project(0x2169F) || is_project(0x216C9) || is_project(0x216CA) || is_project(20827) || is_project(20831) || is_project(21881) || is_project(21882)) {
+		p->gain = 100000;
+	} else {
+		p->gain = 1000000;
+	}
 	strlcpy(p->name, "ois", sizeof(p->name));
 	strlcpy(p->vendor, "mtk", sizeof(p->vendor));
 #ifdef OPLUS_FEATURE_SENSOR
@@ -796,18 +754,15 @@ static void mtk_nanohub_init_sensor_info(void)
 	p->gain = 1;
 	strlcpy(p->name, "sars", sizeof(p->name));
 	strlcpy(p->vendor, "mtk", sizeof(p->vendor));
-#endif /*OPLUS_FEATURE_SENSOR*/
-	#ifdef OPLUS_FEATURE_SENSOR_ALGORITHM
+
 	p = &sensor_state[SENSOR_TYPE_AI_SHUTTER];
 	p->sensorType = SENSOR_TYPE_AI_SHUTTER;
 	p->gain = 1;
 	p->rate = SENSOR_RATE_ONCHANGE;
 	strlcpy(p->name, "ai_shutter", sizeof(p->name));
 	strlcpy(p->vendor, "oplus", sizeof(p->vendor));
-	#endif
-	#ifdef OPLUS_FEATURE_SENSOR_ALGORITHM
 	oplus_init_sensor_state(sensor_state);
-	#endif
+#endif /*OPLUS_FEATURE_SENSOR*/
 }
 
 static void init_sensor_config_cmd(struct ConfigCmd *cmd,
@@ -863,12 +818,6 @@ static int mtk_nanohub_report_data(struct data_unit_t *data_t)
 	comp_time = data_t->time_stamp;
 
 	do {
-		if (data_t->flush_action == DATA_ACTION) {
-			if (unlikely(comp_time < raw_time)) {
-				data_t->time_stamp += 10000;
-				comp_time += 10000;
-			}
-		}
 		/* must check report return value for retry sending */
 		if (data_t->flush_action != FLUSH_ACTION) {
 			err = mtk_nanohub_report_to_manager(data_t);
@@ -902,8 +851,6 @@ static int mtk_nanohub_report_data(struct data_unit_t *data_t)
 					raw_ts_reverse_debug[sensor_type],
 					comp_ts_reverse_debug[sensor_type],
 					comp_time);
-				//data_t->time_stamp += 10000;
-				//comp_time += 10000;
 			}
 			comp_ts_reverse_debug[sensor_type] = comp_time;
 		}
@@ -1055,9 +1002,9 @@ static int mtk_nanohub_send_timestamp_to_hub(void)
 		return 0;
 	}
 
-	__pm_stay_awake(&device->time_sync_wakeup_src);
+	__pm_stay_awake(device->time_sync_wakeup_src);
 	err = mtk_nanohub_send_timestamp_wake_locked();
-	__pm_relax(&device->time_sync_wakeup_src);
+	__pm_relax(device->time_sync_wakeup_src);
 	return err;
 }
 
@@ -1088,26 +1035,13 @@ static void mtk_nanohub_disable_report_flush(uint8_t sensor_id)
 	mutex_unlock(&flush_mtx);
 }
 
-#ifdef OPLUS_FEATURE_CAMERA_OIS
-static void mtk_nanohub_ois_adjust_freq(bool any_on)
-{
-       if (any_on){
-         pr_debug("mtk register ois feature\n");
-         scp_register_feature(OIS_FEATURE_ID);
-       } else {
-         pr_debug("mtk deregister ois feature\n");
-         scp_deregister_feature(OIS_FEATURE_ID);
-       }
-}
-#endif //OPLUS_FEATURE_CAMERA_OIS
-
 int mtk_nanohub_enable_to_hub(uint8_t sensor_id, int enabledisable)
 {
 	uint8_t sensor_type = id_to_type(sensor_id);
 	struct ConfigCmd cmd;
 	int ret = 0;
 
-	if (enabledisable == 1)
+	if (enabledisable == 1 && (READ_ONCE(scp_system_ready)))
 		scp_register_feature(SENS_FEATURE_ID);
 	mutex_lock(&sensor_state_mtx);
 	if (sensor_id >= ID_SENSOR_MAX) {
@@ -1120,20 +1054,6 @@ int mtk_nanohub_enable_to_hub(uint8_t sensor_id, int enabledisable)
 		mutex_unlock(&sensor_state_mtx);
 		return -1;
 	}
-
-
-#ifdef OPLUS_FEATURE_CAMERA_OIS
-    if ((is_project(0X2169E) || is_project(0X2169F)
-        || is_project(0X216CA) || is_project(0X216C9))
-        && (sensor_id == ID_OIS)){
-        pr_debug("mtk ois enable(%d)\n",enabledisable);
-        if (enabledisable == 1)
-            mtk_nanohub_ois_adjust_freq(1);
-        else
-            mtk_nanohub_ois_adjust_freq(0);
-    }
-#endif //OPLUS_FEATURE_CAMERA_OIS
-
 	sensor_state[sensor_type].enable = enabledisable;
 	init_sensor_config_cmd(&cmd, sensor_type);
 	if (atomic_read(&power_status) == SENSOR_POWER_UP) {
@@ -1475,7 +1395,7 @@ int mtk_nanohub_set_cmd_to_hub(uint8_t sensor_id,
 		switch (action) {
 		case CUST_ACTION_GET_RAW_DATA:
 			req.set_cust_req.getRawData.action =
-				CUST_ACTION_GET_RAW_DATA;
+						CUST_ACTION_GET_RAW_DATA;
 			len = offsetof(struct SCP_SENSOR_HUB_SET_CUST_REQ,
 				custData) + sizeof(req.set_cust_req.getRawData);
 			err = mtk_nanohub_req_send(&req);
@@ -1903,6 +1823,7 @@ int mtk_nanohub_set_cmd_to_hub(uint8_t sensor_id,
 			return -1;
 		}
 	}
+
 	err = mtk_nanohub_req_send(&req);
 	if (err < 0) {
 		pr_err("set_cust fail!\n");
@@ -2055,11 +1976,10 @@ static void mtk_nanohub_restoring_config(void)
 		spin_lock(&config_data_lock);
 		memcpy(data, device->proximity_config_data, length);
 		spin_unlock(&config_data_lock);
-		#ifdef OPLUS_FEATURE_SENSOR_ALGORITHM
-		if (!is_support_new_arch_func()) {
+#ifdef PLUS_FEATURE_SENSOR
+		if (!is_support_new_arch_func())
+#endif
 		mtk_nanohub_cfg_to_hub(ID_PROXIMITY, data, length);
-		}
-		#endif
 		vfree(data);
 	}
 
@@ -2078,16 +1998,6 @@ static void mtk_nanohub_restoring_config(void)
 	if (data) {
 		spin_lock(&config_data_lock);
 		memcpy(data, device->sar_config_data, length);
-		spin_unlock(&config_data_lock);
-		mtk_nanohub_cfg_to_hub(ID_SAR, data, length);
-		vfree(data);
-	}
-
-	length = sizeof(device->sars_config_data);
-	data = vzalloc(length);
-	if (data) {
-		spin_lock(&config_data_lock);
-		memcpy(data, device->sars_config_data, length);
 		spin_unlock(&config_data_lock);
 		mtk_nanohub_cfg_to_hub(ID_SAR, data, length);
 		vfree(data);
@@ -2112,7 +2022,6 @@ static void mtk_nanohub_restoring_config(void)
 		mtk_nanohub_cfg_to_hub(ID_CCT, data, length);
 		vfree(data);
 	}
-#endif /*OPLUS_FEATURE_SENSOR*/
 
 	length = sizeof(device->rear_als_config_data);
 	data = vzalloc(length);
@@ -2123,6 +2032,17 @@ static void mtk_nanohub_restoring_config(void)
 		mtk_nanohub_cfg_to_hub(ID_REAR_ALS, data, length);
 		vfree(data);
 	}
+
+	length = sizeof(device->sars_config_data);
+	data = vzalloc(length);
+	if (data) {
+		spin_lock(&config_data_lock);
+		memcpy(data, device->sars_config_data, length);
+		spin_unlock(&config_data_lock);
+		mtk_nanohub_cfg_to_hub(ID_SAR, data, length);
+		vfree(data);
+	}
+#endif /*OPLUS_FEATURE_SENSOR*/
 }
 
 static void mtk_nanohub_start_timesync(void)
@@ -2138,14 +2058,15 @@ static void mtk_nanohub_start_timesync(void)
 
 void mtk_nanohub_power_up_loop(void *data)
 {
-	int id = 0;
+	int ret = 0, id = 0;
 	struct mtk_nanohub_device *device = mtk_nanohub_dev;
 	unsigned long flags = 0;
 
-	if (wait_event_interruptible(power_reset_wait,
-		READ_ONCE(scp_system_ready) && READ_ONCE(scp_chre_ready)))
+	ret = wait_event_interruptible(power_reset_wait,
+		READ_ONCE(scp_system_ready) && READ_ONCE(scp_chre_ready));
+	if (ret)
 		return;
-
+	pr_info("SCP power up\n");
 	spin_lock_irqsave(&scp_state_lock, flags);
 	WRITE_ONCE(scp_chre_ready, false);
 	WRITE_ONCE(scp_system_ready, false);
@@ -2155,6 +2076,7 @@ void mtk_nanohub_power_up_loop(void *data)
 	/* 1. reset wp queue head and tail */
 	device->wp_queue.head = 0;
 	device->wp_queue.tail = 0;
+
 	/* 2. init dram information */
 	WRITE_ONCE(device->scp_sensor_fifo,
 		(struct sensor_fifo *)
@@ -2196,11 +2118,40 @@ static int mtk_nanohub_power_up_work(void *data)
 	return 0;
 }
 
+static int send_sensor_init_start_event(void)
+{
+	enum scp_ipi_status ipi_status = SCP_IPI_ERROR;
+	uint32_t sensor_init_start_event = 0;
+	uint32_t retry = 0;
+
+	do {
+		ipi_status = scp_ipi_send(IPI_SENSOR_INIT_START,
+			&sensor_init_start_event,
+			sizeof(sensor_init_start_event),
+			0, SCP_A_ID);
+		if (ipi_status == SCP_IPI_ERROR) {
+			pr_err("IPI_SENSOR_INIT_START send fail\n");
+			return -1;
+		}
+		if (ipi_status == SCP_IPI_BUSY) {
+			if (retry++ == 1000) {
+				pr_err("IPI_SENSOR_INIT_START retry fail\n");
+				return -1;
+			}
+			if (retry % 10 == 0)
+				usleep_range(1000, 2000);
+		}
+	} while (ipi_status == SCP_IPI_BUSY);
+
+	return 0;
+}
+
 static int mtk_nanohub_ready_event(struct notifier_block *this,
 	unsigned long event, void *ptr)
 {
 	unsigned long flags = 0;
 
+	pr_info("notify event:%lu\n", event);
 	if (event == SCP_EVENT_STOP) {
 		spin_lock_irqsave(&scp_state_lock, flags);
 		WRITE_ONCE(scp_system_ready, false);
@@ -2210,6 +2161,9 @@ static int mtk_nanohub_ready_event(struct notifier_block *this,
 	}
 
 	if (event == SCP_EVENT_READY) {
+		if (send_sensor_init_start_event())
+			return NOTIFY_BAD;
+
 		spin_lock_irqsave(&scp_state_lock, flags);
 		WRITE_ONCE(scp_system_ready, true);
 		if (READ_ONCE(scp_system_ready) && READ_ONCE(scp_chre_ready)) {
@@ -2251,7 +2205,7 @@ static int infrared_set_power(int on,bool boc){
 	}
 	if (on) {
 		//cancel disable infraed power in three seconds
-		hrtimer_cancel(&mtk_nanohub_dev->infrared_power_timer);
+		cancel_delayed_work(&mtk_nanohub_dev->infrared_power_work);
 		if (regulator_count_voltages(device->power_3v) > 0) {
 			ret = regulator_set_voltage(device->power_3v, 3000000, 3104000);
 			if (ret) {
@@ -2275,9 +2229,8 @@ static int infrared_set_power(int on,bool boc){
 	} else {
 		if (power_cnt == 1) {
 			//disable infraed power after 3s later to avoid frequent switching power supply
-			hrtimer_start(&mtk_nanohub_dev->infrared_power_timer,
-				ktime_set(3, 0),
-				HRTIMER_MODE_REL);
+			schedule_delayed_work(&mtk_nanohub_dev->infrared_power_work,
+				msecs_to_jiffies(3000));
 			power_cnt = 0;
 		} else {
 			power_cnt--;
@@ -2292,25 +2245,9 @@ static int infrared_set_power(int on,bool boc){
 static int mtk_nanohub_enable(struct hf_device *hfdev,
 		int sensor_type, int en)
 {
-#ifdef OPLUS_FEATURE_SENSOR
-	struct mtk_nanohub_device *device = mtk_nanohub_dev;
-#endif
 	if (sensor_type <= 0)
 		return 0;
 	/* pr_notice("%s [%d,%d]\n", __func__, sensor_type, en); */
-
-#ifdef OPLUS_FEATURE_SENSOR
-	if (sensor_type == SENSOR_TYPE_RGBW) {
-		pr_notice("%s en:%d\n", __func__, en);
-		if (en) {
-			light_data_update = false;
-			mod_timer(&device->light_monitor_timer,
-				jiffies + msecs_to_jiffies(LIGHT_MONITOR_TIME_CYCLC));
-		} else {
-			del_timer_sync(&device->light_monitor_timer);
-		}
-	}
-#endif
 #if OPLUS_FEATURE_SENSOR
 	if(sensor_type == SENSOR_TYPE_PROXIMITY && mtk_nanohub_dev->infrared_power_ctrl){
 		infrared_set_power(en,false);
@@ -2356,6 +2293,7 @@ static int mtk_nanohub_config(struct hf_device *hfdev,
 
 	if (sensor_type <= 0)
 		return 0;
+
 	pr_notice("%s [%d]\n", __func__, sensor_type);
 	switch (type_to_id(sensor_type)) {
 	case ID_ACCELEROMETER:
@@ -2407,12 +2345,6 @@ static int mtk_nanohub_config(struct hf_device *hfdev,
 		memcpy(device->sar_config_data, data, length);
 		spin_unlock(&config_data_lock);
 		break;
-	case ID_SARS:
-		length = sizeof(device->sars_config_data);
-		spin_lock(&config_data_lock);
-		memcpy(device->sar_config_data, data, length);
-		spin_unlock(&config_data_lock);
-		break;
 	case ID_OIS:
 		if (sizeof(device->ois_config_data) < length)
 			length = sizeof(device->ois_config_data);
@@ -2427,13 +2359,19 @@ static int mtk_nanohub_config(struct hf_device *hfdev,
 		memcpy(device->cct_config_data, data, length);
 		spin_unlock(&config_data_lock);
 		break;
-#endif /*OPLUS_FEATURE_SENSOR*/
 	case ID_REAR_ALS:
 		length = sizeof(device->rear_als_config_data);
 		spin_lock(&config_data_lock);
 		memcpy(device->rear_als_config_data, data, length);
 		spin_unlock(&config_data_lock);
 		break;
+	case ID_SARS:
+		length = sizeof(device->sars_config_data);
+		spin_lock(&config_data_lock);
+		memcpy(device->sar_config_data, data, length);
+		spin_unlock(&config_data_lock);
+		break;
+#endif /*OPLUS_FEATURE_SENSOR*/
 	}
 	if (!length) {
 		pr_err("%s type(%d) length fail\n", __func__, sensor_type);
@@ -2547,15 +2485,6 @@ static int mtk_nanohub_custom_cmd(struct hf_device *hfdev,
 					sizeof(device->sar_config_data));
 			spin_unlock(&config_data_lock);
 			break;
-		case SENSOR_TYPE_SARS:
-			if (sizeof(cust_cmd->data) <
-					sizeof(device->sars_config_data))
-				return -EINVAL;
-			spin_lock(&config_data_lock);
-			memcpy(cust_cmd->data, device->sars_config_data,
-					sizeof(device->sars_config_data));
-			spin_unlock(&config_data_lock);
-			break;
 		case SENSOR_TYPE_OIS:
 			if (sizeof(cust_cmd->data) <
 					sizeof(device->ois_config_data))
@@ -2574,6 +2503,15 @@ static int mtk_nanohub_custom_cmd(struct hf_device *hfdev,
 			spin_lock(&config_data_lock);
 			memcpy(cust_cmd->data, device->cct_config_data,
 					sizeof(device->cct_config_data));
+			spin_unlock(&config_data_lock);
+			break;
+		case SENSOR_TYPE_SARS:
+			if (sizeof(cust_cmd->data) <
+					sizeof(device->sars_config_data))
+				return -EINVAL;
+			spin_lock(&config_data_lock);
+			memcpy(cust_cmd->data, device->sars_config_data,
+					sizeof(device->sars_config_data));
 			spin_unlock(&config_data_lock);
 			break;
 #endif /*OPLUS_FEATURE_SENSOR*/
@@ -2599,13 +2537,13 @@ static int mtk_nanohub_report_to_manager(struct data_unit_t *data)
 		return 0;
 
 	memset(&event, 0, sizeof(struct hf_manager_event));
-	#ifdef OPLUS_FEATURE_SENSOR_ALGORITHM
+#ifdef OPLUS_FEATURE_SENSOR
 	if(data->sensor_type >= ID_OPLUS_VIRTUAL_SENSOR_START &&
 		data->sensor_type < ID_VIRTUAL_SENSOR_MAX) {
 		virtual_sensor_report_data(data,data->sensor_type);
 		return 0;
 	}
-	#endif /*OPLUS_FEATURE_SENSOR_ALGORITHM*/
+#endif /*OPLUS_FEATURE_SENSOR*/
 	if (data->flush_action == DATA_ACTION) {
 		switch (data->sensor_type) {
 		case ID_ACCELEROMETER:
@@ -2728,20 +2666,6 @@ static int mtk_nanohub_report_to_manager(struct data_unit_t *data)
 			event.word[0] = data->sar_event.data[0];
 			event.word[1] = data->sar_event.data[1];
 			event.word[2] = data->sar_event.data[2];
-			break;
-		case ID_RGBW:
-			event.timestamp = data->time_stamp;
-			event.sensor_type = id_to_type(data->sensor_type);
-			event.action = data->flush_action;
-			event.word[0] = data->data[0];
-			event.word[1] = data->data[1];
-			event.word[2] = data->data[2];
-			event.word[3] = data->data[3];
-			event.word[4] = data->data[4];
-			event.word[5] = data->data[5];
-#ifdef OPLUS_FEATURE_SENSOR
-			light_data_update = true;
-#endif
 			break;
 		default:
 			event.timestamp = data->time_stamp;
@@ -2917,16 +2841,14 @@ static int mtk_nanohub_report_to_manager(struct data_unit_t *data)
 		event.word[4] = data->data[4];
 		event.word[5] = data->data[5];
 	}
-	/*
-	 * oneshot proximity tiledetect should wakeup source when data action
-	 */
+
+	/* oneshot proximity tiledetect should wakeup source when data action */
 	if (data->flush_action == DATA_ACTION) {
 		if (data->sensor_type == ID_PROXIMITY ||
 			data->sensor_type == ID_TILT_DETECTOR ||
 			sensor_state[id_to_type(data->sensor_type)].rate ==
 				SENSOR_RATE_ONESHOT) {
-			__pm_wakeup_event(&device->data_notify_wakeup_src,
-				250);
+			__pm_wakeup_event(device->data_notify_wakeup_src, 250);
 		}
 	}
 	return manager->report(manager, &event);
@@ -3000,18 +2922,18 @@ static ssize_t trace_store(struct device_driver *ddri,
 	int res = 0;
 
 	if (sscanf(buf, "%d,%d", &id, &trace) != 2) {
-		pr_err("invalid content: '%s', length = %zu\n", buf, count);
+		pr_info("invalid content: '%s', length = %zu\n", buf, count);
 		goto err_out;
 	}
 
 	if (id < 0 || id >= ID_SENSOR_MAX) {
-		pr_debug("invalid id value:%d,should be '0<=id<=%d'\n",
+		pr_info("invalid id value:%d,should be '0<=id<=%d'\n",
 			trace, ID_SENSOR_MAX);
 		goto err_out;
 	}
 
 	if (trace != 0 && trace != 1) {
-		pr_debug("invalid trace value:%d,trace should be '0' or '1'",
+		pr_info("invalid trace value:%d,trace should be '0' or '1'",
 			trace);
 		goto err_out;
 	}
@@ -3019,7 +2941,7 @@ static ssize_t trace_store(struct device_driver *ddri,
 	res = mtk_nanohub_set_cmd_to_hub(id,
 			CUST_ACTION_SET_TRACE, &trace);
 	if (res < 0) {
-		pr_err("cmd_to_hub (ID: %d),(action: %d)err: %d\n", id,
+		pr_info("cmd_to_hub fail.ID: %d,action:%d,err: %d\n", id,
 					CUST_ACTION_SET_TRACE, res);
 	} else
 		atomic_set(&device->traces[id], trace);
@@ -3045,7 +2967,7 @@ static int mtk_nanohub_create_attr(struct device_driver *driver)
 	for (idx = 0; idx < num; idx++) {
 		err = driver_create_file(driver, mtk_nanohub_attrs[idx]);
 		if (err) {
-			pr_err("driver_create_file (%s) = %d\n",
+			pr_err("driver_create_file(%s) failed,err = %d\n",
 				mtk_nanohub_attrs[idx]->attr.name, err);
 			break;
 		}
@@ -3101,7 +3023,7 @@ static int mtk_parse_dts(struct mtk_nanohub_device *mtk_ndevice, struct platform
 	return -1;
 };
 
-static enum hrtimer_restart infrared_power_timer_func(struct hrtimer *timer)
+static void infrared_power_timer_func(struct work_struct *dwork)
 {
     int ret = 0;
     pmic_enable_interrupt(INT_VIBR_OC, 0, "vibr");
@@ -3109,10 +3031,11 @@ static enum hrtimer_restart infrared_power_timer_func(struct hrtimer *timer)
     if (ret) {
         printk("Regulator power_3v disable failed\n");
         ret = regulator_enable(mtk_nanohub_dev->power_3v);
-        return ret;
+        printk("regulator_enable power_3v:%d\n", ret);
+        return;
     }
 
-    return HRTIMER_NORESTART;
+    return;
 }
 
 static int mtk_nanohub_probe_info(struct platform_device *pdev)
@@ -3121,8 +3044,7 @@ static int mtk_nanohub_probe_info(struct platform_device *pdev)
 	mtk_nanohub_dev->infrared_power_ctrl = 1;
 	init_infrared_oc_handler(infrared_oc_handler);
 
-	hrtimer_init(&mtk_nanohub_dev->infrared_power_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	mtk_nanohub_dev->infrared_power_timer.function = infrared_power_timer_func;
+	INIT_DELAYED_WORK(&mtk_nanohub_dev->infrared_power_work, infrared_power_timer_func);
 
 	printk(" ----mtk_nanohub_probe_info %s[%d]----\n", __FUNCTION__, __LINE__);
 	return 0;
@@ -3161,6 +3083,7 @@ static int mtk_nanohub_probe(struct platform_device *pdev)
 		goto exit_kfree;
 	}
 	mtk_nanohub_dev = device;
+
 	/* init sensor share dram write pointer event queue */
 	spin_lock_init(&device->wp_queue.buffer_lock);
 	device->wp_queue.head = 0;
@@ -3172,83 +3095,107 @@ static int mtk_nanohub_probe(struct platform_device *pdev)
 		err = -ENOMEM;
 		goto exit_device;
 	}
+
 	/* init the debug trace flag */
 	for (index = 0; index < ID_SENSOR_MAX; index++)
 		atomic_set(&device->traces[index], 0);
+
 	/* init scp boot flags */
 	atomic_set(&device->cfg_data_after_reboot, 0);
 	atomic_set(&device->start_timesync_first_boot, 0);
 	atomic_set(&device->create_manager_first_boot, 0);
+
 	/* init timestamp sync worker */
 	INIT_WORK(&device->sync_time_worker, mtk_nanohub_sync_time_work);
-	device->sync_time_timer.expires =
-		jiffies + msecs_to_jiffies(SYNC_TIME_START_CYCLC);
-	device->sync_time_timer.function = mtk_nanohub_sync_time_func;
-	init_timer(&device->sync_time_timer);
+	timer_setup(&device->sync_time_timer, mtk_nanohub_sync_time_func, 0);
+	mod_timer(&device->sync_time_timer,
+			  jiffies + msecs_to_jiffies(SYNC_TIME_START_CYCLC));
 
-#ifdef OPLUS_FEATURE_SENSOR
-	INIT_WORK(&device->light_monitor_worker, mtk_nanohub_light_monitor_work);
-	device->light_monitor_timer.expires =
-		jiffies + msecs_to_jiffies(LIGHT_MONITOR_TIME_CYCLC);
-	device->light_monitor_timer.function = mtk_nanohub_light_monitor_time_func;
-	init_timer(&device->light_monitor_timer);
-#endif
 	/* init wakeup source */
-	wakeup_source_init(&device->time_sync_wakeup_src, "sync_time");
-	wakeup_source_init(&device->data_notify_wakeup_src, "data_notify");
+	device->time_sync_wakeup_src = wakeup_source_register(NULL, "synctime");
+	if (!device->time_sync_wakeup_src) {
+		pr_err("time sync wakeup source init fail\n");
+		err = -ENOMEM;
+		goto exit_kfree_2;
+	}
+
+	device->data_notify_wakeup_src = wakeup_source_register(NULL,
+								"data_notify");
+	if (!device->data_notify_wakeup_src) {
+		pr_err("data_notify wakeup source init fail\n");
+		err = -ENOMEM;
+		goto exit_wakeup_source_unreg;
+	}
+
 	/* init nanohub ipi */
-	mtk_nanohub_ipi_init();
+	err = mtk_nanohub_ipi_init();
+	if (err)
+		goto exit_wakeup_source_unreg_2;
+
 	/* register ipi interrupt handler */
-	scp_ipi_registration(IPI_SENSOR,
-		mtk_nanohub_ipi_handler, "mtk_nanohub");
+	err = scp_ipi_registration(IPI_SENSOR, mtk_nanohub_ipi_handler,
+				   "mtk_nanohub");
+	if (err != SCP_IPI_DONE) {
+		pr_err("IPI_SENSOR register fail, err:%d\n", err);
+		goto exit_wakeup_source_unreg_2;
+	}
+
 	/* this call back can get scp power down status */
 	scp_A_register_notify(&mtk_nanohub_ready_notifier);
+
 	/* init data path */
 	WRITE_ONCE(chre_kthread_wait_condition, false);
 	task = kthread_run(mtk_nanohub_direct_push_work,
-		NULL, "chre_kthread");
+			   NULL, "chre_kthread");
 	if (IS_ERR(task)) {
+		err = -ENOMEM;
 		pr_err("mtk_nanohub_direct_push_work create fail!\n");
-		goto exit_scp;
+		goto exit_scp_ipi_reg;
 	}
 	sched_setscheduler(task, SCHED_FIFO, &param);
+
 	/* this call back can get scp power UP status */
 	task_power_reset = kthread_run(mtk_nanohub_power_up_work,
-		NULL, "scp_power_reset");
+				       NULL, "scp_power_reset");
 	if (IS_ERR(task_power_reset)) {
+		err = -ENOMEM;
 		pr_err("mtk_nanohub_power_up_work create fail!\n");
-		goto exit_scp;
+		goto exit_scp_ipi_reg;
 	}
+
 	err = mtk_nanohub_create_attr(pdev->dev.driver);
 	if (err < 0) {
-		pr_err("create attribute err\n");
-		goto exit_scp;
+		pr_err("create attribute err,err:%d\n", err);
+		goto exit_scp_ipi_reg;
 	}
 	err = register_pm_notifier(&mtk_nanohub_pm_notifier_func);
 	if (err < 0) {
-		pr_err("Failed to register PM notifier.\n");
+		pr_err("register PM notifier fail, err:%d\n", err);
 		goto exit_attr;
 	}
 
 	pr_info("init done, data_unit_t:%d, SCP_SENSOR_HUB_DATA:%d\n",
 		(int)sizeof(struct data_unit_t),
 		(int)sizeof(union SCP_SENSOR_HUB_DATA));
-	BUG_ON(sizeof(struct data_unit_t) != SENSOR_DATA_SIZE
-		|| sizeof(union SCP_SENSOR_HUB_DATA) != SENSOR_IPI_SIZE);
 	return 0;
 
 exit_attr:
 	mtk_nanohub_delete_attr(pdev->dev.driver);
-exit_scp:
+exit_scp_ipi_reg:
 	scp_A_unregister_notify(&mtk_nanohub_ready_notifier);
 	scp_ipi_unregistration(IPI_SENSOR);
+exit_wakeup_source_unreg_2:
+	wakeup_source_unregister(device->data_notify_wakeup_src);
+exit_wakeup_source_unreg:
+	wakeup_source_unregister(device->time_sync_wakeup_src);
+exit_kfree_2:
 	vfree(device->wp_queue.ringbuffer);
 exit_device:
 	hf_device_unregister(&device->hf_dev);
 exit_kfree:
 	kfree(device);
 exit:
-	pr_err("%s: err = %d\n", __func__, err);
+	pr_err("%s fail.err = %d\n", __func__, err);
 	return err;
 }
 
@@ -3286,7 +3233,7 @@ static void mtk_nanohub_shutdown(struct platform_device *pdev)
 			ret = nanohub_external_write((const uint8_t *)&cmd,
 				sizeof(struct ConfigCmd));
 			if (ret < 0)
-				pr_notice("failed registerlistener [%d,%d]\n",
+				pr_warn("fail to set sensor:%d %d in shutdwn\n",
 					id, cmd.cmd);
 		}
 	}
@@ -3326,19 +3273,36 @@ static struct platform_driver mtk_nanohub_pdrv = {
 
 static int __init mtk_nanohub_init(void)
 {
-	if (platform_device_register(&mtk_nanohub_pdev)) {
-		pr_err("mtk_nanohub platform device error\n");
-		return -1;
+	int ret = 0;
+
+	ret = nanohub_init();
+	if (ret)
+		goto err_exit;
+
+	ret = platform_device_register(&mtk_nanohub_pdev);
+	if (ret) {
+		pr_err("platform dev reg fail,ret:%d\n", ret);
+		goto err_exit;
 	}
-	if (platform_driver_register(&mtk_nanohub_pdrv)) {
-		pr_err("mtk_nanohub platform driver error\n");
-		return -1;
+
+	ret = platform_driver_register(&mtk_nanohub_pdrv);
+	if (ret) {
+		pr_err("platform drv reg fail,ret:%d\n", ret);
+		goto err_unregister_device;
 	}
+
 	return 0;
+
+err_unregister_device:
+	platform_device_unregister(&mtk_nanohub_pdev);
+err_exit:
+	return ret;
 }
 
 static void __exit mtk_nanohub_exit(void)
 {
+	platform_driver_unregister(&mtk_nanohub_pdrv);
+	platform_device_unregister(&mtk_nanohub_pdev);
 }
 
 #ifdef OPLUS_FEATURE_SENSOR
@@ -3357,9 +3321,9 @@ static void __exit mtk_nanohub_info_exit(void)
 late_initcall(mtk_nanohub_info_init);
 module_exit(mtk_nanohub_info_exit);
 #endif
-
 module_init(mtk_nanohub_init);
 module_exit(mtk_nanohub_exit);
+
 MODULE_AUTHOR("Mediatek");
 MODULE_DESCRIPTION("mtk_nanohub driver");
 MODULE_LICENSE("GPL");

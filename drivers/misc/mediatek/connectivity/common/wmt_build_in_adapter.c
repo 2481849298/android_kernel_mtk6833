@@ -1,16 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
-/*#define pr_fmt(fmt) KBUILD_MODNAME ": %s: " fmt, __func__*/
 #include <linux/kernel.h>
 
 #include "wmt_build_in_adapter.h"
@@ -22,6 +13,8 @@
 #include <linux/proc_fs.h>
 #include <linux/ctype.h>
 #include <linux/cdev.h>
+#include <linux/sched/clock.h>
+#include "conn_dbg.h"
 
 /*device tree mode*/
 #ifdef CONFIG_OF
@@ -39,11 +32,6 @@
 #define CONNADP_LOG_INFO    2
 #define CONNADP_LOG_WARN    1
 #define CONNADP_LOG_ERR     0
-
-#if defined(CONFIG_MACH_MT6873)
-#include <clk-mt6873-pg.h>
-#define DUMP_CLOCK_FAIL_CALLBACK 1
-#endif
 
 /*******************************************************************************
  * Connsys adaptation layer logging utility
@@ -93,6 +81,88 @@ static struct cdev gConnDbgdev;
  ******************************************************************************/
 static struct wmt_platform_bridge bridge;
 
+#define CONN_DBG_LOG_BUF_SIZE 256
+static spinlock_t conn_dbg_log_lock;
+static enum conn_dbg_log_type conn_dbg_actvie_log_type;
+static char conn_dbg_log_buf[CONN_DBG_LOG_TYPE_NUM][CONN_DBG_LOG_BUF_SIZE];
+
+static void conn_dbg_get_local_time(u64 *sec, unsigned long *nsec)
+{
+	if (sec != NULL && nsec != NULL) {
+		*sec = local_clock();
+		*nsec = do_div(*sec, 1000000000)/1000;
+	} else
+		pr_info("The input parameters error when get local time\n");
+}
+
+int conn_dbg_add_log(enum conn_dbg_log_type type, const char *buf)
+{
+	unsigned long flag;
+	int space;
+	u64 sec;
+	unsigned long nsec;
+	char temp[CONN_DBG_LOG_BUF_SIZE];
+
+	if (type >= CONN_DBG_LOG_TYPE_NUM || buf == NULL) {
+		pr_info("%s type %d or buf %x is invalid\n", __func__, type, buf);
+		return -1;
+	}
+
+	pr_info("%s type = %d, log = %s\n", __func__, type, buf);
+	conn_dbg_get_local_time(&sec, &nsec);
+	if (snprintf(temp, CONN_DBG_LOG_BUF_SIZE, "[%llu.%06lu]%s", sec, nsec, buf) < 0) {
+		pr_info("%s snprintf error\n", __func__);
+		return -2;
+	}
+
+	spin_lock_irqsave(&conn_dbg_log_lock, flag);
+
+	space = CONN_DBG_LOG_BUF_SIZE - strlen(conn_dbg_log_buf[type]) - 1;
+	if (space > 0)
+		strncat(conn_dbg_log_buf[type], temp, space);
+	else
+		pr_info("%s buffer is full\n", __func__);
+
+	spin_unlock_irqrestore(&conn_dbg_log_lock, flag);
+
+	return 0;
+}
+EXPORT_SYMBOL(conn_dbg_add_log);
+
+static ssize_t conn_dbg_read_log(struct file *filp, char __user *buffer,
+				size_t count, loff_t *f_pos)
+{
+	unsigned long flag;
+	int dump_len = 0;
+	int ret = 0;
+	char temp[CONN_DBG_LOG_BUF_SIZE];
+
+	if (*f_pos < 0 || conn_dbg_actvie_log_type >= CONN_DBG_LOG_TYPE_NUM)
+		return -EFAULT;
+
+	/* copy data to temp buffer because copy_to_user might sleep */
+	spin_lock_irqsave(&conn_dbg_log_lock, flag);
+	memcpy(temp, conn_dbg_log_buf[conn_dbg_actvie_log_type], CONN_DBG_LOG_BUF_SIZE);
+	spin_unlock_irqrestore(&conn_dbg_log_lock, flag);
+
+	dump_len = strlen(temp) - *f_pos;
+	if (dump_len > 0 && dump_len < CONN_DBG_LOG_BUF_SIZE - *f_pos) {
+		if (dump_len > count)
+			dump_len = count;
+
+		pr_info("%s f_pos=%d, dump_len=%d, %s", __func__, *f_pos, dump_len, &temp[*f_pos]);
+		ret = copy_to_user(buffer, &temp[*f_pos], dump_len);
+		if (ret) {
+			pr_info("%s copy_to_user failed, ret = %d", __func__, ret);
+			ret = -EFAULT;
+		} else {
+			*f_pos += dump_len;
+			ret = dump_len;
+		}
+	}
+	return ret;
+}
+
 ssize_t conn_dbg_dev_write(struct file *filp, const char __user *buffer,
 				size_t count, loff_t *f_pos)
 {
@@ -105,19 +175,38 @@ ssize_t conn_dbg_dev_write(struct file *filp, const char __user *buffer,
 ssize_t conn_dbg_dev_read(struct file *filp, char __user *buffer,
 				size_t count, loff_t *f_pos)
 {
-	if (bridge.debug_read_cb)
-		return bridge.debug_read_cb(filp, buffer, count, f_pos);
+	ssize_t ret, ret2;
+
+	ret = conn_dbg_read_log(filp, buffer, count, f_pos);
+	if (ret > 0) {
+		count -= ret;
+		buffer += ret;
+	}
+
+	if (bridge.debug_read_cb) {
+		ret2 = bridge.debug_read_cb(filp, buffer, count, f_pos);
+		if (ret2 > 0)
+			ret = ret > 0 ? ret + ret2 : ret2;
+	}
+
+	return ret;
+}
+static const struct file_operations gConnDbgDevFops = {
+	.read = conn_dbg_dev_read,
+	.write = conn_dbg_dev_write,
+};
+
+static int conn_dbg_log_init(void)
+{
+	int i;
+
+	spin_lock_init(&conn_dbg_log_lock);
+
+	for(i = 0; i < CONN_DBG_LOG_TYPE_NUM; i++)
+		memset(conn_dbg_log_buf[i], 0, CONN_DBG_LOG_BUF_SIZE);
 
 	return 0;
 }
-
-
-
-
-const struct file_operations gConnDbgDevFops = {
-	.write = conn_dbg_dev_write,
-	.read = conn_dbg_dev_read,
-};
 
 static int conn_dbg_dev_init(void)
 {
@@ -190,18 +279,6 @@ static int conn_dbg_dev_deinit(void)
 	return 0;
 }
 
-#ifdef DUMP_CLOCK_FAIL_CALLBACK
-static void wmt_clock_debug_dump(enum subsys_id sys)
-{
-	if (sys == SYS_CONN)
-		mtk_wcn_cmb_stub_clock_fail_dump();
-}
-
-static struct pg_callbacks wmt_clk_subsys_handle = {
-	.debug_dump = wmt_clock_debug_dump
-};
-#endif
-
 void wmt_export_platform_bridge_register(struct wmt_platform_bridge *cb)
 {
 	if (unlikely(!cb))
@@ -211,16 +288,14 @@ void wmt_export_platform_bridge_register(struct wmt_platform_bridge *cb)
 	bridge.clock_fail_dump_cb = cb->clock_fail_dump_cb;
 	bridge.conninfra_reg_readable_cb = cb->conninfra_reg_readable_cb;
 	bridge.conninfra_reg_is_bus_hang_cb = cb->conninfra_reg_is_bus_hang_cb;
-	bridge.conninfra_reg_is_bus_hang_no_lock_cb = cb->conninfra_reg_is_bus_hang_no_lock_cb;
-#ifdef DUMP_CLOCK_FAIL_CALLBACK
-	register_pg_callback(&wmt_clk_subsys_handle);
-#endif
 
 	if (cb->debug_write_cb != NULL && cb->debug_read_cb != NULL) {
 		bridge.debug_write_cb = cb->debug_write_cb;
 		bridge.debug_read_cb = cb->debug_read_cb;
-		conn_dbg_dev_init();
 	}
+
+	conn_dbg_dev_init();
+	conn_dbg_log_init();
 
 	CONNADP_INFO_FUNC("\n");
 }
@@ -290,22 +365,6 @@ int mtk_wcn_conninfra_is_bus_hang(void)
 		return bridge.conninfra_reg_is_bus_hang_cb();
 }
 
-int mtk_wcn_conninfra_conn_bus_dump(void)
-{
-	static DEFINE_RATELIMIT_STATE(_rs, 5*HZ, 1);
-	int ret = 0;
-
-	if (unlikely(!bridge.conninfra_reg_is_bus_hang_no_lock_cb)) {
-		if (__ratelimit(&_rs))
-			CONNADP_WARN_FUNC("is_bus_hang_no_lock not registered\n");
-		ret = -1;
-	} else {
-		ret = bridge.conninfra_reg_is_bus_hang_no_lock_cb();
-	}
-
-	return ret;
-}
-
 /*******************************************************************************
  * SDIO integration with platform MMC driver
  ******************************************************************************/
@@ -366,15 +425,18 @@ static irqreturn_t mtk_wcn_cmb_sdio_eirq_handler_stub(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-void mtk_wcn_cmb_sdio_request_eirq_by_wmt(void)
+static void mtk_wcn_cmb_sdio_request_eirq(msdc_sdio_irq_handler_t irq_handler,
+					  void *data)
 {
 #ifdef CONFIG_OF
-	int ret = -EINVAL;
 	struct device_node *node;
+	int ret = -EINVAL;
 
 	CONNADP_INFO_FUNC("enter\n");
 	_mtk_wcn_sdio_irq_flag_set(0);
 	atomic_set(&irq_enable_flag, 1);
+	mtk_wcn_cmb_sdio_eirq_data = data;
+	mtk_wcn_cmb_sdio_eirq_handler = irq_handler;
 
 	node = (struct device_node *)of_find_compatible_node(NULL, NULL,
 					"mediatek,connectivity-combo");
@@ -390,20 +452,6 @@ void mtk_wcn_cmb_sdio_request_eirq_by_wmt(void)
 			mtk_wcn_cmb_sdio_disable_eirq();/*state:power off*/
 	} else
 		CONNADP_WARN_FUNC("can't find connectivity compatible node\n");
-
-	CONNADP_INFO_FUNC("exit\n");
-	return;
-#endif
-}
-EXPORT_SYMBOL(mtk_wcn_cmb_sdio_request_eirq_by_wmt);
-
-static void mtk_wcn_cmb_sdio_request_eirq(msdc_sdio_irq_handler_t irq_handler,
-					  void *data)
-{
-#ifdef CONFIG_OF
-	CONNADP_INFO_FUNC("enter\n");
-	mtk_wcn_cmb_sdio_eirq_data = data;
-	mtk_wcn_cmb_sdio_eirq_handler = irq_handler;
 
 	CONNADP_INFO_FUNC("exit\n");
 #else
@@ -425,7 +473,7 @@ static void mtk_wcn_cmb_sdio_enable_eirq(void)
 		CONNADP_DBG_FUNC("wifi eint has been enabled\n");
 	else {
 		atomic_set(&irq_enable_flag, 1);
-		if (wifi_irq != 0xffffffff) {
+		if (wifi_irq != 0xfffffff) {
 			enable_irq(wifi_irq);
 			CONNADP_DBG_FUNC(" enable WIFI EINT %d!\n", wifi_irq);
 		}
@@ -437,7 +485,7 @@ static void mtk_wcn_cmb_sdio_disable_eirq(void)
 	if (!atomic_read(&irq_enable_flag))
 		CONNADP_DBG_FUNC("wifi eint has been disabled!\n");
 	else {
-		if (wifi_irq != 0xffffffff) {
+		if (wifi_irq != 0xfffffff) {
 			disable_irq_nosync(wifi_irq);
 			CONNADP_DBG_FUNC("disable WIFI EINT %d!\n", wifi_irq);
 		}

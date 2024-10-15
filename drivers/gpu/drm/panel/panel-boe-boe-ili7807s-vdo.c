@@ -42,6 +42,9 @@
 #endif
 extern unsigned long esd_flag;
 #include <mt6370_pmu_bled.h>
+#if (defined(OPLUS_BUG_STABILITY) && defined(CONFIG_MFD_MT6370_PMU))
+	extern unsigned int pmic_custom_flag;
+#endif
 #define BLED_REAPTIME_NORMAL1 9
 #define BLED_REAPTIME_NORMAL2 10
 #define BLED_REAPTIME_SUSPEND 0
@@ -902,7 +905,7 @@ static struct mtk_panel_params ext_params_120hz = {
 	.pll_clk = 553,
 // #ifdef OPLUS_BUG_COMPATIBILITY
 	.phy_timcon = {
-	    .hs_trail = 20,
+	    .hs_trail = 14,
 	},
 //#endif
 //	.vfp_low_power = VFP_120hz,
@@ -985,7 +988,7 @@ static struct mtk_panel_params ext_params_30hz = {
 	.pll_clk = 553,
 // #ifdef OPLUS_BUG_COMPATIBILITY
 	.phy_timcon = {
-	    .hs_trail = 20,
+	    .hs_trail = 14,
 	},
 //#endif
 //	.vfp_low_power = VFP_30hz,
@@ -1070,7 +1073,7 @@ static struct mtk_panel_params ext_params_45hz = {
 	.pll_clk = 553,
 // #ifdef OPLUS_BUG_COMPATIBILITY
 	.phy_timcon = {
-	    .hs_trail = 20,
+	    .hs_trail = 14,
 	},
 //#endif
 //	.vfp_low_power = VFP_120hz,
@@ -1154,7 +1157,7 @@ static struct mtk_panel_params ext_params_48hz = {
 	.pll_clk = 553,
 // #ifdef OPLUS_BUG_COMPATIBILITY
 	.phy_timcon = {
-	    .hs_trail = 20,
+	    .hs_trail = 14,
 	},
 //#endif
 //	.vfp_low_power = VFP_120hz,
@@ -1238,7 +1241,7 @@ static struct mtk_panel_params ext_params_50hz = {
 	.pll_clk = 553,
 // #ifdef OPLUS_BUG_COMPATIBILITY
 	.phy_timcon = {
-	    .hs_trail = 20,
+	    .hs_trail = 14,
 	},
 //#endif
 //	.vfp_low_power = VFP_120hz,
@@ -1322,7 +1325,7 @@ static struct mtk_panel_params ext_params_60hz = {
 	.pll_clk = 553,
 // #ifdef OPLUS_BUG_COMPATIBILITY
 	.phy_timcon = {
-	    .hs_trail = 20,
+	    .hs_trail = 14,
 	},
 //#endif
 //	.vfp_low_power = VFP_60hz,
@@ -1404,7 +1407,7 @@ static struct mtk_panel_params ext_params_90hz = {
 	.pll_clk = 553,
 // #ifdef OPLUS_BUG_COMPATIBILITY
 	.phy_timcon = {
-	    .hs_trail = 20,
+	    .hs_trail = 14,
 	},
 //#endif
 //	.vfp_low_power = VFP_90hz,
@@ -1677,7 +1680,7 @@ static const struct drm_panel_funcs lcm_drm_funcs = {
 	.get_modes = lcm_get_modes,
 };
 
-static void dyn_timer_fn(unsigned long arg)
+static void dyn_timer_fn(struct timer_list *arg)
 {
 	pr_info("\n");
 	ext_params_120hz.dyn.switch_en = 1;
@@ -1696,7 +1699,9 @@ static int lcm_probe(struct mipi_dsi_device *dsi)
 	struct device_node *backlight;
 	int ret;
 	struct device_node *dsi_node, *remote_node = NULL, *endpoint = NULL;
-
+#if (defined(OPLUS_BUG_STABILITY) && defined(CONFIG_MFD_MT6370_PMU))
+	pmic_custom_flag = 1;
+#endif
 	dsi_node = of_get_parent(dev->of_node);
 	if (dsi_node) {
 		endpoint = of_graph_get_next_endpoint(dsi_node, NULL);
@@ -1788,8 +1793,7 @@ static int lcm_probe(struct mipi_dsi_device *dsi)
 	disp_aal_set_dre_en(1);
 // #endif
 	register_device_proc("lcd","ili7807s_boe_boe","BOE");
-
-	setup_timer(&dyn_timer, dyn_timer_fn, 0);
+	timer_setup(&dyn_timer, dyn_timer_fn, 0);
 	mod_timer(&dyn_timer, jiffies + (60*HZ));
 
 	pr_info("%s-\n", __func__);

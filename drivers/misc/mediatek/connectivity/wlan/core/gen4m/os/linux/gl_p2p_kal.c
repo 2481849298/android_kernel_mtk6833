@@ -192,6 +192,24 @@ kalP2PUpdateAssocInfo(IN struct GLUE_INFO *prGlueInfo,
 		u4FrameBodyLen -= 4;
 	}
 
+	prBssInfo = GET_BSS_INFO_BY_INDEX(prGlueInfo->prAdapter, ucBssIndex);
+	if (!prBssInfo)
+		return;
+	if (u4FrameBodyLen <= CFG_CFG80211_IE_BUF_LEN &&
+		u4FrameBodyLen <= MAX_IE_LENGTH &&
+		!IS_BSS_APGO(prBssInfo)) {
+		struct P2P_ROLE_FSM_INFO *fsm =
+			P2P_ROLE_INDEX_2_ROLE_FSM_INFO(
+				prGlueInfo->prAdapter,
+				prBssInfo->u4PrivateData);
+
+		if (!fsm)
+			return;
+
+		fsm->rConnReqInfo.u4BufLength = u4FrameBodyLen;
+		kalMemCopy(fsm->rConnReqInfo.aucIEBuf, cp, u4FrameBodyLen);
+	}
+
 	/* do supplicant a favor, parse to the start of WPA/RSN IE */
 	if (wextSrchDesiredWPSIE(cp, u4FrameBodyLen, 0xDD, &pucDesiredIE)) {
 		/* printk("wextSrchDesiredWPSIE!!\n"); */
@@ -212,8 +230,6 @@ kalP2PUpdateAssocInfo(IN struct GLUE_INFO *prGlueInfo,
 	/* IWEVASSOCREQIE, indicate binary string */
 	pucExtraInfo = pucDesiredIE;
 	wrqu.data.length = pucDesiredIE[1] + 2;
-
-	prBssInfo = GET_BSS_INFO_BY_INDEX(prGlueInfo->prAdapter, ucBssIndex);
 
 	if (ucBssIndex == prGlueInfo->prAdapter->ucP2PDevBssIdx)
 		prNetdevice = prGlueInfo->prP2PInfo
@@ -638,6 +654,19 @@ void kalP2PTxCarrierOn(IN struct GLUE_INFO *prGlueInfo,
 		netif_carrier_on(prDevHandler);
 		netif_tx_start_all_queues(prDevHandler);
 	}
+}
+
+uint8_t kalP2PIsTxCarrierOn(IN struct GLUE_INFO *prGlueInfo,
+		IN struct BSS_INFO *prBssInfo)
+{
+	struct net_device *prDevHandler = NULL;
+	uint8_t ucBssIndex = (uint8_t)prBssInfo->ucBssIndex;
+
+	prDevHandler = wlanGetNetDev(prGlueInfo, ucBssIndex);
+	if (prDevHandler == NULL)
+		return FALSE;
+
+	return netif_carrier_ok(prDevHandler);
 }
 
 void kalP2PEnableNetDev(IN struct GLUE_INFO *prGlueInfo,
@@ -1512,7 +1541,6 @@ kalP2PIndicateRxMgmtFrame(IN struct ADAPTER *prAdapter,
 
 }				/* kalP2PIndicateRxMgmtFrame */
 
-#if CFG_WPS_DISCONNECT || (KERNEL_VERSION(4, 4, 0) <= CFG80211_VERSION_CODE)
 void
 kalP2PGCIndicateConnectionStatus(IN struct GLUE_INFO *prGlueInfo,
 		IN uint8_t ucRoleIndex,
@@ -1561,77 +1589,25 @@ kalP2PGCIndicateConnectionStatus(IN struct GLUE_INFO *prGlueInfo,
 
 			prP2pConnInfo->eConnRequest = P2P_CONNECTION_TYPE_IDLE;
 		} else {
+			DBGLOG(INIT, INFO,
+				"indicate disconnection event to kernel, reason=%d, locally_generated=%d\n",
+				u2StatusReason,
+				eStatus == WLAN_STATUS_MEDIA_DISCONNECT_LOCALLY
+				);
 			/* Disconnect, what if u2StatusReason == 0? */
 			cfg80211_disconnected(prGlueP2pInfo->aprRoleHandler,
 				/* struct net_device * dev, */
 				u2StatusReason,
 				pucRxIEBuf, u2RxIELen,
+#if CFG_WPS_DISCONNECT || (KERNEL_VERSION(4, 4, 0) <= CFG80211_VERSION_CODE)
 				eStatus == WLAN_STATUS_MEDIA_DISCONNECT_LOCALLY,
-				GFP_KERNEL);
-		}
-
-	} while (FALSE);
-
-}				/* kalP2PGCIndicateConnectionStatus */
-
-#else
-void
-kalP2PGCIndicateConnectionStatus(IN struct GLUE_INFO *prGlueInfo,
-		IN uint8_t ucRoleIndex,
-		IN struct P2P_CONNECTION_REQ_INFO *prP2pConnInfo,
-		IN uint8_t *pucRxIEBuf,
-		IN uint16_t u2RxIELen,
-		IN uint16_t u2StatusReason)
-{
-	struct GL_P2P_INFO *prGlueP2pInfo = (struct GL_P2P_INFO *) NULL;
-	struct ADAPTER *prAdapter = NULL;
-
-	do {
-		if (prGlueInfo == NULL) {
-			ASSERT(FALSE);
-			break;
-		}
-
-		prAdapter = prGlueInfo->prAdapter;
-		prGlueP2pInfo = prGlueInfo->prP2PInfo[ucRoleIndex];
-
-		/* FIXME: This exception occurs at wlanRemove. */
-		if ((prGlueP2pInfo == NULL) ||
-		    (prGlueP2pInfo->aprRoleHandler == NULL) ||
-		    (prAdapter->rP2PNetRegState !=
-				ENUM_NET_REG_STATE_REGISTERED) ||
-		    (test_bit(GLUE_FLAG_HALT_BIT, &prGlueInfo->ulFlag) == 1)) {
-			break;
-		}
-
-		if (prP2pConnInfo) {
-			/* switch netif on */
-			netif_carrier_on(prGlueP2pInfo->aprRoleHandler);
-
-			cfg80211_connect_result(prGlueP2pInfo->aprRoleHandler,
-				/* struct net_device * dev, */
-				prP2pConnInfo->aucBssid,
-				prP2pConnInfo->aucIEBuf,
-				prP2pConnInfo->u4BufLength,
-				pucRxIEBuf, u2RxIELen,
-				u2StatusReason,
-				/* gfp_t gfp *//* allocation flags */
-				GFP_KERNEL);
-
-			prP2pConnInfo->eConnRequest = P2P_CONNECTION_TYPE_IDLE;
-		} else {
-			/* Disconnect, what if u2StatusReason == 0? */
-			cfg80211_disconnected(prGlueP2pInfo->aprRoleHandler,
-				/* struct net_device * dev, */
-				u2StatusReason, pucRxIEBuf,
-				u2RxIELen, GFP_KERNEL);
-		}
-
-	} while (FALSE);
-
-}				/* kalP2PGCIndicateConnectionStatus */
-
 #endif
+				GFP_KERNEL);
+		}
+
+	} while (FALSE);
+
+}				/* kalP2PGCIndicateConnectionStatus */
 
 void
 kalP2PGOStationUpdate(IN struct GLUE_INFO *prGlueInfo,
@@ -2261,6 +2237,14 @@ void kalP2pPreStartRdd(
 	chan = ieee80211_get_channel(
 		prGlueP2pInfo->prWdev->wiphy,
 		freq);
+	if (!chan) {
+		DBGLOG(P2P, ERROR, "chan info null.\n");
+		return;
+	}
+	chandef.center_freq1 = 0;
+	chandef.center_freq2 = 0;
+	chandef.chan = chan;
+	chandef.width = 0;
 	cfg80211_chandef_create(&chandef,
 		chan, NL80211_CHAN_NO_HT);
 
@@ -2325,6 +2309,7 @@ void kalP2pIndicateAcsResult(IN struct GLUE_INFO *prGlueInfo,
 			ch_width = 20;
 			ucSecondCh = 0;
 		}
+#if CFG_SUPPORT_SAP_DFS_CHANNEL
 		wlanUpdateDfsChannelTable(prGlueInfo,
 			ucRoleIndex,
 			ucPrimaryCh,
@@ -2332,6 +2317,7 @@ void kalP2pIndicateAcsResult(IN struct GLUE_INFO *prGlueInfo,
 			0,
 			nicChannelNum2Freq(ucSeg0Ch, eBand) / 1000,
 			eBand);
+#endif
 	}
 
 	DBGLOG(P2P, INFO,

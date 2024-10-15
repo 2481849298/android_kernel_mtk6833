@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef BUILD_LK
@@ -452,6 +444,8 @@ static void lcm_init_lcm(void)
 	MDELAY(5);
 	//register
 	sgm37604a_write_byte(0x11, 0x00);
+	sgm37604a_write_byte(0x1A, 0);
+	sgm37604a_write_byte(0x19, 0);
 	MDELAY(10);
 
 	push_table(lcm_initinal_setting,
@@ -540,6 +534,7 @@ static void lcm_setbacklight_cmdq(void *handle, unsigned int level)
 		sgm37604a_write_byte(0x1A, (backlight_i2c_map_hx[s_last_backlight_level] & 0x0F));
 		sgm37604a_write_byte(0x19, (backlight_i2c_map_hx[s_last_backlight_level] >> 4));
 	}
+	pr_info("s_last_backlight_level=%d\n", s_last_backlight_level);
 }
 
 struct LCM_DRIVER hx83102p_wxga_vdo_incell_boe_lcm_drv = {

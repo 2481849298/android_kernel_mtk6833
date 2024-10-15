@@ -10,11 +10,17 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
+#include "../common/mtk-afe-platform-driver.h"
 #include "mt6768-afe-common.h"
 #include "mt6768-afe-clk.h"
 #include "mt6768-afe-gpio.h"
 #include "../../codecs/mt6358.h"
 #include "../common/mtk-sp-spk-amp.h"
+
+#if IS_ENABLED(CONFIG_SND_SOC_OPLUS_PA_MANAGER)
+#include "../../codecs/audio/oplus_speaker_manager/oplus_speaker_manager_platform.h"
+#include "../../codecs/audio/oplus_speaker_manager/oplus_speaker_manager_codec.h"
+#endif /*CONFIG_SND_SOC_OPLUS_PA_MANAGER*/
 
 /*
  * if need additional control for the ext spk amp that is connected
@@ -22,9 +28,14 @@
  * mt6768_mt6358_spk_amp_event()
  */
 #define EXT_SPK_AMP_W_NAME "Ext_Speaker_Amp"
+#if IS_ENABLED(CONFIG_SND_SOC_OPLUS_PA_MANAGER)
+#define EXT_RCV_AMP_W_NAME "Ext_Reciver_Amp"
+#endif
+
 #ifdef OPLUS_BUG_COMPATIBILITY
 #include "../../codecs/audio/sia81xx/sia81xx_aux_dev_if.h"
 #endif  /*OPLUS_BUG_COMPATIBILITY*/
+
 
 static const char *const mt6768_spk_type_str[] = {MTK_SPK_NOT_SMARTPA_STR,
 						  MTK_SPK_RICHTEK_RT5509_STR,
@@ -41,6 +52,8 @@ static const struct soc_enum mt6768_spk_type_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(mt6768_spk_i2s_type_str),
 			    mt6768_spk_i2s_type_str),
 };
+
+
 #ifdef OPLUS_BUG_COMPATIBILITY
 
 
@@ -116,6 +129,8 @@ static int mt6853_audio_extern_config_ctl(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 #endif  /*OPLUS_BUG_COMPATIBILITY*/
+
+
 static int mt6768_spk_type_get(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
@@ -172,19 +187,99 @@ static int speaker_mute_put_status(struct snd_kcontrol *kcontrol, struct snd_ctl
 
 	if(speaker_mute_control)
 	{
+#ifdef CONFIG_SND_SOC_OPLUS_PA_MANAGER
+		oplus_ext_amp_l_enable(false);
+		oplus_ext_amp_r_enable(false);
+#else
 		if (OPLUS_PA_SIA == oplus_pa_type) {
 			sia81xx_stop();
 		}
+#endif // CONFIG_SND_SOC_OPLUS_PA_MANAGER
 	} else {
+#ifdef CONFIG_SND_SOC_OPLUS_PA_MANAGER
+		oplus_ext_amp_l_enable(true);
+		oplus_ext_amp_r_enable(true);
+#else
 		if ((kspk_enable_spk_pa_state)&&(OPLUS_PA_SIA == oplus_pa_type)) {
 			sia81xx_start();
 		}
+#endif // CONFIG_SND_SOC_OPLUS_PA_MANAGER
 	}
 
 	pr_err("%s(), speaker_mute_control = %d\n", __func__, ucontrol->value.integer.value[0]);
 	return 0;
 }
 #endif /* OPLUS_FEATURE_SPEAKER_MUTE */
+
+#if IS_ENABLED(CONFIG_SND_SOC_OPLUS_PA_MANAGER)
+static int rcv_amp_mode;
+static const char *rcv_amp_type_str[] = {"SPEAKER_MODE", "RECIEVER_MODE"};
+static const struct soc_enum rcv_amp_type_enum =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(rcv_amp_type_str), rcv_amp_type_str);
+
+static int mt6768_rcv_amp_mode_get(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol)
+{
+	pr_info("%s() = %d\n", __func__, rcv_amp_mode);
+	ucontrol->value.integer.value[0] = rcv_amp_mode;
+	return 0;
+}
+
+static int mt6768_rcv_amp_mode_set(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+
+	if (ucontrol->value.enumerated.item[0] >= e->items)
+		return -EINVAL;
+
+	rcv_amp_mode = ucontrol->value.integer.value[0];
+	pr_info("%s() = %d\n", __func__, rcv_amp_mode);
+	return 0;
+}
+
+static int mt6768_mt6358_rcv_amp_event(struct snd_soc_dapm_widget *w,
+					struct snd_kcontrol *kcontrol,
+					int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+
+	dev_info(card->dev, "%s(), event %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_POST_PMU:
+#ifdef OPLUS_FEATURE_SPEAKER_MUTE
+		if (speaker_mute_control) {
+			dev_err(card->dev, "%s(), speaker force mute%d\n", __func__);
+			return 0;
+		}
+#endif /* OPLUS_FEATURE_SPEAKER_MUTE */
+		/* rcv amp on control */
+		if(rcv_amp_mode == 1)
+		{
+			oplus_ext_amp_recv_l_enable(true);
+		} else {
+			oplus_ext_amp_l_enable(true);
+		}
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		/* rcv amp off control */
+		if(rcv_amp_mode == 1)
+		{
+			oplus_ext_amp_recv_l_enable(false);
+		} else {
+			oplus_ext_amp_l_enable(false);
+		}
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+};
+#endif  /*CONFIG_SND_SOC_OPLUS_PA_MANAGER*/
+
 static int mt6768_mt6358_spk_amp_event(struct snd_soc_dapm_widget *w,
 				       struct snd_kcontrol *kcontrol,
 				       int event)
@@ -204,22 +299,36 @@ static int mt6768_mt6358_spk_amp_event(struct snd_soc_dapm_widget *w,
 		}
 		kspk_enable_spk_pa_state = 1;
 #endif /* OPLUS_FEATURE_SPEAKER_MUTE */
+
+#if IS_ENABLED(CONFIG_SND_SOC_OPLUS_PA_MANAGER)
+		dev_info(card->dev, "%s(), SOC_OPLUS_PA_MANAGER oplus_ext_amp_r_enable(true)\n", __func__);
+		oplus_ext_amp_r_enable(true);
+#else
 #ifdef OPLUS_BUG_COMPATIBILITY
 		if (OPLUS_PA_SIA == oplus_pa_type) {
 			sia81xx_start();
 		}
 #endif  /*OPLUS_BUG_COMPATIBILITY*/
+#endif  /*CONFIG_SND_SOC_OPLUS_PA_MANAGER*/
+
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		/* spk amp off control */
 #ifdef OPLUS_FEATURE_SPEAKER_MUTE
 		kspk_enable_spk_pa_state = 0;
 #endif /* OPLUS_FEATURE_SPEAKER_MUTE */
+
+#if IS_ENABLED(CONFIG_SND_SOC_OPLUS_PA_MANAGER)
+		dev_info(card->dev, "%s(), SOC_OPLUS_PA_MANAGER oplus_ext_amp_r_enable(false)\n", __func__);
+		oplus_ext_amp_r_enable(false);
+#else
 #ifdef OPLUS_BUG_COMPATIBILITY
 		if (OPLUS_PA_SIA == oplus_pa_type) {
 			sia81xx_stop();
 		}
 #endif  /*OPLUS_BUG_COMPATIBILITY*/
+#endif  /*CONFIG_SND_SOC_OPLUS_PA_MANAGER*/
+
 		break;
 	default:
 		break;
@@ -230,17 +339,39 @@ static int mt6768_mt6358_spk_amp_event(struct snd_soc_dapm_widget *w,
 
 static const struct snd_soc_dapm_widget mt6768_mt6358_widgets[] = {
 	SND_SOC_DAPM_SPK(EXT_SPK_AMP_W_NAME, mt6768_mt6358_spk_amp_event),
+#if IS_ENABLED(CONFIG_SND_SOC_OPLUS_PA_MANAGER)
+	SND_SOC_DAPM_SPK(EXT_RCV_AMP_W_NAME, mt6768_mt6358_rcv_amp_event),
+#endif
 };
 
 static const struct snd_soc_dapm_route mt6768_mt6358_routes[] = {
 	{EXT_SPK_AMP_W_NAME, NULL, "LINEOUT L"},
+#if IS_ENABLED(CONFIG_SND_SOC_OPLUS_PA_MANAGER)
+	{EXT_RCV_AMP_W_NAME, NULL, "Receiver"},
+	{EXT_RCV_AMP_W_NAME, NULL, "Headphone L Ext Spk Amp"},
+#endif
 	{EXT_SPK_AMP_W_NAME, NULL, "LINEOUT L HSSPK"},
 	{EXT_SPK_AMP_W_NAME, NULL, "Headphone L Ext Spk Amp"},
 	{EXT_SPK_AMP_W_NAME, NULL, "Headphone R Ext Spk Amp"},
 };
 
+#ifdef CONFIG_OPLUS_FEATURE_MM_FEEDBACK
+#define HAL_FEEDBACK_MAX_BYTES         (512)
+extern int hal_feedback_config_get(struct snd_kcontrol *kcontrol,
+                        unsigned int __user *bytes,
+                        unsigned int size);
+extern int hal_feedback_config_set(struct snd_kcontrol *kcontrol,
+                        const unsigned int __user *bytes,
+                        unsigned int size);
+#endif  /*CONFIG_OPLUS_FEATURE_MM_FEEDBACK*/
+
 static const struct snd_kcontrol_new mt6768_mt6358_controls[] = {
 	SOC_DAPM_PIN_SWITCH(EXT_SPK_AMP_W_NAME),
+#if IS_ENABLED(CONFIG_SND_SOC_OPLUS_PA_MANAGER)
+	SOC_DAPM_PIN_SWITCH(EXT_RCV_AMP_W_NAME),
+	SOC_ENUM_EXT("RCV_AMP_MODE", rcv_amp_type_enum,
+			 mt6768_rcv_amp_mode_get, mt6768_rcv_amp_mode_set),
+#endif
 	SOC_ENUM_EXT("MTK_SPK_TYPE_GET", mt6768_spk_type_enum[0],
 		     mt6768_spk_type_get, NULL),
 	SOC_ENUM_EXT("MTK_SPK_I2S_OUT_TYPE_GET", mt6768_spk_type_enum[1],
@@ -259,6 +390,11 @@ static const struct snd_kcontrol_new mt6768_mt6358_controls[] = {
 		.get = mt6853_audio_extern_config_get
 	},
 	#endif //OPLUS_BUG_COMPATIBILITY
+#ifdef CONFIG_OPLUS_FEATURE_MM_FEEDBACK
+	SND_SOC_BYTES_TLV("HAL FEEDBACK",
+			  HAL_FEEDBACK_MAX_BYTES,
+			  hal_feedback_config_get, hal_feedback_config_set),
+#endif //CONFIG_OPLUS_FEATURE_MM_FEEDBACK
 };
 
 /*
@@ -283,8 +419,12 @@ static const struct snd_soc_ops mt6768_mt6358_i2s_ops = {
 
 static int mt6768_mt6358_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 {
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 	struct mt6768_afe_private *afe_priv = afe->platform_priv;
+	struct snd_soc_component *codec_component =
+		snd_soc_rtdcom_lookup(rtd, CODEC_MT6358_NAME);
 	int phase = 0;
 	unsigned int monitor = 0;
 	int test_done_1, test_done_2 = 0;
@@ -297,7 +437,7 @@ static int mt6768_mt6358_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 	mt6768_afe_gpio_request(afe, true, MT6768_DAI_ADDA, 1);
 	mt6768_afe_gpio_request(afe, true, MT6768_DAI_ADDA, 0);
 
-	mt6358_mtkaif_calibration_enable(&rtd->codec->component);
+	mt6358_mtkaif_calibration_enable(codec_component);
 
 	/* set clock protocol 2 */
 	regmap_update_bits(afe->regmap, AFE_AUD_PAD_TOP, 0xff, 0x38);
@@ -316,7 +456,7 @@ static int mt6768_mt6358_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 	     phase <= afe_priv->mtkaif_calibration_num_phase &&
 	     afe_priv->mtkaif_calibration_ok;
 	     phase++) {
-		mt6358_set_mtkaif_calibration_phase(&rtd->codec->component,
+		mt6358_set_mtkaif_calibration_phase(codec_component,
 						    phase, phase);
 
 		regmap_update_bits(afe_priv->topckgen, CKSYS_AUD_TOP_CFG,
@@ -375,17 +515,17 @@ static int mt6768_mt6358_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 	}
 
 	if (!afe_priv->mtkaif_calibration_ok)
-		mt6358_set_mtkaif_calibration_phase(&rtd->codec->component,
+		mt6358_set_mtkaif_calibration_phase(codec_component,
 						    0, 0);
 	else
-		mt6358_set_mtkaif_calibration_phase(&rtd->codec->component,
+		mt6358_set_mtkaif_calibration_phase(codec_component,
 			afe_priv->mtkaif_chosen_phase[0],
 			afe_priv->mtkaif_chosen_phase[1]);
 
 	/* disable rx fifo */
 	regmap_update_bits(afe->regmap, AFE_AUD_PAD_TOP, 0xff, 0x38);
 
-	mt6358_mtkaif_calibration_disable(&rtd->codec->component);
+	mt6358_mtkaif_calibration_disable(codec_component);
 
 	mt6768_afe_gpio_request(afe, false, MT6768_DAI_ADDA, 1);
 	mt6768_afe_gpio_request(afe, false, MT6768_DAI_ADDA, 0);
@@ -401,18 +541,21 @@ static int mt6768_mt6358_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 static int mt6768_mt6358_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct mt6358_codec_ops ops;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 	struct mt6768_afe_private *afe_priv = afe->platform_priv;
 	struct snd_soc_dapm_context *dapm = &rtd->card->dapm;
-
+	struct snd_soc_component *codec_component =
+		snd_soc_rtdcom_lookup(rtd, CODEC_MT6358_NAME);
 	ops.enable_dc_compensation = mt6768_enable_dc_compensation;
 	ops.set_lch_dc_compensation = mt6768_set_lch_dc_compensation;
 	ops.set_rch_dc_compensation = mt6768_set_rch_dc_compensation;
 	ops.adda_dl_gain_control = mt6768_adda_dl_gain_control;
-	mt6358_set_codec_ops(&rtd->codec->component, &ops);
+	mt6358_set_codec_ops(codec_component, &ops);
 
 	/* set mtkaif protocol */
-	mt6358_set_mtkaif_protocol(&rtd->codec->component,
+	mt6358_set_mtkaif_protocol(codec_component,
 				   MT6358_MTKAIF_PROTOCOL_1);
 	afe_priv->mtkaif_protocol = MT6358_MTKAIF_PROTOCOL_1;
 
@@ -422,6 +565,9 @@ static int mt6768_mt6358_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* disable ext amp connection */
 	snd_soc_dapm_disable_pin(dapm, EXT_SPK_AMP_W_NAME);
+#if IS_ENABLED(CONFIG_SND_SOC_OPLUS_PA_MANAGER)
+	snd_soc_dapm_disable_pin(dapm, EXT_RCV_AMP_W_NAME);
+#endif
 
 	return 0;
 }
@@ -453,7 +599,9 @@ static const struct snd_pcm_hardware mt6768_mt6358_vow_hardware = {
 static int mt6768_mt6358_vow_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 	struct snd_soc_component *component = NULL;
 	struct snd_soc_rtdcom_list *rtdcom = NULL;
 
@@ -473,7 +621,9 @@ static int mt6768_mt6358_vow_startup(struct snd_pcm_substream *substream)
 static void mt6768_mt6358_vow_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 	struct snd_soc_component *component = NULL;
 	struct snd_soc_rtdcom_list *rtdcom = NULL;
 
@@ -939,6 +1089,7 @@ static int mt6768_mt6358_dev_probe(struct platform_device *pdev)
 #ifdef OPLUS_BUG_COMPATIBILITY
 	read_audio_extern_config_dts(pdev);
 #endif  /*OPLUS_BUG_COMPATIBILITY*/
+
 	ret = mtk_spk_update_info(card, pdev,
 				  &spk_out_dai_link_idx, &spk_iv_dai_link_idx,
 				  &mt6768_mt6358_i2s_ops);
@@ -1003,6 +1154,7 @@ static int mt6768_mt6358_dev_probe(struct platform_device *pdev)
 	}
 
 	card->dev = &pdev->dev;
+
 #ifdef OPLUS_BUG_COMPATIBILITY
 	ret = soc_aux_init_only_sia81xx(pdev, card);
         dev_err(&pdev->dev, "%s soc_aux_init_only_sia8108 %d\n",

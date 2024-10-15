@@ -190,7 +190,7 @@ static struct imgsensor_info_struct imgsensor_info = {
     .mipi_lane_num = SENSOR_MIPI_4_LANE,
     .i2c_addr_table = {0x34, 0x35, 0xff},
     .i2c_speed = 400,
-    .hs_trail = 0x55,
+    .hs_trail = 0xF,
 };
 
 static struct imgsensor_struct imgsensor = {

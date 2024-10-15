@@ -278,6 +278,21 @@
 	vooc_ap_data_new_function:vooc_ap_data_new_function {
 		compatible = "mediatek, VOOC_EINT_NEW_FUNCTION";
 	};
+
+	mediatek_phy_tuning:mediatek_phy_tuning {
+		phy_tuning {
+			compatible = "mediatek,phy_tuning";
+			eye-vrt = <6>;
+			eye-term = <6>;
+			eye-rev6 = <2>;
+			eye-disc = <0xF>;
+			host-eye-vrt = <6>;
+			host-eye-term = <6>;
+			host-eye-rev6 = <2>;
+			host-eye-disc = <0xF>;
+		};
+	};
+
 	oplus,track-charge {
 		compatible = "oplus,track-charge";
 		track,fast_chg_break_t_thd = <1000>;
@@ -285,6 +300,11 @@
 		track,voocphy_type = <4>;
 		track,wired_max_power = <80000>;
 		track,wired_fast_chg_scheme = <1>;
+	};
+
+	oplus_battery_log: oplus,battery_log {
+		compatible = "oplus,battery_log";
+		oplus,battery_log_support;
 	};
 };
 
@@ -1659,8 +1679,8 @@ aa 0b 00 21 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 	dischg_enable: dischg_enable {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO51__FUNC_GPIO51>;
-			slew-rate = <1>;
-			bias-pull-up;
+			output-enable;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 			output-high;
 		};
 	};
@@ -1668,8 +1688,8 @@ aa 0b 00 21 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 	dischg_disable: dischg_disable {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO51__FUNC_GPIO51>;
-			slew-rate = <1>;
-			bias-pull-down;
+			output-enable;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_01>;
 			output-low;
 		};
 	};
@@ -1923,17 +1943,6 @@ aa 0b 00 21 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 	cdp_temp_warm_fastchg_current = <800>;
 
 	hot_bat_decidegc = <53>;
-};
-
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <6>;
-	u2_term_ref = <6>;
-	u2_enhance = <2>;
-
-	u2_vrt_ref_host = <6>;
-	u2_term_ref_host = <6>;
-	u2_enhance_host = <2>;
 };
 
 &mt6360_pmu {

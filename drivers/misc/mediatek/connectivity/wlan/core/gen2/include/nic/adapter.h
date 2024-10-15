@@ -414,6 +414,7 @@ struct _BSS_INFO_T {
 	struct AP_PMF_CFG rApPmfCfg;
 #endif
 	LINK_T rPmkidCache;
+	UINT_8 fgEnableH2E;
 
 };
 

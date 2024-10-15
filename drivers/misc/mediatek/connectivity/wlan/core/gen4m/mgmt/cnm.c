@@ -523,6 +523,7 @@ static uint8_t *apucCnmOpModeReq[CNM_OPMODE_REQ_MAX_CAP+1] = {
 	(uint8_t *) DISP_STRING("DBDC Scan"),
 	(uint8_t *) DISP_STRING("COEX"),
 	(uint8_t *) DISP_STRING("SmartGear"),
+	(uint8_t *) DISP_STRING("User"),
 	(uint8_t *) DISP_STRING("SmartGear_1T2R"),
 	(uint8_t *) DISP_STRING("ANT Ctrl_1T2R"),
 	(uint8_t *) DISP_STRING("CoAnt"),
@@ -692,7 +693,7 @@ void cnmChMngrRequestPrivilege(struct ADAPTER
 		if ((g_rDbdcInfo.rPeivilegeLockTime != 0) &&
 			(rChReqQueueTime > g_rDbdcInfo.rPeivilegeLockTime) &&
 			((rChReqQueueTime -
-				g_rDbdcInfo.rPeivilegeLockTime) > 5000)) {
+				g_rDbdcInfo.rPeivilegeLockTime) > 15000)) {
 			log_dbg(CNM, WARN,
 				"[DBDC] ChReq: long peivilege lock at %d, %d\n",
 				g_rDbdcInfo.rPeivilegeLockTime,
@@ -973,9 +974,10 @@ void cnmChMngrHandleChEvent(struct ADAPTER *prAdapter,
 	       prEventBody->ucPrimaryChannel,
 	       prEventBody->ucRfSco, prEventBody->u4GrantInterval);
 
-	ASSERT(prEventBody->ucBssIndex <=
-	       prAdapter->ucHwBssIdNum);
-	ASSERT(prEventBody->ucStatus == EVENT_CH_STATUS_GRANT);
+	if (prEventBody->ucBssIndex > prAdapter->ucHwBssIdNum)
+		return ;
+	if (prEventBody->ucStatus != EVENT_CH_STATUS_GRANT)
+		return;
 
 	prBssInfo =
 		prAdapter->aprBssInfo[prEventBody->ucBssIndex];
@@ -1040,6 +1042,12 @@ void cnmRadarDetectEvent(IN struct ADAPTER *prAdapter,
 	struct BSS_INFO *prBssInfo;
 	struct MSG_P2P_RADAR_DETECT *prP2pRddDetMsg;
 	uint8_t ucBssIndex;
+
+	if (p2pFuncGetDfsState() != DFS_STATE_CHECKING &&
+		p2pFuncGetDfsState() != DFS_STATE_ACTIVE) {
+		DBGLOG(CNM, WARN, "Radar detect not start.\n");
+		return;
+	}
 
 	prEventBody = (struct EVENT_RDD_REPORT *)(
 			      prEvent->aucBuffer);
@@ -2124,10 +2132,13 @@ struct BSS_INFO *cnmGetBssInfoAndInit(struct ADAPTER *prAdapter,
 				      enum ENUM_NETWORK_TYPE eNetworkType,
 				      u_int8_t fgIsP2pDevice)
 {
+	struct WIFI_VAR *prWifiVar;
 	struct BSS_INFO *prBssInfo;
 	uint8_t i, ucBssIndex, ucOwnMacIdx;
 
 	ASSERT(prAdapter);
+
+	prWifiVar = &prAdapter->rWifiVar;
 
 	/*specific case for p2p device scan*/
 	if (eNetworkType == NETWORK_TYPE_P2P && fgIsP2pDevice) {
@@ -2138,6 +2149,8 @@ struct BSS_INFO *cnmGetBssInfoAndInit(struct ADAPTER *prAdapter,
 		prBssInfo->ucBssIndex = prAdapter->ucP2PDevBssIdx;
 		prBssInfo->eNetworkType = eNetworkType;
 		prBssInfo->ucOwnMacIndex = prAdapter->ucHwBssIdNum;
+		prBssInfo->u4NetifStopTh = prWifiVar->u4NetifStopTh;
+		prBssInfo->u4NetifStartTh = prWifiVar->u4NetifStartTh;
 
 		/* initialize wlan id and status for keys */
 		prBssInfo->ucBMCWlanIndex = WTBL_RESERVED_ENTRY;
@@ -2229,6 +2242,8 @@ struct BSS_INFO *cnmGetBssInfoAndInit(struct ADAPTER *prAdapter,
 		/* initialize wlan id and status for keys */
 		prBssInfo->ucBMCWlanIndex = WTBL_RESERVED_ENTRY;
 		prBssInfo->wepkeyWlanIdx = WTBL_RESERVED_ENTRY;
+		prBssInfo->u4NetifStopTh = prWifiVar->u4NetifStopTh;
+		prBssInfo->u4NetifStartTh = prWifiVar->u4NetifStartTh;
 		for (i = 0; i < MAX_KEY_NUM; i++) {
 			prBssInfo->ucBMCWlanIndexSUsed[i] = FALSE;
 			prBssInfo->ucBMCWlanIndexS[i] = WTBL_RESERVED_ENTRY;
@@ -4038,6 +4053,9 @@ cnmOpModeMapEvtReason(
 	case EVENT_OPMODE_CHANGE_REASON_ANT_CTRL_1T2R:
 		eReqIdx = CNM_OPMODE_REQ_ANT_CTRL_1T2R;
 		break;
+	case EVENT_OPMODE_CHANGE_REASON_USER_CONFIG:
+		eReqIdx = CNM_OPMODE_REQ_USER_CONFIG;
+		break;
 	default:
 		eReqIdx = CNM_OPMODE_REQ_NUM;
 		break;
@@ -4547,6 +4565,15 @@ void cnmOpmodeEventHandler(
 		prAdapter->fgANTCtrl = true;
 		prAdapter->ucANTCtrlReason = prEvtOpMode->ucReason;
 		prAdapter->ucANTCtrlPendingCount = 0;
+	} else if ((prEvtOpMode->ucEnable) &&
+	    (prEvtOpMode->ucReason == EVENT_OPMODE_CHANGE_REASON_USER_CONFIG)) {
+	    if (!prAdapter->fgANTCtrl) {
+			prAdapter->fgANTCtrl = true;
+			/* prAdapter->ucANTCtrlReason = prEvtOpMode->ucReason; */
+			prAdapter->ucANTCtrlReason =
+				EVENT_OPMODE_CHANGE_REASON_ANT_CTRL;
+			prAdapter->ucANTCtrlPendingCount = 0;
+	    }
 	}
 #endif
 
@@ -4772,6 +4799,25 @@ struct BSS_INFO *cnmGetP2pBssInfo(IN struct ADAPTER *prAdapter)
 	return NULL;
 }
 
+struct BSS_INFO *cnmGetSapGoBssInfo(IN struct ADAPTER *prAdapter)
+{
+	struct BSS_INFO *prBssInfo;
+	uint8_t i;
+
+	if (!prAdapter)
+		return NULL;
+
+	for (i = 0; i < prAdapter->ucHwBssIdNum; i++) {
+		prBssInfo = prAdapter->aprBssInfo[i];
+
+		if (prBssInfo &&
+		    IS_BSS_APGO(prBssInfo) &&
+		    IS_BSS_ALIVE(prAdapter, prBssInfo))
+			return prBssInfo;
+	}
+
+        return NULL;
+}
 #if (CFG_SUPPORT_POWER_THROTTLING == 1 && CFG_SUPPORT_CNM_POWER_CTRL == 1)
 /*----------------------------------------------------------------------------*/
 /*!
@@ -4872,7 +4918,8 @@ void cnmPowerControlErrorHandling(
 			prBssInfo,
 			prBssInfo->prStaRecOfAP,
 			TRUE,
-			REASON_CODE_OP_MODE_CHANGE_FAIL);
+			REASON_CODE_OP_MODE_CHANGE_FAIL,
+			TRUE);
 		break;
 	default:
 		break;

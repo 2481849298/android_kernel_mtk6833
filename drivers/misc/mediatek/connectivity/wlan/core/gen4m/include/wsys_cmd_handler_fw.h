@@ -1377,19 +1377,18 @@ struct CMD_MDDP_FILTER_RULE {
 	uint8_t  aucWhPfClsFilterMddp[0];
 };
 
-struct CMD_MONITOR_SET_INFO
-{
-    uint8_t  ucEnable;
-    uint8_t  ucBand;
-    uint8_t  ucPriChannel;
-    uint8_t  ucSco;
-    uint8_t  ucChannelWidth;
-    uint8_t  ucChannelS1;
-    uint8_t  ucChannelS2;
-    uint8_t  ucBandIdx;
-    uint16_t u2Aid;
-    uint8_t  fgDropFcsErrorFrame;
-    uint8_t  aucResv[5];
+struct CMD_MONITOR_SET_INFO {
+	uint8_t  ucEnable;
+	uint8_t  ucBand;
+	uint8_t  ucPriChannel;
+	uint8_t  ucSco;
+	uint8_t  ucChannelWidth;
+	uint8_t  ucChannelS1;
+	uint8_t  ucChannelS2;
+	uint8_t  ucBandIdx;
+	uint16_t u2Aid;
+	uint8_t  fgDropFcsErrorFrame;
+	uint8_t  aucResv[5];
 };
 
 /*---------------------------------------------------------------------------*/
@@ -2073,6 +2072,8 @@ enum ENUM_EVENT_OPMODE_CHANGE_REASON {
 	EVENT_OPMODE_CHANGE_REASON_SMARTGEAR_1T2R    = 5,
 	EVENT_OPMODE_CHANGE_REASON_ANT_CTRL    = 6,
 	EVENT_OPMODE_CHANGE_REASON_ANT_CTRL_1T2R    = 7,
+	EVENT_OPMODE_CHANGE_REASON_AOL              = 8,
+	EVENT_OPMODE_CHANGE_REASON_USER_CONFIG = 9,
 };
 
 struct EVENT_OPMODE_CHANGE {

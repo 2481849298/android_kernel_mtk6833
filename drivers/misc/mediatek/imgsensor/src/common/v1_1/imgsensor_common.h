@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef __IMGSENSOR_COMMON_H__
@@ -93,6 +85,23 @@ enum IMGSENSOR_RETURN {
 #define S5KGW3_STEREO_START_ADDR_TELE          (0x1F20)
 #define IMX471_STEREO_START_ADDR               (0x1900) //
 #define GC02M1B_STEREO_START_ADDR              (0x0E28) //
+#define OV64B_AESYNC_START_ADDR_MASTER         (0x2600)
+#define IMX355_AESYNC_START_ADDR_WIDE          (0x348D)
+#define IMX709_AESYNC_START_ADDR_TELE          (0x3F00)
+#define CALI_DATA_SLAVE_TELE_LENGTH_22277      (893)
+#define OV64B_STEREO_START_ADDR_MW_22277       (0x1F00)
+#define OV64B_STEREO_START_ADDR_MT_22277       (0x2700)
+#define IMX355_STEREO_START_ADDR_22277         (0x2E00)
+#define IMX709_STEREO_START_ADDR_22277         (0x3100)
+
+#define IMX882_AESYNC_START_ADDR_MASTER        (0x3Cf0)
+#define CALI_DATA_SLAVE_TELE_LENGTH_23231      (893)
+#define IMX882_STEREO_START_ADDR_MW_23231      (0x2FA2)
+#define IMX882_STEREO_START_ADDR_MT_23231      (0x2FA6)
+#define IMX355_STEREO_START_ADDR_23231         (0x2E00)
+#define IMX709_STEREO_START_ADDR_23231         (0x3100)
+
+
 extern char gOtpCheckdata[7][40];
 #endif
 

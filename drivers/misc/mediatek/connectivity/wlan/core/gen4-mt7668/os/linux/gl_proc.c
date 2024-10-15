@@ -754,11 +754,10 @@ static ssize_t procDbgLevelWrite(struct file *file, const char __user *buffer,
 
 #if CFG_CHIP_RESET_SUPPORT
 	if (temp[0] == 'R') {
-		P_GLUE_INFO_T prGlueInfo = NULL;
-
-		prGlueInfo = g_prGlueInfo_proc;
-		DBGLOG(RSN, ERROR, "WIFI trigger reset!!\n");
-		glResetTrigger(prGlueInfo->prAdapter);
+		DBGLOG(INIT, ERROR, "WIFI trigger reset!!\n");
+		glGetRstReason(RST_CMD_TRIGGER);
+		GL_RESET_TRIGGER(g_prGlueInfo_proc->prAdapter,
+					RST_FLAG_CHIP_RESET);
 		temp[0] = 'X';
 	}
 #endif
@@ -2090,7 +2089,6 @@ static ssize_t procMCRWrite(struct file *file, const char __user *buffer,
 
 			u4McrOffset = rMcrInfo.u4McrOffset;
 
-			/* printk("Write 0x%lx to MCR 0x%04lx\n", */
 			/* rMcrInfo.u4McrOffset, rMcrInfo.u4McrData); */
 
 			rStatus = kalIoctl(prGlueInfo,

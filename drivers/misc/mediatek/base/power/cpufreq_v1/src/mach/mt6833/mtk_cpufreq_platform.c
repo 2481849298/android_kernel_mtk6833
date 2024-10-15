@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2020 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/of.h>
 #include <linux/of_address.h>
@@ -632,7 +624,9 @@ int mt_cpufreq_dts_map(void)
 unsigned int _mt_cpufreq_get_cpu_level(void)
 {
 	unsigned int lv = CPU_LEVEL_0;
+
 	int val = get_devinfo_with_index(7) & 0xF; /* segment code */
+	int type = get_devinfo_with_index(3);
 
 	if (val < 3 && val > 0)
 		lv = CPU_LEVEL_0;
@@ -640,6 +634,12 @@ unsigned int _mt_cpufreq_get_cpu_level(void)
 		lv = CPU_LEVEL_2;
 	else
 		lv = CPU_LEVEL_1;
+
+	/* add for tablet cpufreq adjustment */
+	if ((type >> 30) & 0x1) {
+		if ((val == 7) || (val == 8))
+			lv = CPU_LEVEL_2;
+	}
 #ifdef MTK_5GCM_PROJECT
 	lv = CPU_LEVEL_1;
 #endif

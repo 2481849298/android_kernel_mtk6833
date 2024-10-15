@@ -1,16 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * Power Delivery Process Event
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include "inc/pd_core.h"
@@ -229,12 +219,11 @@ static const char *const tcp_dpm_evt_name[] = {
 	"error_recovery",
 };
 
-static inline void print_tcp_event(struct tcpc_device *tcpc,
-	uint8_t msg, uint8_t from)
+static inline void print_tcp_event(struct tcpc_device *tcpc, uint8_t msg)
 {
 	if (msg < TCP_DPM_EVT_NR)
-		PE_EVT_INFO("tcp_event(%s), %d, %d\n",
-			    tcp_dpm_evt_name[msg], msg, from);
+		PE_EVT_INFO("tcp_event(%s), %d\n",
+			tcp_dpm_evt_name[msg], msg);
 }
 #endif
 
@@ -276,7 +265,7 @@ static inline void print_event(
 		break;
 
 	case PD_EVT_TCP_MSG:
-		print_tcp_event(tcpc, pd_event->msg, pd_event->msg_sec);
+		print_tcp_event(tcpc, pd_event->msg);
 		break;
 	}
 #endif
@@ -336,68 +325,6 @@ static inline bool pd_process_ready_protocol_error(struct pd_port *pd_port)
 	return false;
 #endif	/* CONFIG_USB_PD_REV30 */
 }
-
-#ifdef CONFIG_USB_PD_DISCARD_AND_UNEXPECT_MSG
-
-static inline bool pd_process_unexpected_alert(
-	struct pd_port *pd_port, struct pd_event *pd_event)
-{
-#ifdef CONFIG_USB_PD_REV30_ALERT_REMOTE
-	struct tcpc_device __maybe_unused *tcpc = pd_port->tcpc;
-
-	if (pd_event->event_type == PD_EVT_DATA_MSG ||
-		pd_event->msg == PD_DATA_ALERT) {
-		PE_INFO("unexpected_alert\n");
-
-		pd_dpm_inform_alert(pd_port);
-		pd_free_unexpected_event(pd_port);
-		return true;
-	}
-#endif	/* CONFIG_USB_PD_REV30_ALERT_REMOTE */
-
-	return false;
-}
-
-static inline bool pd_process_unexpected_message(
-	struct pd_port *pd_port, struct pd_event *pd_event)
-{
-	struct pe_data *pe_data = &pd_port->pe_data;
-
-
-	// For 1711 series : IC will auto reties discard message ...
-	if (!(pd_port->tcpc->tcpc_flags & TCPC_FLAGS_RETRY_CRC_DISCARD)) {
-		pe_transit_soft_reset_state(pd_port);
-		return true;
-	}
-
-	/* Save Unexpected Msg */
-	if (pe_data->pd_unexpected_event_pending)
-		pd_free_event(pd_port->tcpc, &pe_data->pd_unexpected_event);
-
-	pe_data->pd_unexpected_event = *pd_event;
-	pd_event->pd_msg = NULL;
-	pe_data->pd_unexpected_event_pending = true;
-
-	if (pd_is_pe_wait_pd_transmit_done(pd_port)) {
-		if (pe_data->pd_sent_ams_init_cmd)
-			PE_TRANSIT_STATE(pd_port, PE_SEND_SOFT_RESET_TX_WAIT);
-		else {
-			if (pd_process_unexpected_alert(pd_port, pd_event))
-				return false;
-
-			PE_TRANSIT_STATE(pd_port, PE_UNEXPECTED_TX_WAIT);
-		}
-	} else {
-		if (pe_data->pd_sent_ams_init_cmd)
-			pe_transit_soft_reset_state(pd_port);
-		else
-			pe_transit_ready_state(pd_port);
-	}
-
-	pd_notify_tcp_event_buf_reset(pd_port, TCP_DPM_RET_DROP_UNEXPECTED);
-	return true;
-}
-#endif	/* CONFIG_USB_PD_DISCARD_AND_UNEXPECT_MSG */
 
 bool pd_process_protocol_error(
 	struct pd_port *pd_port, struct pd_event *pd_event)
@@ -465,14 +392,8 @@ bool pd_process_protocol_error(
 #endif
 	} else if (power_change)
 		pe_transit_hard_reset_state(pd_port);
-	else {
-#ifdef CONFIG_USB_PD_DISCARD_AND_UNEXPECT_MSG
-		if (!pd_process_unexpected_message(pd_port, pd_event))
-			return false;
-#else
+	else
 		pe_transit_soft_reset_state(pd_port);
-#endif	/* CONFIG_USB_PD_DISCARD_AND_UNEXPECT_MSG */
-	}
 
 	/*
 	 * event_type: PD_EVT_CTRL_MSG (1), PD_EVT_DATA_MSG (2)
@@ -483,7 +404,7 @@ out:
 	return ret;
 }
 
-bool pd_process_tx_failed_discard(struct pd_port *pd_port, uint8_t msg)
+bool pd_process_tx_failed(struct pd_port *pd_port)
 {
 	struct tcpc_device __maybe_unused *tcpc = pd_port->tcpc;
 
@@ -492,22 +413,6 @@ bool pd_process_tx_failed_discard(struct pd_port *pd_port, uint8_t msg)
 		PE_DBG("Ignore tx_failed\n");
 		return false;
 	}
-
-#ifdef CONFIG_USB_PD_DISCARD_AND_UNEXPECT_MSG
-	if (msg == PD_HW_TX_DISCARD &&
-		(tcpc->tcpc_flags & TCPC_FLAGS_RETRY_CRC_DISCARD)) {
-
-		pd_notify_tcp_event_buf_reset(pd_port,
-					      TCP_DPM_RET_DROP_DISCARD);
-
-		if (pd_port->pe_data.pd_sent_ams_init_cmd)
-			PE_TRANSIT_STATE(pd_port, PE_SEND_SOFT_RESET_STANDBY);
-		else
-			pe_transit_ready_state(pd_port);
-
-		return true;
-	}
-#endif	/* CONFIG_USB_PD_DISCARD_AND_UNEXPECT_MSG */
 
 	pe_transit_soft_reset_state(pd_port);
 	return true;
@@ -647,6 +552,17 @@ static inline bool pe_is_valid_pd_msg_id(struct pd_port *pd_port,
 		}
 	}
 
+	if (((pd_port->pe_data.msg_id_rx[sop_type] + 2) % PD_MSG_ID_MAX) == msg_id) {
+		PE_INFO("Miss Msg!!!\n");
+		pd_port->miss_msg = true;
+	}
+
+	if (pd_port->pe_pd_state == PE_SNK_SEND_SOFT_RESET &&
+	    pd_port->pe_data.msg_id_rx[sop_type] == 1) {
+		PE_INFO("Miss Msg!!!\n");
+		pd_port->miss_msg = true;
+	}
+
 	if (pd_port->pe_data.msg_id_rx[sop_type] == msg_id) {
 		PE_INFO("Repeat msg: %c:%d:%d\n",
 			(pd_event->event_type == PD_EVT_CTRL_MSG) ? 'C' : 'D',
@@ -775,6 +691,11 @@ static inline bool pe_transit_startup_state(
 		return false;
 
 	pd_dpm_notify_pe_startup(pd_port);
+#ifdef OPLUS_FEATURE_CHG_BASIC
+/********* workaround MO.230913213000256759: sc6607 workaround for pd abnormal start*********/
+	pd_enable_timer(pd_port, PD_TIMER_INT_INVAILD);
+/********* workaround MO.230913213000256759: sc6607 workaround for pd abnormal end*********/
+#endif
 	PE_TRANSIT_STATE(pd_port, startup_state);
 
 	return true;
@@ -852,6 +773,9 @@ bool pd_process_event(
 	bool ret = false;
 	struct pd_msg *pd_msg = pd_event->pd_msg;
 	uint8_t tii = pe_check_trap_in_idle_state(pd_port, pd_event);
+	int rv = 0;
+	uint32_t chip_id = 0;
+	uint32_t chip_pid = 0;
 
 	if (tii < TII_PE_RUNNING)
 		return tii;
@@ -874,6 +798,36 @@ bool pd_process_event(
 		if (!pe_is_valid_pd_msg_role(pd_port, pd_event, pd_msg)) {
 			PE_TRANSIT_STATE(pd_port, PE_ERROR_RECOVERY);
 			return true;
+		}
+
+		rv = tcpci_get_chip_id(pd_port->tcpc, &chip_id);
+		rv |= tcpci_get_chip_pid(pd_port->tcpc, &chip_pid);
+		if (!rv && SC2150A_DID == chip_id &&
+			SC2150A_PID == chip_pid && pd_port->miss_msg) {
+			pd_port->miss_msg = false;
+			if (pd_port->pe_pd_state == PE_SNK_TRANSITION_SINK) {
+				if (!(pd_event->msg == PD_CTRL_PS_RDY &&
+				     pd_event->event_type == PD_EVT_CTRL_MSG)) {
+					pd_add_miss_msg(pd_port,pd_event,PD_CTRL_PS_RDY);
+					return false;
+				}
+			} else if (pd_port->pe_pd_state == PE_SNK_SELECT_CAPABILITY) {
+				if (pd_event->msg == PD_CTRL_PS_RDY &&
+				    pd_event->event_type == PD_EVT_CTRL_MSG) {
+					pd_add_miss_msg(pd_port,pd_event,PD_CTRL_ACCEPT);
+					return false;
+				} else if (pd_event->msg == PD_DATA_SOURCE_CAP &&
+					   pd_event->event_type == PD_EVT_DATA_MSG) {
+					pd_add_miss_msg(pd_port,pd_event,PD_CTRL_REJECT);
+					return false;
+				}
+			} else if (pd_port->pe_pd_state == PE_SNK_SEND_SOFT_RESET) {
+				if (pd_event->msg == PD_DATA_SOURCE_CAP &&
+						pd_event->event_type == PD_EVT_DATA_MSG) {
+					pd_add_miss_msg(pd_port,pd_event,PD_CTRL_ACCEPT);
+					return false;
+				}
+			}
 		}
 	}
 
