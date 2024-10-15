@@ -378,7 +378,7 @@ enum {
 #endif
 
 #define HQA_CMD_FRAME_DATA_SIZE	4096
-
+#define	LIST_SEG_MAX 100
 struct HQA_CMD_FRAME {
 	uint32_t MagicNo;
 	uint16_t Type;

@@ -518,7 +518,7 @@ endif
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/performance/include/
-ccflags-y += -I$(srctree)/drivers/misc/mediatek/emi/$(MTK_PLATFORM)
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/emi/mt6765
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/emi/submodule
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/pmic/include/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/power_throttling/
