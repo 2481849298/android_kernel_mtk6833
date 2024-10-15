@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include "regulator.h"
@@ -28,6 +20,7 @@ static DEFINE_MUTEX(g_regulator_state_mutex);
 static const int regulator_voltage[] = {
 	REGULATOR_VOLTAGE_0,
 	REGULATOR_VOLTAGE_1000,
+	REGULATOR_VOLTAGE_1050,
 	REGULATOR_VOLTAGE_1100,
 	REGULATOR_VOLTAGE_1200,
 	REGULATOR_VOLTAGE_1210,
@@ -94,6 +87,12 @@ struct regulator *regulator_get_regVCAMAF_bladeb(void)
 EXPORT_SYMBOL(regulator_get_regVCAMAF_bladeb);
 #endif
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+extern unsigned int pmic_config_interface(unsigned int RegNum,
+				   unsigned int val,
+				   unsigned int MASK,
+				   unsigned int SHIFT);
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 
 static enum IMGSENSOR_RETURN regulator_init(
 	void *pinstance,
@@ -107,7 +106,12 @@ static enum IMGSENSOR_RETURN regulator_init(
 	ghw_device_common = pcommon;
 	of_node_record = pcommon->pplatform_device->dev.of_node;
 	#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
-
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	if (is_project(22629) || is_project(22710) || is_project(22711)) {
+		pmic_config_interface(0x1b14, 0xffff, 0xFFFF, 0x0);
+		pmic_config_interface(0x1c54, 0x1c72, 0xFFFF, 0x0);
+	}
+	#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 	for (idx = IMGSENSOR_SENSOR_IDX_MIN_NUM;
 		idx < IMGSENSOR_SENSOR_IDX_MAX_NUM;
 		idx++) {
@@ -177,6 +181,11 @@ static struct regulator *regulator_reinit(void *pinstance, int sensor_idx, int t
 		regulator_get(&((pimgsensor->hw.common.pplatform_device)->dev), str_regulator_name);
 	pr_err("reinit %s regulator[%d][%d] = %pK\n", str_regulator_name,
 			sensor_idx, type, preg->pregulator[sensor_idx][type]);
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	if (is_project(22629) || is_project(22710) || is_project(22711)) {
+		pmic_config_interface(0x1b14, 0xfbff, 0xFFFF, 0x0);
+	}
+	#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 	msleep(10);
 	if(IS_ERR(preg->pregulator[sensor_idx][type])){
 		pr_err("regulator reinit fail %pK\n",preg->pregulator[sensor_idx][type]);
@@ -199,8 +208,11 @@ static enum IMGSENSOR_RETURN regulator_set(
 	int reg_type_offset;
 	atomic_t             *enable_cnt;
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-	if (is_project(21101) || is_project(21102) || is_project(21235) || is_project(21236) || is_project(21041) || is_project(21042)
-	|| is_project(0x216A0) || is_project(21831) || is_project(0x2163B) || is_project(0x2163C) || is_project(0x2163D)
+	if (is_project(22083) || is_project(22084) || is_project(22291) || is_project(22292) || is_project(22631) || is_project(22632) || is_project(23602)
+	|| is_project(23053) || is_project(23054) || is_project(23253)
+	|| is_project(21101) || is_project(21102) || is_project(21235) || is_project(21236) || is_project(21041) || is_project(21042)
+	|| is_project(22087) || is_project(22088) || is_project(22331) || is_project(22332) || is_project(22333) || is_project(22334) || is_project(22869)
+	|| is_project(0x216A0) || is_project(22610) || is_project(22705) || is_project(22706) || is_project(21831) || is_project(0x2163B) || is_project(0x2163C) || is_project(0x2163D)
 	|| is_project(21639) || is_project(0x216CD) || is_project(0x216CE) || is_project(22603) || is_project(22604) || is_project(22609)
 	|| is_project(0x2260A) || is_project(0x2260B) || is_project(22669) || is_project(0x2266A) || is_project(0x2266B) || is_project(0x2266C)) {
 		PK_DBG("to set current regulator pin:%d", pin);
@@ -353,8 +365,7 @@ static enum IMGSENSOR_RETURN regulator_set(
 	#endif
 	    pin < IMGSENSOR_HW_PIN_AVDD    ||
 	    pin_state < IMGSENSOR_HW_PIN_STATE_LEVEL_0 ||
-	    pin_state >= IMGSENSOR_HW_PIN_STATE_LEVEL_HIGH ||
-	    sensor_idx < 0)
+	    pin_state >= IMGSENSOR_HW_PIN_STATE_LEVEL_HIGH)
 		return IMGSENSOR_RETURN_ERROR;
 
 	reg_type_offset = REGULATOR_TYPE_VCAMA;

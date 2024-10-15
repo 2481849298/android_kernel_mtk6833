@@ -142,6 +142,15 @@ static int f2fs_begin_enable_verity(struct file *filp)
 	if (err)
 		return err;
 
+#ifdef CONFIG_F2FS_FS_DEDUP
+	mark_file_modified(inode);
+	if (f2fs_is_outer_inode(inode)) {
+		err = f2fs_revoke_deduped_inode(inode, __func__);
+		if (err)
+			return err;
+	}
+#endif
+
 	set_inode_flag(inode, FI_VERITY_IN_PROGRESS);
 	return 0;
 }
@@ -239,7 +248,7 @@ static void f2fs_merkle_tree_readahead(struct address_space *mapping,
 
 	for (index = start_index; index < start_index + count; index++) {
 		rcu_read_lock();
-		page = radix_tree_lookup(&mapping->page_tree, index);
+		page = radix_tree_lookup(&mapping->i_pages, index);
 		rcu_read_unlock();
 		if (!page || radix_tree_exceptional_entry(page)) {
 			page = __page_cache_alloc(readahead_gfp_mask(mapping));

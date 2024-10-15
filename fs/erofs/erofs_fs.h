@@ -2,9 +2,9 @@
 /*
  * EROFS (Enhanced ROM File System) on-disk format definition
  *
- * Copyright (C) 2017-2018 HUAWEI, Inc.
- *             https://www.huawei.com/
- * Created by Gao Xiang <gaoxiang25@huawei.com>
+ * Copyright (C) 2017-2018 odm, Inc.
+ *             https://www.odm.com/
+ * Created by Gao Xiang <gaoxiang25@odm.com>
  */
 #ifndef __EROFS_FS_H
 #define __EROFS_FS_H

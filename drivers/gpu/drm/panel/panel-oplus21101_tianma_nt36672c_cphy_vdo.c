@@ -48,6 +48,7 @@
  *****************************************************************************/
 
 extern unsigned long esd_flag;
+extern unsigned int g_shutdown_flag;
 static int esd_brightness = 1023;
 static int last_brightness = 0;
 extern unsigned long oplus_max_normal_brightness;
@@ -193,92 +194,54 @@ static void tianma_panel_init(struct tianma *ctx)
         tianma_dcs_write_seq_static(ctx, 0xFB,0x01);
 // endif
 
-    	/*CABC begin*/
-    	tianma_dcs_write_seq_static(ctx, 0xFF, 0x23);
-	tianma_dcs_write_seq_static(ctx, 0xFB, 0x01);
-	tianma_dcs_write_seq_static(ctx, 0x00, 0x80);
-	tianma_dcs_write_seq_static(ctx, 0x01, 0x84);
-	tianma_dcs_write_seq_static(ctx, 0x11, 0x01);
-	tianma_dcs_write_seq_static(ctx, 0x12, 0x95);
-	tianma_dcs_write_seq_static(ctx, 0x15, 0x68);
-	tianma_dcs_write_seq_static(ctx, 0x16, 0x0B);
-	//Max gain
-	tianma_dcs_write_seq_static(ctx, 0x0A, 0xFF);
-        tianma_dcs_write_seq_static(ctx, 0x0B, 0xFF);
-        tianma_dcs_write_seq_static(ctx, 0x0C, 0xFF);
-        tianma_dcs_write_seq_static(ctx, 0x0D, 0x3F);
-	//Image_Compensation
-	tianma_dcs_write_seq_static(ctx, 0x19, 0x09);
-        tianma_dcs_write_seq_static(ctx, 0x1A, 0x09);
-        tianma_dcs_write_seq_static(ctx, 0x1B, 0x09);
-        tianma_dcs_write_seq_static(ctx, 0x1C, 0x09);
-        tianma_dcs_write_seq_static(ctx, 0x1D, 0x09);
-        tianma_dcs_write_seq_static(ctx, 0x1E, 0x09);
-        tianma_dcs_write_seq_static(ctx, 0x1F, 0x0A);
-        tianma_dcs_write_seq_static(ctx, 0x20, 0x0B);
-        tianma_dcs_write_seq_static(ctx, 0x21, 0x0C);
-        tianma_dcs_write_seq_static(ctx, 0x22, 0x0E);
-        tianma_dcs_write_seq_static(ctx, 0x23, 0x0F);
-        tianma_dcs_write_seq_static(ctx, 0x24, 0x10);
-        tianma_dcs_write_seq_static(ctx, 0x25, 0x11);
-        tianma_dcs_write_seq_static(ctx, 0x26, 0x12);
-        tianma_dcs_write_seq_static(ctx, 0x27, 0x12);
-        tianma_dcs_write_seq_static(ctx, 0x28, 0x12);
-        tianma_dcs_write_seq_static(ctx, 0x29, 0x0D);
-        tianma_dcs_write_seq_static(ctx, 0x2A, 0x22);
-        tianma_dcs_write_seq_static(ctx, 0x2B, 0x2B);
-	//PWM_5500h_0x01
-	tianma_dcs_write_seq_static(ctx, 0x30, 0xFC);
-    	tianma_dcs_write_seq_static(ctx, 0x31, 0xFA);
-    	tianma_dcs_write_seq_static(ctx, 0x32, 0xED);
-    	tianma_dcs_write_seq_static(ctx, 0x33, 0xEC);
-    	tianma_dcs_write_seq_static(ctx, 0x34, 0xEB);
-    	tianma_dcs_write_seq_static(ctx, 0x35, 0xEA);
-    	tianma_dcs_write_seq_static(ctx, 0x36, 0xE9);
-    	tianma_dcs_write_seq_static(ctx, 0x37, 0xE8);
-    	tianma_dcs_write_seq_static(ctx, 0x38, 0xE6);
-    	tianma_dcs_write_seq_static(ctx, 0x39, 0xE5);
-    	tianma_dcs_write_seq_static(ctx, 0x3A, 0xE4);
-    	tianma_dcs_write_seq_static(ctx, 0x3B, 0xE3);
-    	tianma_dcs_write_seq_static(ctx, 0x3D, 0xE2);
-    	tianma_dcs_write_seq_static(ctx, 0x3F, 0xE0);
-    	tianma_dcs_write_seq_static(ctx, 0x40, 0xDE);
-    	tianma_dcs_write_seq_static(ctx, 0x41, 0xDB);
-	//PWM_5500h_02
-	tianma_dcs_write_seq_static(ctx, 0x45, 0xE8);
-    	tianma_dcs_write_seq_static(ctx, 0x46, 0xDD);
-    	tianma_dcs_write_seq_static(ctx, 0x47, 0xD4);
-    	tianma_dcs_write_seq_static(ctx, 0x48, 0xD2);
-    	tianma_dcs_write_seq_static(ctx, 0x49, 0xCF);
-    	tianma_dcs_write_seq_static(ctx, 0x4A, 0xCA);
-   	tianma_dcs_write_seq_static(ctx, 0x4B, 0xC6);
-    	tianma_dcs_write_seq_static(ctx, 0x4C, 0xC0);
-    	tianma_dcs_write_seq_static(ctx, 0x4D, 0xBD);
-    	tianma_dcs_write_seq_static(ctx, 0x4E, 0xBA);
-    	tianma_dcs_write_seq_static(ctx, 0x4F, 0xB8);
-    	tianma_dcs_write_seq_static(ctx, 0x50, 0xB7);
-    	tianma_dcs_write_seq_static(ctx, 0x51, 0xB5);
-    	tianma_dcs_write_seq_static(ctx, 0x52, 0xB3);
-    	tianma_dcs_write_seq_static(ctx, 0x53, 0xB0);
-    	tianma_dcs_write_seq_static(ctx, 0x54, 0xAD);
-	//PWM_5500h_03
-	tianma_dcs_write_seq_static(ctx, 0x58, 0xE4);
-    	tianma_dcs_write_seq_static(ctx, 0x59, 0xD8);
-    	tianma_dcs_write_seq_static(ctx, 0x5A, 0xCE);
-    	tianma_dcs_write_seq_static(ctx, 0x5B, 0xCA);
-    	tianma_dcs_write_seq_static(ctx, 0x5C, 0xC6);
-    	tianma_dcs_write_seq_static(ctx, 0x5D, 0xC2);
-    	tianma_dcs_write_seq_static(ctx, 0x5E, 0xBC);
-    	tianma_dcs_write_seq_static(ctx, 0x5F, 0xB5);
-    	tianma_dcs_write_seq_static(ctx, 0x60, 0xAF);
-    	tianma_dcs_write_seq_static(ctx, 0x61, 0xA9);
-    	tianma_dcs_write_seq_static(ctx, 0x62, 0xA4);
-    	tianma_dcs_write_seq_static(ctx, 0x63, 0x9F);
-    	tianma_dcs_write_seq_static(ctx, 0x64, 0x9B);
-    	tianma_dcs_write_seq_static(ctx, 0x65, 0x98);
-    	tianma_dcs_write_seq_static(ctx, 0x66, 0x94);
-    	tianma_dcs_write_seq_static(ctx, 0x67, 0x90);
-    	/*CABC end*/
+//CABC
+	tianma_dcs_write_seq_static(ctx, 0xFF,0x23);
+	tianma_dcs_write_seq_static(ctx, 0xFB,0x01);
+	tianma_dcs_write_seq_static(ctx, 0x00,0x80);
+	tianma_dcs_write_seq_static(ctx, 0x05,0x22);
+	tianma_dcs_write_seq_static(ctx, 0x06,0x01);
+	tianma_dcs_write_seq_static(ctx, 0x07,0x00);
+	tianma_dcs_write_seq_static(ctx, 0x08,0x01);
+	tianma_dcs_write_seq_static(ctx, 0x09,0x00);
+	tianma_dcs_write_seq_static(ctx, 0x10,0x82);
+	tianma_dcs_write_seq_static(ctx, 0x11,0x01);
+	tianma_dcs_write_seq_static(ctx, 0x12,0x95);
+	tianma_dcs_write_seq_static(ctx, 0x15,0x68);
+	tianma_dcs_write_seq_static(ctx, 0x16,0x0B);
+//CABC_PWM_UI
+	tianma_dcs_write_seq_static(ctx, 0x30,0xFF);
+	tianma_dcs_write_seq_static(ctx, 0x31,0xFD);
+	tianma_dcs_write_seq_static(ctx, 0x32,0xFA);
+	tianma_dcs_write_seq_static(ctx, 0x33,0xF7);
+	tianma_dcs_write_seq_static(ctx, 0x34,0xF4);
+	tianma_dcs_write_seq_static(ctx, 0x35,0xF0);
+	tianma_dcs_write_seq_static(ctx, 0x36,0xED);
+	tianma_dcs_write_seq_static(ctx, 0x37,0xEC);
+	tianma_dcs_write_seq_static(ctx, 0x38,0xEB);
+	tianma_dcs_write_seq_static(ctx, 0x39,0xEA);
+	tianma_dcs_write_seq_static(ctx, 0x3A,0xE9);
+	tianma_dcs_write_seq_static(ctx, 0x3B,0xE8);
+	tianma_dcs_write_seq_static(ctx, 0x3D,0xE7);
+	tianma_dcs_write_seq_static(ctx, 0x3F,0xE6);
+	tianma_dcs_write_seq_static(ctx, 0x40,0xE5);
+	tianma_dcs_write_seq_static(ctx, 0x41,0xE4);
+//CABC_PWM_STILL
+	tianma_dcs_write_seq_static(ctx, 0x45,0xFF);
+	tianma_dcs_write_seq_static(ctx, 0x46,0xFA);
+	tianma_dcs_write_seq_static(ctx, 0x47,0xF2);
+	tianma_dcs_write_seq_static(ctx, 0x48,0xE8);
+	tianma_dcs_write_seq_static(ctx, 0x49,0xE4);
+	tianma_dcs_write_seq_static(ctx, 0x4A,0xDC);
+	tianma_dcs_write_seq_static(ctx, 0x4B,0xD7);
+	tianma_dcs_write_seq_static(ctx, 0x4C,0xD5);
+	tianma_dcs_write_seq_static(ctx, 0x4D,0xD3);
+	tianma_dcs_write_seq_static(ctx, 0x4E,0xD2);
+	tianma_dcs_write_seq_static(ctx, 0x4F,0xD0);
+	tianma_dcs_write_seq_static(ctx, 0x50,0xCE);
+	tianma_dcs_write_seq_static(ctx, 0x51,0xCD);
+	tianma_dcs_write_seq_static(ctx, 0x52,0xCB);
+	tianma_dcs_write_seq_static(ctx, 0x53,0xC6);
+	tianma_dcs_write_seq_static(ctx, 0x54,0xC3);
 
 	tianma_dcs_write_seq_static(ctx, 0xFF, 0x10);
         tianma_dcs_write_seq_static(ctx, 0xFB, 0x01);
@@ -307,7 +270,7 @@ static int tianma_disable(struct drm_panel *panel)
 		backlight_update_status(ctx->backlight);
 	}
 
-	usleep_range(20 * 1000, 20 * 1000);
+	usleep_range(20 * 1000, 20 * 1000 + 100);
 	ctx->enabled = false;
 
 	return 0;
@@ -316,50 +279,55 @@ static int tianma_disable(struct drm_panel *panel)
 static int tianma_unprepare(struct drm_panel *panel)
 {
 	struct tianma *ctx = panel_to_tianma(panel);
-	pr_info("%s\n", __func__);
 
 	if (!ctx->prepared)
 		return 0;
 
 	tianma_dcs_write_seq_static(ctx, MIPI_DCS_SET_DISPLAY_OFF);
 	tianma_dcs_write_seq_static(ctx, MIPI_DCS_ENTER_SLEEP_MODE);
-	usleep_range(60 * 1000, 60 * 1000);
-/*
-	ctx->reset_gpio = devm_gpiod_get(ctx->dev, "reset", GPIOD_OUT_HIGH);
-	gpiod_set_value(ctx->reset_gpio, 0);
-	devm_gpiod_put(ctx->dev, ctx->reset_gpio);
-*/
+	usleep_range(60 * 1000, 60 * 1000 + 100);
+	pr_info("%s: tp_gesture_enable_flag = %d g_shutdown_flag = %d \n", __func__,
+			tp_gesture_enable_flag(), g_shutdown_flag);
+	if (1 == g_shutdown_flag) {
+		ctx->reset_gpio = devm_gpiod_get(ctx->dev,
+				"reset", GPIOD_OUT_HIGH);
+		if (IS_ERR(ctx->reset_gpio)) {
+			dev_err(ctx->dev, "%s: cannot get reset_gpio %ld\n",
+				__func__, PTR_ERR(ctx->reset_gpio));
+			return PTR_ERR(ctx->reset_gpio);
+		}
+		gpiod_set_value(ctx->reset_gpio, 0);
+		devm_gpiod_put(ctx->dev, ctx->reset_gpio);
 
-/* #ifdef OPLUS_BUG_STABILITY */
-    pr_info("%s: tp_gesture_enable_flag = %d \n", __func__, tp_gesture_enable_flag());
-    if (0 == tp_gesture_enable_flag() || (esd_flag == 1)) {
-/* #endif */ /* OPLUS_BUG_STABILITY */
-        pr_info("%s: going to cut off power \n", __func__);
-	ctx->bias_neg = devm_gpiod_get_index(ctx->dev,
-            "bias", 1, GPIOD_OUT_HIGH);
-	gpiod_set_value(ctx->bias_neg, 0);
-	devm_gpiod_put(ctx->dev, ctx->bias_neg);
-
-	usleep_range(2 * 1000, 2 * 1000);
-
-	ctx->bias_pos = devm_gpiod_get_index(ctx->dev,
-            "bias", 0, GPIOD_OUT_HIGH);
-	gpiod_set_value(ctx->bias_pos, 0);
-	devm_gpiod_put(ctx->dev, ctx->bias_pos);
-	usleep_range(140 * 1000, 140 * 1000);
-        //ctx->reset_gpio = devm_gpiod_get(ctx->dev, "reset", GPIOD_OUT_HIGH);
-        //gpiod_set_value(ctx->reset_gpio, 0);
-        //devm_gpiod_put(ctx->dev, ctx->reset_gpio);
-        //usleep_range(2 * 1000, 2 * 1000);
-	if( ctx->is_normal_mode ){
-		switch_spi7cs_state(false);
+		usleep_range(2 * 1000, 2 * 1000 + 100);
 	}
-	//add for ldo
-/*	ctx->bias_en = devm_gpiod_get(ctx->dev, "ldo", GPIOD_OUT_HIGH);
-	gpiod_set_value(ctx->bias_en, 0);
-	devm_gpiod_put(ctx->dev, ctx->bias_en);
-	usleep_range(20 * 1000, 20 * 1000);*/
-    }
+	if (0 == tp_gesture_enable_flag() || (esd_flag == 1) || (1 == g_shutdown_flag)) {
+		ctx->bias_neg = devm_gpiod_get_index(ctx->dev,
+				"bias", 1, GPIOD_OUT_HIGH);
+		if (IS_ERR(ctx->bias_neg)) {
+			dev_err(ctx->dev, "%s: cannot get bias_neg %ld\n",
+				__func__, PTR_ERR(ctx->bias_neg));
+			return PTR_ERR(ctx->bias_neg);
+		}
+		gpiod_set_value(ctx->bias_neg, 0);
+		devm_gpiod_put(ctx->dev, ctx->bias_neg);
+
+		usleep_range(2 * 1000, 2 * 1000 + 100);
+
+		ctx->bias_pos = devm_gpiod_get_index(ctx->dev,
+				"bias", 0, GPIOD_OUT_HIGH);
+		if (IS_ERR(ctx->bias_pos)) {
+			dev_err(ctx->dev, "%s: cannot get bias_pos %ld\n",
+				__func__, PTR_ERR(ctx->bias_pos));
+			return PTR_ERR(ctx->bias_pos);
+		}
+		gpiod_set_value(ctx->bias_pos, 0);
+		devm_gpiod_put(ctx->dev, ctx->bias_pos);
+		usleep_range(140 * 1000, 140 * 1000 + 100);
+		if(ctx->is_normal_mode) {
+			switch_spi7cs_state(false);
+		}
+	}
 
 	ctx->error = 0;
 	ctx->prepared = false;
@@ -378,13 +346,13 @@ static int lcm_panel_poweron(struct drm_panel *panel)
 	ctx->bias_en = devm_gpiod_get(ctx->dev, "ldo", GPIOD_OUT_HIGH);
 	gpiod_set_value(ctx->bias_en, 1);
 	devm_gpiod_put(ctx->dev, ctx->bias_en);
-	udelay(2000);
+	usleep_range(20 * 1000, 20 * 1000 + 100);
 	ctx->bias_pos = devm_gpiod_get_index(ctx->dev,
 		"bias", 0, GPIOD_OUT_HIGH);
 	gpiod_set_value(ctx->bias_pos, 1);
 	devm_gpiod_put(ctx->dev, ctx->bias_pos);
 
-	udelay(2000);
+	usleep_range(20 * 1000, 20 * 1000 + 100);
 
 	ctx->bias_neg = devm_gpiod_get_index(ctx->dev,
 		"bias", 1, GPIOD_OUT_HIGH);
@@ -393,9 +361,6 @@ static int lcm_panel_poweron(struct drm_panel *panel)
 	_20015_lcm_i2c_write_bytes(0x0, 0xf);
 	_20015_lcm_i2c_write_bytes(0x1, 0xf);
 	msleep(2);
-/* #ifdef OPLUS_BUG_STABILITY */
-//	lcd_queue_load_tp_fw();
-/* #endif */ /* OPLUS_BUG_STABILITY */
 	pr_info("%s-\n", __func__);
 	return 0;
 }
@@ -413,7 +378,7 @@ static int lcm_panel_poweroff(struct drm_panel *panel)
 		ctx->bias_en = devm_gpiod_get(ctx->dev, "ldo", GPIOD_OUT_HIGH);
 		gpiod_set_value(ctx->bias_en, 0);
 		devm_gpiod_put(ctx->dev, ctx->bias_en);
-		usleep_range(30 * 1000, 30 * 1000);
+		usleep_range(30 * 1000, 30 * 1000 + 100);
 	}
 
 	return 0;
@@ -428,20 +393,6 @@ static int tianma_prepare(struct drm_panel *panel)
 	if (ctx->prepared)
 		return 0;
 
-
- /*	ctx->bias_pos = devm_gpiod_get_index(ctx->dev,
-		"bias", 0, GPIOD_OUT_HIGH);
-	gpiod_set_value(ctx->bias_pos, 1);
-	devm_gpiod_put(ctx->dev, ctx->bias_pos);
-
-	msleep(2);
-	ctx->bias_neg = devm_gpiod_get_index(ctx->dev,
-		"bias", 1, GPIOD_OUT_HIGH);
-	gpiod_set_value(ctx->bias_neg, 1);
-	devm_gpiod_put(ctx->dev, ctx->bias_neg);
-	_lcm_i2c_write_bytes(0x0, 0xf);
-	_lcm_i2c_write_bytes(0x1, 0xf);
-*/
 	usleep_range(2 * 1000, 2 * 1000);
 	//NVT H -> L -> H -> L -> H
 	ctx->reset_gpio = devm_gpiod_get(ctx->dev, "reset", GPIOD_OUT_HIGH);
@@ -452,19 +403,15 @@ static int tianma_prepare(struct drm_panel *panel)
 	usleep_range(10 * 1000, 10 * 1000);
 	gpiod_set_value(ctx->reset_gpio, 0);
 	usleep_range(10 * 1000, 10 * 1000);
-    if(ctx->is_normal_mode) {
+	if(ctx->is_normal_mode) {
 		switch_spi7cs_state(true);
-    }
+	}
 	gpiod_set_value(ctx->reset_gpio, 1);
 	devm_gpiod_put(ctx->dev, ctx->reset_gpio);
-//	tianma_vdd_tp_start(ctx);
 	usleep_range(10 * 1000, 10 * 1000);
-//end
-//	tianma_vdd_tp_end(ctx);
-/* #ifdef OPLUS_BUG_STABILITY */
-    if(ctx->is_normal_mode) {
-        lcd_queue_load_tp_fw();
-    }
+	if(ctx->is_normal_mode) {
+		lcd_queue_load_tp_fw();
+	}
 
 	tianma_panel_init(ctx);
 
@@ -500,7 +447,7 @@ static int tianma_enable(struct drm_panel *panel)
 }
 
 static const struct drm_display_mode default_mode = {
-	.clock = 300591,
+	.clock = 313152,
 	.hdisplay = 1080,
 	.hsync_start = 1080 + 276,
 	.hsync_end = 1080 + 276 + 22,
@@ -513,7 +460,7 @@ static const struct drm_display_mode default_mode = {
 };
 
 static const struct drm_display_mode performance_mode = {
-	.clock = 300591,
+	.clock = 312732,
 	.hdisplay = 1080,
 	.hsync_start = 1080 + 276,
 	.hsync_end = 1080 + 276 + 22,
@@ -523,6 +470,58 @@ static const struct drm_display_mode performance_mode = {
 	.vsync_end = 2408 + 54 + 10,
 	.vtotal = 2408 + 54 + 10 + 10,
 	.vrefresh = 90,
+};
+
+static const struct drm_display_mode performance_mode_30hz = {
+	.clock = 313152,
+	.hdisplay = 1080,
+	.hsync_start = 1080 + 276,
+	.hsync_end = 1080 + 276 + 22,
+	.htotal = 1080 + 276 + 22 + 22,
+	.vdisplay = 2408,
+	.vsync_start = 2408 + 5028,
+	.vsync_end = 2408 + 5028 + 10,
+	.vtotal = 2408 + 5028 + 10 + 10,
+	.vrefresh = 30,
+};
+
+static const struct drm_display_mode performance_mode_45hz = {
+	.clock = 313110,
+	.hdisplay = 1080,
+	.hsync_start = 1080 + 276,
+	.hsync_end = 1080 + 276 + 22,
+	.htotal = 1080 + 276 + 22 + 22,
+	.vdisplay = 2408,
+	.vsync_start = 2408 + 2542,
+	.vsync_end = 2408 + 2542 + 10,
+	.vtotal = 2408 + 2542 + 10 + 10,
+	.vrefresh = 45,
+};
+
+static const struct drm_display_mode performance_mode_48hz = {
+	.clock = 313152,
+	.hdisplay = 1080,
+	.hsync_start = 1080 + 276,
+	.hsync_end = 1080 + 276 + 22,
+	.htotal = 1080 + 276 + 22 + 22,
+	.vdisplay = 2408,
+	.vsync_start = 2408 + 2232,
+	.vsync_end = 2408 + 2232 + 10,
+	.vtotal = 2408 + 2232 + 10 + 10,
+	.vrefresh = 48,
+};
+
+static const struct drm_display_mode performance_mode_50hz = {
+	.clock = 313040,
+	.hdisplay = 1080,
+	.hsync_start = 1080 + 276,
+	.hsync_end = 1080 + 276 + 22,
+	.htotal = 1080 + 276 + 22 + 22,
+	.vdisplay = 2408,
+	.vsync_start = 2408 + 2044,
+	.vsync_end = 2408 + 2044 + 10,
+	.vtotal = 2408 + 2044 + 10 + 10,
+	.vrefresh = 50,
 };
 
 #if defined(CONFIG_MTK_PANEL_EXT)
@@ -545,11 +544,13 @@ static struct mtk_panel_params ext_params = {
 		.switch_en = 1,
 		.pll_clk = 553,
 		.hfp = 290,
-		.vfp = 1296,
+		.vfp = 1300,
 	},
 	.phy_timcon = {
 		.hs_prpr = 0x0B,
 	},
+	.vendor = "NT36672C_TM_Alice",
+	.manufacture = "Alice_nt_tm3276",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -561,7 +562,7 @@ static struct mtk_panel_params ext_params = {
 
 static struct mtk_panel_params ext_params_90hz = {
 	.pll_clk = 548,
-	.vfp_low_power = 1296,
+	.vfp_low_power = 1300,
 	.cust_esd_check = 1,
 	.esd_check_enable = 1,
 	.is_cphy = 1,
@@ -583,6 +584,148 @@ static struct mtk_panel_params ext_params_90hz = {
 	.phy_timcon = {
 		.hs_prpr = 0x0B,
 	},
+        .vendor = "NT36672C_TM_Alice",
+        .manufacture = "Alice_nt_tm3276",
+#ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
+	.round_corner_en = 1,
+	.corner_pattern_height = ROUND_CORNER_H_TOP,
+	.corner_pattern_height_bot = ROUND_CORNER_H_BOT,
+	.corner_pattern_tp_size = sizeof(top_rc_pattern),
+	.corner_pattern_lt_addr = (void *)top_rc_pattern,
+#endif
+};
+
+static struct mtk_panel_params ext_params_30hz = {
+	.pll_clk = 548,
+	.vfp_low_power = 5028,
+	.cust_esd_check = 1,
+	.esd_check_enable = 1,
+	.is_cphy = 1,
+	.lcm_esd_check_table[0] = {
+	.cmd = 0x0A, .count = 1, .para_list[0] = 0x9C, .mask_list[0] = 0x9c,
+	},
+	.is_cphy = 1,
+	.data_rate = 1096,
+	.dyn_fps = {
+		.switch_en = 1,
+		.vact_timing_fps = 90,
+	},
+	.dyn = {
+		.switch_en = 1,
+		.pll_clk = 553,
+		.hfp = 290,
+		.vfp = 5028,
+	},
+	.phy_timcon = {
+		.hs_prpr = 0x0B,
+	},
+        .vendor = "NT36672C_TM_Alice",
+        .manufacture = "Alice_nt_tm3276",
+#ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
+	.round_corner_en = 1,
+	.corner_pattern_height = ROUND_CORNER_H_TOP,
+	.corner_pattern_height_bot = ROUND_CORNER_H_BOT,
+	.corner_pattern_tp_size = sizeof(top_rc_pattern),
+	.corner_pattern_lt_addr = (void *)top_rc_pattern,
+#endif
+};
+
+static struct mtk_panel_params ext_params_45hz = {
+	.pll_clk = 548,
+	.vfp_low_power = 5028,
+	.cust_esd_check = 1,
+	.esd_check_enable = 1,
+	.is_cphy = 1,
+	.lcm_esd_check_table[0] = {
+	.cmd = 0x0A, .count = 1, .para_list[0] = 0x9C, .mask_list[0] = 0x9c,
+	},
+	.is_cphy = 1,
+	.data_rate = 1096,
+	.dyn_fps = {
+		.switch_en = 1,
+		.vact_timing_fps = 90,
+	},
+	.dyn = {
+		.switch_en = 1,
+		.pll_clk = 553,
+		.hfp = 290,
+		.vfp = 2542,
+	},
+	.phy_timcon = {
+		.hs_prpr = 0x0B,
+	},
+        .vendor = "NT36672C_TM_Alice",
+        .manufacture = "Alice_nt_tm3276",
+#ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
+	.round_corner_en = 1,
+	.corner_pattern_height = ROUND_CORNER_H_TOP,
+	.corner_pattern_height_bot = ROUND_CORNER_H_BOT,
+	.corner_pattern_tp_size = sizeof(top_rc_pattern),
+	.corner_pattern_lt_addr = (void *)top_rc_pattern,
+#endif
+};
+
+static struct mtk_panel_params ext_params_48hz = {
+	.pll_clk = 548,
+	.vfp_low_power = 2542,
+	.cust_esd_check = 1,
+	.esd_check_enable = 1,
+	.is_cphy = 1,
+	.lcm_esd_check_table[0] = {
+	.cmd = 0x0A, .count = 1, .para_list[0] = 0x9C, .mask_list[0] = 0x9c,
+	},
+	.is_cphy = 1,
+	.data_rate = 1096,
+	.dyn_fps = {
+		.switch_en = 1,
+		.vact_timing_fps = 90,
+	},
+	.dyn = {
+		.switch_en = 1,
+		.pll_clk = 553,
+		.hfp = 290,
+		.vfp = 2232,
+	},
+	.phy_timcon = {
+		.hs_prpr = 0x0B,
+	},
+        .vendor = "NT36672C_TM_Alice",
+        .manufacture = "Alice_nt_tm3276",
+#ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
+	.round_corner_en = 1,
+	.corner_pattern_height = ROUND_CORNER_H_TOP,
+	.corner_pattern_height_bot = ROUND_CORNER_H_BOT,
+	.corner_pattern_tp_size = sizeof(top_rc_pattern),
+	.corner_pattern_lt_addr = (void *)top_rc_pattern,
+#endif
+};
+
+static struct mtk_panel_params ext_params_50hz = {
+	.pll_clk = 548,
+	.vfp_low_power = 2232,
+	.cust_esd_check = 1,
+	.esd_check_enable = 1,
+	.is_cphy = 1,
+	.lcm_esd_check_table[0] = {
+	.cmd = 0x0A, .count = 1, .para_list[0] = 0x9C, .mask_list[0] = 0x9c,
+	},
+	.is_cphy = 1,
+	.data_rate = 1096,
+	.dyn_fps = {
+		.switch_en = 1,
+		.vact_timing_fps = 90,
+	},
+	.dyn = {
+		.switch_en = 1,
+		.pll_clk = 553,
+		.hfp = 290,
+		.vfp = 2044,
+	},
+	.phy_timcon = {
+		.hs_prpr = 0x0B,
+	},
+        .vendor = "NT36672C_TM_Alice",
+        .manufacture = "Alice_nt_tm3276",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -598,61 +741,43 @@ static int tianma_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 	char bl_tb0[] = {0x51, 0x07, 0xff, 0x00};
 	char bl_tb1[] = {0x55, 0x00};
 	char bl_tb3[] = {0x53, 0x24};
-/*
-	char bl_tb4[] = {0xFF,0x98,0x83,0x08};
-	char bl_tb5[] = {0xE0,0x55,0x5E,0x63,0x67,0x71,0x55,0x81,0x91,0xA1,0xB6,0xA5,0xCB,0xF1,0x13,0x37,0xAA,0x5D,0x87,0xBC,0xDE,0xFF,0x05,0x27,0x50,0x7E,0x3F,0xB1,0xF3,0xFF};
-	char bl_tb6[] = {0xE1,0x55,0x5E,0x63,0x67,0x71,0x55,0x81,0x91,0xA1,0xB6,0xA5,0xCB,0xF1,0x13,0x37,0xAA,0x5D,0x87,0xBC,0xDE,0xFF,0x05,0x27,0x50,0x7E,0x3F,0xB1,0xF3,0xFF};
-	char bl_tb8[] = {0xE0,0x00,0x00,0x13,0x42,0x72,0x50,0xAE,0xE3,0x0B,0x3D,0x95,0x65,0xA5,0xDA,0x07,0xAA,0x34,0x64,0x9C,0xBF,0xFE,0xE9,0x0C,0x3A,0x72,0x3F,0x9F,0xDC,0xFF};
-	char bl_tb9[] = {0xE1,0x00,0x00,0x13,0x42,0x72,0x50,0xAE,0xE3,0x0B,0x3D,0x95,0x65,0xA5,0xDA,0x07,0xAA,0x34,0x64,0x9C,0xBF,0xFE,0xE9,0x0C,0x3A,0x72,0x3F,0x9F,0xDC,0xFF};
-*/
-	pr_err("%s backlight = %d\n", __func__, level);
 
 	if (level > 4095)
                 level = 4095;
 	if (get_boot_mode() == KERNEL_POWER_OFF_CHARGING_BOOT && level > 0) {
 		level = 2047;
 	}
-/*
-	if(level < 14 && level > 0){
-		backlight_gamma = 1;
-		cb(dsi, handle, bl_tb4, ARRAY_SIZE(bl_tb4));
-		cb(dsi, handle, bl_tb5, ARRAY_SIZE(bl_tb5));
-		cb(dsi, handle, bl_tb6, ARRAY_SIZE(bl_tb6));
-	}else if(level > 13 && backlight_gamma == 1){
-		backlight_gamma = 0;
-		cb(dsi, handle, bl_tb4, ARRAY_SIZE(bl_tb4));
-		cb(dsi, handle, bl_tb8, ARRAY_SIZE(bl_tb8));
-		cb(dsi, handle, bl_tb9, ARRAY_SIZE(bl_tb9));
-	}else if(level == 0){
-		backlight_gamma = 0;
+
+	if(level == 0) {
+		cb(dsi, handle, bl_tb3, ARRAY_SIZE(bl_tb3));
 	}
-*/
+
 	bl_tb0[1] = level >> 8;
-    bl_tb0[2] = level & 0xFF;
+	bl_tb0[2] = level & 0xFF;
 	esd_brightness = level;
 	if (last_brightness == 0) {
-		usleep_range(15*1000, 15*1000+100);
+		usleep_range(15 * 1000, 15 * 1000 + 100);
 	}
 	if (!cb)
 		return -1;
 
-	pr_err("%s bl_tb0[1]=%x, bl_tb0[2]=%x\n", __func__, bl_tb0[1], bl_tb0[2]);
+	pr_err("%s level=%d, bl_tb0[1]=%x, bl_tb0[2]=%x\n", __func__, level, bl_tb0[1], bl_tb0[2]);
 	cb(dsi, handle, bl_tb0, ARRAY_SIZE(bl_tb0));
-/* #ifdef OPLUS_BUG_STABILITY */
+
 	if ((last_brightness == 0) && (cabc_lastlevel != 0)) {
 		bl_tb1[1] = cabc_lastlevel;
 		cb(dsi, handle, bl_tb1, ARRAY_SIZE(bl_tb1));
 		cb(dsi, handle, bl_tb3, ARRAY_SIZE(bl_tb3));
 	}
 	last_brightness = level;
-/* #endif */
+
 	return 0;
 }
 
 static int oplus_esd_backlight_check(void *dsi, dcs_write_gce cb,
                 void *handle)
 {
-        char bl_tb0[] = {0x51, 0x07, 0xff};
+        char bl_tb0[] = {0x51, 0x07, 0xff, 0x00};
 
         pr_err("%s esd_backlight = %d\n", __func__, esd_brightness);
         bl_tb0[1] = esd_brightness >> 8;
@@ -671,10 +796,18 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 	struct mtk_panel_ext *ext = find_panel_ext(panel);
 	int ret = 0;
 
-	if (mode == 0)
+	if (ext && mode == 0)
 		ext->params = &ext_params;
-	else if (mode == 1)
+	else if (ext && mode == 1)
 		ext->params = &ext_params_90hz;
+	else if (ext && mode == 2)
+		ext->params = &ext_params_30hz;
+	else if (ext && mode == 3)
+		ext->params = &ext_params_45hz;
+	else if (ext && mode == 4)
+		ext->params = &ext_params_48hz;
+	else if (ext && mode == 5)
+		ext->params = &ext_params_50hz;
 	else
 		ret = 1;
 
@@ -690,6 +823,14 @@ static int mtk_panel_ext_param_get(struct mtk_panel_params *ext_para,
 		ext_para = &ext_params;
 	else if (mode == 1)
 		ext_para = &ext_params_90hz;
+	else if (mode == 2)
+		ext_para = &ext_params_30hz;
+	else if (mode == 3)
+		ext_para = &ext_params_45hz;
+	else if (mode == 4)
+		ext_para = &ext_params_48hz;
+	else if (mode == 5)
+		ext_para = &ext_params_50hz;
 	else
 		ret = 1;
 
@@ -709,13 +850,11 @@ static void cabc_switch(void *dsi, dcs_write_gce cb,
 	if(cabc_mode == 3)
                 cabc_mode = 2;
 	bl_tb0[1] = (u8)cabc_mode;
-	cb(dsi, handle, bl_tb3, ARRAY_SIZE(bl_tb3));
 	cb(dsi, handle, bl_tb1, ARRAY_SIZE(bl_tb1));
 	cb(dsi, handle, bl_tb2, ARRAY_SIZE(bl_tb2));
+	cb(dsi, handle, bl_tb3, ARRAY_SIZE(bl_tb3));
 	cb(dsi, handle, bl_tb0, ARRAY_SIZE(bl_tb0));
-	/* #ifdef OPLUS_BUG_STABILITY */
 	cabc_lastlevel = cabc_mode;
-/* #endif */
 }
 
 static int panel_ext_reset(struct drm_panel *panel, int on)
@@ -738,7 +877,7 @@ static struct mtk_panel_funcs ext_funcs = {
 	.ext_param_get = mtk_panel_ext_param_get,
 	.panel_poweron = lcm_panel_poweron,
 	.panel_poweroff = lcm_panel_poweroff,
-	.cabc_switch = cabc_switch, 
+	.cabc_switch = cabc_switch,
 };
 #endif
 
@@ -776,6 +915,10 @@ static int tianma_get_modes(struct drm_panel *panel)
 {
 	struct drm_display_mode *mode;
 	struct drm_display_mode *mode2;
+	struct drm_display_mode *mode3;
+	struct drm_display_mode *mode4;
+	struct drm_display_mode *mode5;
+	struct drm_display_mode *mode6;
 
 	mode = drm_mode_duplicate(panel->drm, &default_mode);
 	if (!mode) {
@@ -801,6 +944,58 @@ static int tianma_get_modes(struct drm_panel *panel)
 	drm_mode_set_name(mode2);
 	mode2->type = DRM_MODE_TYPE_DRIVER;
 	drm_mode_probed_add(panel->connector, mode2);
+
+	mode3 = drm_mode_duplicate(panel->drm, &performance_mode_30hz);
+	if (!mode3) {
+		dev_err(panel->drm->dev, "failed to add mode %ux%ux@%u\n",
+			performance_mode_30hz.hdisplay,
+			performance_mode_30hz.vdisplay,
+			performance_mode_30hz.vrefresh);
+		return -ENOMEM;
+	}
+
+	drm_mode_set_name(mode3);
+	mode3->type = DRM_MODE_TYPE_DRIVER;
+	drm_mode_probed_add(panel->connector, mode3);
+
+	mode4 = drm_mode_duplicate(panel->drm, &performance_mode_45hz);
+	if (!mode4) {
+		dev_err(panel->drm->dev, "failed to add mode %ux%ux@%u\n",
+			performance_mode_45hz.hdisplay,
+			performance_mode_45hz.vdisplay,
+			performance_mode_45hz.vrefresh);
+		return -ENOMEM;
+	}
+
+	drm_mode_set_name(mode4);
+	mode4->type = DRM_MODE_TYPE_DRIVER;
+	drm_mode_probed_add(panel->connector, mode4);
+
+	mode5 = drm_mode_duplicate(panel->drm, &performance_mode_48hz);
+	if (!mode5) {
+		dev_err(panel->drm->dev, "failed to add mode %ux%ux@%u\n",
+			performance_mode_48hz.hdisplay,
+			performance_mode_48hz.vdisplay,
+			performance_mode_48hz.vrefresh);
+		return -ENOMEM;
+	}
+
+	drm_mode_set_name(mode5);
+	mode5->type = DRM_MODE_TYPE_DRIVER;
+	drm_mode_probed_add(panel->connector, mode5);
+
+	mode6 = drm_mode_duplicate(panel->drm, &performance_mode_50hz);
+	if (!mode6) {
+		dev_err(panel->drm->dev, "failed to add mode %ux%ux@%u\n",
+			performance_mode_50hz.hdisplay,
+			performance_mode_50hz.vdisplay,
+			performance_mode_50hz.vrefresh);
+		return -ENOMEM;
+	}
+
+	drm_mode_set_name(mode6);
+	mode6->type = DRM_MODE_TYPE_DRIVER;
+	drm_mode_probed_add(panel->connector, mode6);
 
 	panel->connector->display_info.width_mm = 67;
 	panel->connector->display_info.height_mm = 153;

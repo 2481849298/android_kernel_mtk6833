@@ -76,6 +76,7 @@ enum {
 	MT6877_DAI_NUM,
 };
 
+#define MT6877_DAI_I2S_MAX_NUM 9 //depends each platform's max i2s num
 #define MT6877_RECORD_MEMIF MT6877_MEMIF_VUL12
 #define MT6877_ECHO_REF_MEMIF MT6877_MEMIF_AWB
 #define MT6877_PRIMARY_MEMIF MT6877_MEMIF_DL1
@@ -243,7 +244,7 @@ int mt6877_dai_pcm_register(struct mtk_base_afe *afe);
 
 int mt6877_dai_hostless_register(struct mtk_base_afe *afe);
 
-int mt6877_add_misc_control(struct snd_soc_platform *platform);
+int mt6877_add_misc_control(struct snd_soc_component *platform);
 
 int mt6877_set_local_afe(struct mtk_base_afe *afe);
 

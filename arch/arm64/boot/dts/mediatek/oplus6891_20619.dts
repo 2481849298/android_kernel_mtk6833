@@ -22,6 +22,8 @@
 #include "mediatek/oplus6891/common/cust_oplus20619_camera.dtsi"
 #include "mediatek/oplus6891/common/oplus6891_common.dtsi"
 
+#include "mediatek/bat_setting/mt6893_battery_cfg_cupid.dtsi"
+
 #include "mediatek/oplus6891/20619/common/20619_common.dtsi"
 #include "mediatek/oplus6891/20619/pcbv1/20619_cust.dtsi"
 

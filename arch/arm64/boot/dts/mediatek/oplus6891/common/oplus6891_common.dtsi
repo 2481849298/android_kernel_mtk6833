@@ -1,4 +1,4 @@
-
+/*
 &mmc_fixed_3v3 {
 	status = "okay";
 	regulator-name = "mmc_power";
@@ -16,7 +16,7 @@
 	enable-active-high;
 	regulator-always-on;
 };
-
+*/
 &reserved_memory {
 };
 
@@ -32,12 +32,9 @@
 	atag,videolfb-lcmname=
 		"nt35595_fhd_dsi_cmd_truly_nt50358_drv";
 };
-
+/*
 &mmc0 {
 	status = "okay";
-	/* pinctrl-names = "default", "state_uhs"; */
-	/* pinctrl-0 = <&mmc0_pins_default>; */
-	/* pinctrl-1 = <&mmc0_pins_uhs>; */
 	bus-width = <8>;
 	max-frequency = <5000000>;
 	cap-mmc-highspeed;
@@ -47,16 +44,17 @@
 	vqmmc-supply = <&mmc_fixed_1v8_io>;
 	non-removable;
 };
-
+*/
 &disp_leds {
 	compatible = "mediatek,disp-leds";
 
 	backlight {
 		label = "lcd-backlight";
-		max-brightness = <4095>;
+		max-brightness = <2784>;
 		led-bits = <12>;
 		trans-bits = <12>;
 		default-state = "on";
+		max_brightness_custom = <1>;
 	};
 };
 
@@ -234,7 +232,7 @@
 		i2c_addr = <57>;
 		direction = <4>;
 		eint_num = <4>;
-		als_ratio = <110>;
+		// als_ratio = <110>;
 		als_buffer_length =<10>;
 		device_name = "tcs3701";
 	};
@@ -543,6 +541,8 @@
                 project_id = <20615>;
 		irq_need_dev_resume_ok;
                 black_gesture_support;
+		black_gesture_indep_support;
+		sportify_aod_gesture_support;
                 fw_edge_limit_support;
                 pressure_report_support;
                 charger_pump_support;
@@ -553,6 +553,7 @@
                 fingerprint_underscreen_support;
                 //esd_handle_support;
 		high_resolution_support_x8;
+		tp_exit_suspend_support;
                 touchpanel,button-type = <4>;
                 touchpanel.button-TRx = <0 0>;
 	};
@@ -694,13 +695,56 @@
 };
 
 &dispsys_config {
-	pinctrl-names =
-		"lcm_rst_out1_gpio", "lcm_rst_out0_gpio",
-		"mode_te_te";
-	pinctrl-0 = <&mtkfb_pins_lcm_rst_out1_gpio>;
-	pinctrl-1 = <&mtkfb_pins_lcm_rst_out0_gpio>;
-	pinctrl-2 = <&mtkfb_pins_lcm_dsi_te>;
-	status = "okay";
+        pinctrl-names =
+                "lcm_rst_out1_gpio", "lcm_rst_out0_gpio",
+                "mode_te_te";
+        pinctrl-0 = <&mtkfb_pins_lcm_rst_out1_gpio>;
+        pinctrl-1 = <&mtkfb_pins_lcm_rst_out0_gpio>;
+        pinctrl-2 = <&mtkfb_pins_lcm_dsi_te>;
+        status = "okay";
+
+	helper-value = <0>, /*MTK_DRM_OPT_STAGE*/
+       	                <1>, /*MTK_DRM_OPT_USE_CMDQ*/
+                        <1>, /*MTK_DRM_OPT_USE_M4U*/
+                        <0>, /*MTK_DRM_OPT_SODI_SUPPORT*/
+                        <1>, /*MTK_DRM_OPT_IDLE_MGR*/
+                        <0>, /*MTK_DRM_OPT_IDLEMGR_SWTCH_DECOUPLE*/
+                        <1>, /*MTK_DRM_OPT_IDLEMGR_BY_REPAINT*/
+                        <0>, /*MTK_DRM_OPT_IDLEMGR_ENTER_ULPS*/
+                        <0>, /*MTK_DRM_OPT_IDLEMGR_KEEP_LP11*/
+                        <0>, /*MTK_DRM_OPT_DYNAMIC_RDMA_GOLDEN_SETTING*/
+                        <1>, /*MTK_DRM_OPT_IDLEMGR_DISABLE_ROUTINE_IRQ*/
+                        <0>, /*MTK_DRM_OPT_MET_LOG*/
+                        <1>, /*MTK_DRM_OPT_USE_PQ*/
+                        <1>, /*MTK_DRM_OPT_ESD_CHECK_RECOVERY*/
+                        <1>, /*MTK_DRM_OPT_ESD_CHECK_SWITCH*/
+                        <1>, /*MTK_DRM_OPT_PRESENT_FENCE*/
+                        <0>, /*MTK_DRM_OPT_RDMA_UNDERFLOW_AEE*/
+                        <0>, /*MTK_DRM_OPT_DSI_UNDERRUN_AEE*/
+                        <1>, /*MTK_DRM_OPT_HRT*/
+                        <1>, /*MTK_DRM_OPT_HRT_MODE*/
+                        <0>, /*MTK_DRM_OPT_DELAYED_TRIGGER*/
+                        <1>, /*MTK_DRM_OPT_OVL_EXT_LAYER*/
+                        <0>, /*MTK_DRM_OPT_AOD*/
+                        <1>, /*MTK_DRM_OPT_RPO*/
+                        <0>, /*MTK_DRM_OPT_DUAL_PIPE*/
+                        <0>, /*MTK_DRM_OPT_DC_BY_HRT*/
+                        <1>, /*MTK_DRM_OPT_OVL_WCG*/
+                        <0>, /*MTK_DRM_OPT_OVL_SBCH*/
+                        <1>, /*MTK_DRM_OPT_COMMIT_NO_WAIT_VBLANK*/
+                        <0>, /*MTK_DRM_OPT_MET*/
+                        <0>, /*MTK_DRM_OPT_REG_PARSER_RAW_DUMP*/
+                        <0>, /*MTK_DRM_OPT_VP_PQ*/
+                        <0>, /*MTK_DRM_OPT_GAME_PQ*/
+                        <0>, /*MTK_DRM_OPT_MMPATH*/
+                        <1>, /*MTK_DRM_OPT_HBM*/
+                        <0>, /*MTK_DRM_OPT_VDS_PATH_SWITCH*/
+                        <0>, /*MTK_DRM_OPT_LAYER_REC*/
+                        <1>, /*MTK_DRM_OPT_CLEAR_LAYER*/
+                        <1>, /*MTK_DRM_OPT_LFR*/
+                        <0>, /*MTK_DRM_OPT_SF_PF*/
+                        <1>, /*MTK_DRM_OPT_DYN_MIPI_CHANGE*/
+                        <1>; /*MTK_DRM_OPT_PRIM_DUAL_PIPE*/
 };
 /* DISPSYS GPIO standardization end */
 
@@ -766,6 +810,7 @@
 /* FINGERPRINT start */
 //ifdef OPLUS_FEATURE_FINGERPRINT
 &oplus_fp_common {
+	compatible = "oplus,fp_common";
     oplus,fp_gpio_num = <1>;
     oplus,fp_gpio_0 = <&pio 190 0x0>;
     pinctrl-names = "default";
@@ -790,6 +835,7 @@
 };
 
 &goodix_fp {
+	compatible = "goodix,goodix_fp";
 	goodix,gpio_irq = <&pio 15 0x00>;
 	goodix,gpio_reset = <&pio 14 0x00>;
 	goodix,gpio_cs = <&pio 157 0x00>;
@@ -1134,6 +1180,9 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 	R_FG_VALUE = <(5)>;
 };
 
+&regulator_vibrator {
+    status = "disabled";
+};
 
 &i2c3 {
     status = "okay";
@@ -1158,8 +1207,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO135__FUNC_GPIO135>;
 			input-enable;
-			slew-rate = <0>;
-			bias-pull-up = <11>;
+			bias-pull-up;
 		};
 	};
 
@@ -1475,10 +1523,12 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 
 
 };
+//#endif //VENDOR_EDIT
 
 &mt6360_pmu {
 	mt6360,intr_gpio_num = <24>; /* direct defined GPIO num */
 	mt6360,intr_gpio = <&pio 24 0x0>;
+	//#ifdef VENDOR_EDIT
 	disable_lpsd = <1>;
 };
 
@@ -1721,7 +1771,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
-	panel7@0 {
+	panel1@0 {
 		compatible = "oplus20615_samsung_ams643ye01_evt_1080p_dsi_cmd";
 		reg = <0>;
 		pm-enable-gpios = <&pio 41 0>;
@@ -1730,12 +1780,12 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		ldo3-supply = <&mt_pmic_vmc_ldo_reg>;
 		pinctrl-names = "default";
 		port {
-			panel_in7: endpoint {
+			panel_in1: endpoint {
 				remote-endpoint = <&dsi_out>;
 			};
 		};
 	};
-	panel8@0 {
+	panel2@0 {
                 compatible = "oplus20615_samsung_ams643ye01_evt2_1080p_dsi_cmd";
                 reg = <1>;
                 pm-enable-gpios = <&pio 41 0>;
@@ -1744,12 +1794,12 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
                 ldo3-supply = <&mt_pmic_vmc_ldo_reg>;
                 pinctrl-names = "default";
                 port {
-                        panel_in8: endpoint {
+                        panel_in2: endpoint {
                                 remote-endpoint = <&dsi_out>;
                         };
                 };
         };
-        panel9@0 {
+        panel3@0 {
                 compatible = "oplus20615_samsung_ams643ye01_pvt_1080p_dsi_cmd";
                 reg = <2>;
                 pm-enable-gpios = <&pio 41 0>;
@@ -1758,7 +1808,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
                 ldo3-supply = <&mt_pmic_vmc_ldo_reg>;
                 pinctrl-names = "default";
                 port {
-                        panel_in9: endpoint {
+                        panel_in3: endpoint {
                                 remote-endpoint = <&dsi_out>;
                         };
                 };
@@ -1766,7 +1816,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 	ports {
 		port {
 			dsi_out: endpoint {
-				remote-endpoint = <&panel_in7>;
+				remote-endpoint = <&panel_in1>;
 			};
 		};
 	};

@@ -229,7 +229,7 @@ static struct imgsensor_info_struct imgsensor_info = {
     .sensor_interface_type = SENSOR_INTERFACE_TYPE_MIPI,
     .mipi_sensor_type = MIPI_OPHY_NCSI2,
     .mipi_settle_delay_mode = 1,
-    .sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_R,
+    .sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_B,
     .mclk = 24,//mclk value, suggest 24 or 26 for 24Mhz or 26Mhz
     .mipi_lane_num = SENSOR_MIPI_4_LANE,//mipi lane num
     .i2c_addr_table = {0x6d, 0xff},
@@ -1841,19 +1841,21 @@ static kal_uint32 set_test_pattern_mode(kal_bool enable)
 {
     LOG_INF("Jesse+ enable: %d\n", enable);
     if (enable) {
-        write_cmos_sensor(0x3019, 0xf0);
-        write_cmos_sensor(0x4308, 0x01);
-        write_cmos_sensor(0x4300, 0x00);
-        write_cmos_sensor(0x4302, 0x00);
-        write_cmos_sensor(0x4304, 0x00);
-        write_cmos_sensor(0x4306, 0x00);
+        write_cmos_sensor(0x3208, 0x0b);
+        write_cmos_sensor(0x430b, 0x00);
+        write_cmos_sensor(0x430c, 0x00);
+        write_cmos_sensor(0x4310, 0x00);
+        write_cmos_sensor(0x4311, 0x00);
+        write_cmos_sensor(0x3208, 0x1b);
+        write_cmos_sensor(0x3208, 0xab);
     } else {
-        write_cmos_sensor(0x3019, 0xd2);
-        write_cmos_sensor(0x4308, 0x00);
-        write_cmos_sensor(0x4300, 0x00);
-        write_cmos_sensor(0x4302, 0x00);
-        write_cmos_sensor(0x4304, 0x00);
-        write_cmos_sensor(0x4306, 0x00);
+        write_cmos_sensor(0x3208, 0x0b);
+        write_cmos_sensor(0x430b, 0xff);
+        write_cmos_sensor(0x430c, 0xff);
+        write_cmos_sensor(0x4310, 0xff);
+        write_cmos_sensor(0x4311, 0xff);
+        write_cmos_sensor(0x3208, 0x1b);
+        write_cmos_sensor(0x3208, 0xab);
     }
     spin_lock(&imgsensor_drv_lock);
     imgsensor.test_pattern = enable;

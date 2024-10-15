@@ -147,6 +147,9 @@
 #define RATE_54M                                108	/* 54M */
 /* 7.3.2.14 BSS membership selector */
 #define RATE_HT_PHY                             127	/* BSS Selector - Clause 20. HT PHY */
+#define RATE_H2E_ONLY                           123 /* BSS Selector - Hash to Element only */
+#define RATE_H2E_ONLY_VAL                       (0x80 | 123)
+
 #define RATE_MASK                               BITS(0, 6)	/* mask bits for the rate */
 #define RATE_BASIC_BIT                          BIT(7)	/* mask bit for the rate belonging to the BSSBasicRateSet */
 

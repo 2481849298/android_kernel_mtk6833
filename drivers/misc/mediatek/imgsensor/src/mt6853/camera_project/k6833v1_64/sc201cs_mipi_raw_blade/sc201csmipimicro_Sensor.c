@@ -66,7 +66,6 @@ extern enum IMGSENSOR_RETURN Eeprom_DataInit(
             enum IMGSENSOR_SENSOR_IDX sensor_idx,
             kal_uint32 sensorID);
 
-
 static imgsensor_info_struct imgsensor_info = {
     .sensor_id = SC201CS1_SENSOR_ID_BLADE,
 
@@ -204,7 +203,7 @@ static imgsensor_struct imgsensor = {
     .dummy_line = 0,                    //current dummyline
     .current_fps = 300,  //full size current fps : 24fps for PIP, 30fps for Normal or ZSD
     .autoflicker_en = KAL_FALSE,  //auto flicker enable: KAL_FALSE for disable auto flicker, KAL_TRUE for enable auto flicker
-    .test_pattern = KAL_FALSE,      //test pattern mode or not. KAL_FALSE for in test pattern mode, KAL_TRUE for normal output
+    .test_pattern = 0,      //test pattern mode or not. KAL_FALSE for in test pattern mode, KAL_TRUE for normal output
     .current_scenario_id = MSDK_SCENARIO_ID_CAMERA_PREVIEW,//current scenario id
     .ihdr_en = 0, //sensor need support LE, SE with HDR feature
     .i2c_write_id = 0x60,
@@ -794,25 +793,27 @@ static void custom1_setting(void)
 }
 //-bug 663265 zhoumin.wt, add, 2021/09/17, modify framerate of dualcam to be 24fps
 
-static kal_uint32 set_test_pattern_mode(kal_bool enable)
+static kal_uint32 set_test_pattern_mode(kal_uint8 modes, struct SET_SENSOR_PATTERN_SOLID_COLOR *pTestpatterndata)
 {
-   	LOG_INF("enable: %d\n", enable);
-    //enable = false;
-	if (enable) {
-                write_cmos_sensor(0x4501, 0xac);
-                write_cmos_sensor(0x3902, 0x85);
-                write_cmos_sensor(0x3908, 0x00);
-                write_cmos_sensor(0x3909, 0xff);
-                write_cmos_sensor(0x390a, 0xff);
-                write_cmos_sensor(0x391d, 0x18);
-	} else {
+    //LOG_INF("sc201-----modes: %d\n", modes);
+
+     if( modes ) {
+         write_cmos_sensor(0x4501, 0xac);
+         write_cmos_sensor(0x3902, 0x85);
+         write_cmos_sensor(0x3908, 0x00);
+         write_cmos_sensor(0x3909, 0xff);
+         write_cmos_sensor(0x390a, 0xff);
+         write_cmos_sensor(0x391d, 0x18);
+         //LOG_INF("sc201=======modes: %d\n", modes);
+     }
+     else {
 		write_cmos_sensor(0x4501, 0xb4);
-	}
-	//write_cmos_sensor(0x3200, 0x00);
-	spin_lock(&imgsensor_drv_lock);
-	imgsensor.test_pattern = enable;
-	spin_unlock(&imgsensor_drv_lock);
-	return ERROR_NONE;
+		//LOG_INF("sc201-----====modes: %d\n", modes);
+     }
+     spin_lock(&imgsensor_drv_lock);
+     imgsensor.test_pattern = modes;
+     spin_unlock(&imgsensor_drv_lock);
+     return ERROR_NONE;
 }
 
 /*************************************************************************
@@ -842,7 +843,8 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
         spin_unlock(&imgsensor_drv_lock);
         do {
             *sensor_id = return_sensor_id();
-            if (*sensor_id == imgsensor_info.sensor_id) {
+            if (*sensor_id == 0xeb2c) {
+                *sensor_id = imgsensor_info.sensor_id;
                 LOG_INF("i2c write id: 0x%x, sensor id: 0x%x\n", imgsensor.i2c_write_id,*sensor_id);
                 if(deviceInfo_register_value == 0x00){
                         Eeprom_DataInit(2, SC201CS1_SENSOR_ID_BLADE);
@@ -928,7 +930,7 @@ static kal_uint32 open(void)
 	 imgsensor.dummy_pixel = 0;
 	 imgsensor.dummy_line = 0;
 	 imgsensor.ihdr_en = KAL_FALSE;
-	 imgsensor.test_pattern = KAL_FALSE;
+	 imgsensor.test_pattern = 0;
 	 imgsensor.current_fps = imgsensor_info.pre.max_framerate;
 	 spin_unlock(&imgsensor_drv_lock);
 
@@ -1582,7 +1584,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
             get_default_framerate_by_scenario((enum MSDK_SCENARIO_ID_ENUM)*(feature_data), (MUINT32 *)(uintptr_t)(*(feature_data+1)));
             break;
         case SENSOR_FEATURE_SET_TEST_PATTERN:
-            set_test_pattern_mode((BOOL)*feature_data);
+            set_test_pattern_mode((UINT8)*feature_data, (struct SET_SENSOR_PATTERN_SOLID_COLOR *) feature_data+1);
             break;
         case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE: //for factory mode auto testing
             *feature_return_para_32 = imgsensor_info.checksum_value;

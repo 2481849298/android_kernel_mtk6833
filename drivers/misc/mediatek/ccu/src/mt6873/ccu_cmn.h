@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef __CCU_CMN_H__
@@ -176,10 +168,6 @@ int ccu_flushLog(int argc, int *argv);
 int ccu_memcpy(void *dest, void *src, int length);
 
 int ccu_memclr(void *dest, int length);
-
-int ccu_read_info_reg(int regNo);
-
-void ccu_write_info_reg(int regNo, int val);
 
 int ccu_read_struct_size(uint32_t *structSizes, uint32_t structCnt);
 

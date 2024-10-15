@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef __IMGSENSOR_HW_REGULATOR_H__
@@ -25,6 +17,7 @@
 enum REGULATOR_VOLTAGE {
 	REGULATOR_VOLTAGE_0    = 0,
 	REGULATOR_VOLTAGE_1000 = 1000000,
+	REGULATOR_VOLTAGE_1050 = 1050000,
 	REGULATOR_VOLTAGE_1100 = 1100000,
 	REGULATOR_VOLTAGE_1200 = 1200000,
 	REGULATOR_VOLTAGE_1210 = 1210000,

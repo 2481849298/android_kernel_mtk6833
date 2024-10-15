@@ -37,3 +37,4 @@
                         <PINMUX_GPIO34__FUNC_I2S3_DO>;
                };
 };
+

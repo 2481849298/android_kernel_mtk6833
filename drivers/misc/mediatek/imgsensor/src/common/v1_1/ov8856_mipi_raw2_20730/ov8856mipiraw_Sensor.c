@@ -21,7 +21,7 @@
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 /*#include <asm/atomic.h>*/
 
 #include "kd_camera_typedef.h"
@@ -2440,7 +2440,7 @@ static kal_uint32 set_test_pattern_mode(kal_bool enable)
 		write_cmos_sensor(0x5e00, 0x83);
 	} else {
 		write_cmos_sensor(0x5000, 0x77);
-		write_cmos_sensor(0x5001, 0x0a);
+		write_cmos_sensor(0x5001, 0x0e);
 		write_cmos_sensor(0x5e00, 0x00);
 	}
 	spin_lock(&imgsensor_drv_lock);

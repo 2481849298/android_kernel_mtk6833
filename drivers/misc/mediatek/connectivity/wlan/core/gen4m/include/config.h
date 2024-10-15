@@ -456,7 +456,7 @@
  */
 #define CFG_DRV_OWN_VERSION	((uint16_t)((NIC_DRIVER_MAJOR_VERSION << 8) | \
 				(NIC_DRIVER_MINOR_VERSION)))
-#define CFG_DRV_PEER_VERSION	((uint16_t)0x0000)
+#define CFG_DRV_PEER_VERSION	0x0000U
 
 /*------------------------------------------------------------------------------
  * Flags and Parameters for TX path
@@ -1000,7 +1000,7 @@
 #define CFG_SUPPORT_802_11V_BSS_TRANSITION_MGT  0
 #endif
 
-#if (CFG_SUPPORT_802_11V_BSS_TRANSITION_MGT == 1) && (CFG_TC10_FEATURE == 1)
+#if (CFG_SUPPORT_802_11V_BSS_TRANSITION_MGT == 1)
 #define CFG_SUPPORT_802_11V_BTM_OFFLOAD 1
 #else
 #define CFG_SUPPORT_802_11V_BTM_OFFLOAD 0
@@ -1059,6 +1059,7 @@
 #define CFG_FIX_2_TX_PORT			0
 
 #ifndef OPLUS_WLAN_BUG_STABILITY
+//CONNECTIVITY.WIFI.NETWORK.INTERNET.367834, 2020/09/21,
 //Modify for disable arp vo setting
 #define CFG_CHANGE_CRITICAL_PACKET_PRIORITY     1
 #else  /* OPLUS_WLAN_BUG_STABILITY */
@@ -1107,6 +1108,7 @@
 
 #define CFG_SUPPORT_LLS 1
 
+#define CFG_REPORT_TX_RATE_FROM_LLS 0
 /*------------------------------------------------------------------------------
  * Flags for prepare the FW compile flag
  *------------------------------------------------------------------------------
@@ -1141,7 +1143,11 @@
 /* During a full2partial scan period, all online full scan requests would be
  * changed to partial scan. The unit of this value is second
  */
-#define CFG_SUPPORT_FULL2PARTIAL_SCAN      (1)
+//#ifndef OPLUS_BUG_STABILITY
+//#define CFG_SUPPORT_FULL2PARTIAL_SCAN      (1)
+//#else /* OPLUS_BUG_STABILITY */
+#define CFG_SUPPORT_FULL2PARTIAL_SCAN      (0)
+//#endif /* OPLUS_BUG_STABILITY */
 #define CFG_SCAN_FULL2PARTIAL_PERIOD       (60)
 
 /*------------------------------------------------------------------------------
@@ -1217,6 +1223,12 @@
 #define CFG_EFUSE_BUFFER_MODE_DELAY_CAL         1
 
 /*------------------------------------------------------------------------------
+ * Flags of Sniffer SUPPORT
+ *------------------------------------------------------------------------------
+ */
+#define CFG_SUPPORT_SNIFFER                 1
+
+/*------------------------------------------------------------------------------
  * Flags of Drop Packet Replay SUPPORT
  *------------------------------------------------------------------------------
  */
@@ -1243,7 +1255,15 @@
 
 #define CFG_SUPPORT_DBDC	1
 #define CFG_SUPPORT_DBDC_NO_BLOCKING_OPMODE 1
-#define CFG_SUPPORT_SAP_DFS_CHANNEL 1
+
+//#ifdef OPLUS_BUG_STABILITY
+//CONNECTIVITY.WIFI.BASIC, 2023/02/20/* SAP/GO setup in dfs follow STA */
+#ifndef CFG_SUPPORT_SAP_DFS_CHANNEL
+#define CFG_SUPPORT_SAP_DFS_CHANNEL 0
+#endif
+//#endif /* OPLUS_BUG_STABILITY */
+
+
 
 /*------------------------------------------------------------------------------
  * Flags for Set IPv6 address to firmware
@@ -1424,12 +1444,7 @@
  * in mtk_cfg80211_get_station
  *------------------------------------------------------------------------------
  */
-#ifndef OPLUS_WLAN_BUG_STABILITY
-//Modify for show max tx rate
 #define CFG_REPORT_MAX_TX_RATE	0
-#else  /* OPLUS_WLAN_BUG_STABILITY */
-#define CFG_REPORT_MAX_TX_RATE	1
-#endif /* OPLUS_WLAN_BUG_STABILITY */
 
 /*------------------------------------------------------------------------------
  * Link Quality Monitor
@@ -1535,6 +1550,7 @@
 */
 #ifndef CFG_SUPPORT_SMART_GEAR
 #ifdef OPLUS_BUG_STABILITY
+//CONNECTIVITY.WIFI.HARDWARE.POWER.360963, 2020/09/21
 //enable smart gear by default
 #define CFG_SUPPORT_SMART_GEAR 1
 #else
@@ -1567,13 +1583,14 @@
  *       COUNTRY_CHANNEL_TXPOWER_LIMIT_TYPE_COMP_11AC_V2
  *------------------------------------------------------------------------------
  */
-#ifdef OPLUS_BUG_STABILITY
+//#ifdef OPLUS_BUG_STABILITY
+//CONNECTIVITY.WIFI.BASIC, 2022/02/11, Power Limit for diff wifi standard
 #ifndef CFG_SUPPORT_DYNA_TX_PWR_CTRL_11AC_V2_SETTING
 #define CFG_SUPPORT_DYNA_TX_PWR_CTRL_11AC_V2_SETTING    0 /*move to wlan/MAKEFILE */
 #endif
-#else
-#define CFG_SUPPORT_DYNA_TX_PWR_CTRL_11AC_V2_SETTING    0
-#endif /* OPLUS_BUG_STABILITY */
+//#else
+//#define CFG_SUPPORT_DYNA_TX_PWR_CTRL_11AC_V2_SETTING    0
+//#endif /* OPLUS_BUG_STABILITY */
 
 /*------------------------------------------------------------------------------
  * tx power control:

@@ -52,6 +52,14 @@ static bool map_pte(struct page_vma_mapped_walk *pvmw)
 	return true;
 }
 
+static inline bool pfn_in_hpage(struct page *hpage, unsigned long pfn)
+{
+	unsigned long hpage_pfn = page_to_pfn(hpage);
+
+	/* THP can be referenced by any subpage */
+	return pfn >= hpage_pfn && pfn - hpage_pfn < hpage_nr_pages(hpage);
+}
+
 /**
  * check_pte - check if @pvmw->page is mapped at the @pvmw->pte
  *
@@ -100,14 +108,7 @@ static bool check_pte(struct page_vma_mapped_walk *pvmw)
 		pfn = pte_pfn(*pvmw->pte);
 	}
 
-	if (pfn < page_to_pfn(pvmw->page))
-		return false;
-
-	/* THP can be referenced by any subpage */
-	if (pfn - page_to_pfn(pvmw->page) >= hpage_nr_pages(pvmw->page))
-		return false;
-
-	return true;
+	return pfn_in_hpage(pvmw->page, pfn);
 }
 
 /**
@@ -146,6 +147,18 @@ bool page_vma_mapped_walk(struct page_vma_mapped_walk *pvmw)
 	/* The only possible pmd mapping has been handled on last iteration */
 	if (pvmw->pmd && !pvmw->pte)
 		return not_found(pvmw);
+
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+	/*
+	 * The only possible cont-pte mapping has been handled on last iteration
+	 * and we are reclaiming file-64KB thp as a whole and don't reclaim pages
+	 * double-mapped
+	 */
+	if (pvmw->pmd && pvmw->pte &&
+			ContPteHugePageHead(pvmw->page) &&
+			pte_cont(READ_ONCE(*pvmw->pte)))
+		return not_found(pvmw);
+#endif
 
 	if (pvmw->pte)
 		goto next_pte;

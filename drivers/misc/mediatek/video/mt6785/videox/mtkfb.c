@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <generated/autoconf.h>
 #include <linux/module.h>
@@ -111,12 +103,16 @@ long dts_gpio_state;
 
 #ifdef OPLUS_BUG_STABILITY
 extern int __attribute((weak)) oplus_mtkfb_custom_data_init(struct platform_device *pdev) { return 0; };
-unsigned int oplus_backlight_backup = 0;
-#endif /* OPLUS_BUG_STABILITY */
+extern unsigned int oplus_backlight_backup;
 
 /* #ifdef OPLUS_FEATURE_AOD */
 extern bool oplus_display_aod_support;
 extern bool oplus_display_hbm_support;
+extern bool oplus_display_cabc_cmdq_support;
+extern bool oplus_display_twelvebits_support;
+extern bool oplus_display_aodlight_support;
+extern bool oplus_display_fppress_support;
+extern bool oplus_display_aod_ramless_support;
 /*
  * add for AOD feature
  */
@@ -129,9 +125,8 @@ void notify_suspend_to_tp(struct fb_info *info, enum mtkfb_aod_power_mode aod_pm
 /* #ifdef OPLUS_FEATURE_ONSCREENFINGERPRINT */
 extern bool ds_rec_fpd;
 extern bool doze_rec_fpd;
-extern bool oplus_display_aod_ramless_support;
 /* #endif */ /* OPLUS_FEATURE_ONSCREENFINGERPRINT */
-
+#endif /* OPLUS_BUG_STABILITY */
 /* macro definiton */
 #define ALIGN_TO(x, n)  (((x) + ((n) - 1)) & ~((n) - 1))
 #define MTK_FB_XRESV (ALIGN_TO(MTK_FB_XRES, MTK_FB_ALIGNMENT))
@@ -331,18 +326,22 @@ static int mtkfb_blank(int blank_mode, struct fb_info *info)
 				     bypass_blank);
 			break;
 		}
-
+#ifdef OPLUS_BUG_STABILITY
 		/* #ifdef OPLUS_FEATURE_AOD */
 		mutex_lock(&fb_pow_mod_lock);
 		/* #endif */ /* OPLUS_FEATURE_AOD */
-		primary_display_set_power_mode(FB_SUSPEND);
-		mtkfb_early_suspend();
+#endif
+		if (prev_pm != FB_SUSPEND) {
+			primary_display_set_power_mode(FB_SUSPEND);
+			mtkfb_early_suspend();
+		}
 
 		debug_print_power_mode_check(prev_pm, FB_SUSPEND);
+#ifdef OPLUS_BUG_STABILITY
 		/* #ifdef OPLUS_FEATURE_AOD */
 		mutex_unlock(&fb_pow_mod_lock);
 		/* #endif */ /* OPLUS_FEATURE_AOD */
-
+#endif
 		break;
 	default:
 		return -EINVAL;
@@ -358,7 +357,6 @@ int mtkfb_set_backlight_level(unsigned int level)
 	MTKFB_FUNC();
 
 	DISPDBG("%s:%d Start\n", __func__, level);
-
 	if (aal_is_support) {
 		#ifdef OPLUS_BUG_STABILITY
 		oplus_backlight_backup = level;
@@ -1149,10 +1147,12 @@ static int mtkfb_ioctl(struct fb_info *info, unsigned int cmd,
 	case MTKFB_SET_AOD_POWER_MODE:
 	{
 		enum mtkfb_aod_power_mode aod_pm = MTKFB_AOD_POWER_MODE_ERROR;
+#ifdef OPLUS_BUG_STABILITY
 		enum mtkfb_power_mode prev_pm =
 					primary_display_get_power_mode();
-
+#endif
 		aod_pm = (enum mtkfb_aod_power_mode)arg;
+#ifdef OPLUS_BUG_STABILITY
 		/* #ifdef OPLUS_FEATURE_AOD */
 		/*
 		* add resume to doze for tp gesture.
@@ -1220,7 +1220,7 @@ static int mtkfb_ioctl(struct fb_info *info, unsigned int cmd,
 		if (stat < 0)
 			DISP_PR_ERR("AOD: set %s failed\n",
 				aod_pm ? "AOD_SUSPEND" : "AOD_RESUME");
-
+#endif
 		break;
 	}
 	case MTKFB_POWEROFF:
@@ -2477,7 +2477,7 @@ static int update_test_kthread(void *data)
 	return 0;
 }
 #endif
-
+#ifdef OPLUS_BUG_STABILITY
 /* #ifdef OPLUS_FEATURE_AOD */
 /*
 * add resume to doze for tp gesture.
@@ -2496,6 +2496,7 @@ void notify_suspend_to_tp(struct fb_info *info, enum mtkfb_aod_power_mode aod_pm
 	}
 }
 /* #endif */ /* OPLUS_FEATURE_AOD */
+#endif
 #if defined(CONFIG_MTK_DUAL_DISPLAY_SUPPORT) && \
 	(CONFIG_MTK_DUAL_DISPLAY_SUPPORT == 2)
 static struct fb_info *allocate_fb_by_index(struct device *dev)
@@ -2521,9 +2522,9 @@ static struct fb_info *allocate_fb_by_index(struct device *dev)
 }
 #endif
 
-/* #ifdef OPLUS_BUG_STABILITY */
+#ifdef OPLUS_BUG_STABILITY
 extern void lcm_set_te_bk_gpio15_pin(void);
-/* #endif */ /* OPLUS_BUG_STABILITY */
+#endif /* OPLUS_BUG_STABILITY */
 
 static int mtkfb_probe(struct platform_device *pdev)
 {
@@ -2536,7 +2537,6 @@ static int mtkfb_probe(struct platform_device *pdev)
 #endif
 	int init_state;
 	int ret = 0;
-
 #ifdef CONFIG_MTK_IOMMU_V2
 	struct ion_client *ion_display_client = NULL;
 	struct ion_handle *ion_display_handle = NULL;
@@ -2556,8 +2556,13 @@ static int mtkfb_probe(struct platform_device *pdev)
 
 	#ifdef OPLUS_BUG_STABILITY
 	oplus_mtkfb_custom_data_init(pdev);
-	#endif
-
+        oplus_display_cabc_cmdq_support = of_property_read_bool(pdev->dev.of_node, "oplus_display_cabc_cmdq_support");
+        oplus_display_aod_support = of_property_read_bool(pdev->dev.of_node, "oplus_display_aod_support");
+        oplus_display_twelvebits_support = of_property_read_bool(pdev->dev.of_node, "oplus_display_twelvebits_support");
+        oplus_display_aod_ramless_support = of_property_read_bool(pdev->dev.of_node, "oplus_display_aod_ramless_support");
+        oplus_display_hbm_support = of_property_read_bool(pdev->dev.of_node, "oplus_display_hbm_support");
+	oplus_display_aodlight_support = of_property_read_bool(pdev->dev.of_node, "oplus_display_aodlight_support");
+	oplus_display_fppress_support = of_property_read_bool(pdev->dev.of_node, "oplus_display_fppress_support");
 	if (oplus_display_hbm_support) {
 		disp_helper_set_option(DISP_OPT_LCM_HBM, 1);
 	}
@@ -2570,20 +2575,18 @@ static int mtkfb_probe(struct platform_device *pdev)
 		}
 	}
 	/* #endif */ /* OPLUS_FEATURE_AOD */
-
+	#endif
 	_parse_tag_videolfb();
 
 	init_state = 0;
-
 	/* pdev = to_platform_device(dev); */
 	/* repo call DTS gpio module, if not necessary, invoke nothing */
 	dts_gpio_state = disp_dts_gpio_init_repo(pdev);
 	if (dts_gpio_state)
 		dev_err(&pdev->dev, "retrieve GPIO DTS failed.");
-
-/* #ifdef OPLUS_BUG_STABILITY */
+#ifdef OPLUS_BUG_STABILITY
 	lcm_set_te_bk_gpio15_pin();
-/* #endif */ /* OPLUS_BUG_STABILITY */
+#endif /* OPLUS_BUG_STABILITY */
 
 	fbi = framebuffer_alloc(sizeof(struct mtkfb_device), &(pdev->dev));
 	if (!fbi) {
@@ -2754,33 +2757,6 @@ static int mtkfb_suspend(struct platform_device *pdev, pm_message_t mesg)
 	return 0;
 }
 
-
-
-static void mtkfb_shutdown(struct platform_device *pdev)
-{
-	MTKFB_LOG("[FB Driver] %s()\n", __func__);
-	/* mt65xx_leds_brightness_set(MT65XX_LED_TYPE_LCD, LED_OFF); */
-	if (!lcd_fps)
-		msleep(30);
-	else
-		msleep(2 * 100000 / lcd_fps);	/* Delay 2 frames. */
-
-	if (primary_display_is_sleepd()) {
-		MTKFB_LOG("mtkfb has been power off\n");
-		return;
-	}
-
-	/* #ifdef OPLUS_FEATURE_AOD */
-	mutex_lock(&fb_pow_mod_lock);
-	/* #endif */ /* OPLUS_FEATURE_AOD */
-	primary_display_set_power_mode(FB_SUSPEND);
-	primary_display_suspend();
-	/* #ifdef OPLUS_FEATURE_AOD */
-	mutex_unlock(&fb_pow_mod_lock);
-	/* #endif */ /* OPLUS_FEATURE_AOD */
-	MTKFB_LOG("[FB Driver] leave %s\n", __func__);
-}
-
 bool mtkfb_is_suspend(void)
 {
 	return primary_display_is_sleepd();
@@ -2811,6 +2787,31 @@ int mtkfb_ipo_init(void)
 	register_pm_notifier(&pm_nb);
 
 	return 0;
+}
+
+static void mtkfb_shutdown(struct platform_device *pdev)
+{
+        MTKFB_LOG("[FB Driver] %s()\n", __func__);
+        /* mt65xx_leds_brightness_set(MT65XX_LED_TYPE_LCD, LED_OFF); */
+        if (!lcd_fps)
+                msleep(30);
+        else
+                msleep(2 * 100000 / lcd_fps);   /* Delay 2 frames. */
+
+        if (primary_display_is_sleepd()) {
+                MTKFB_LOG("mtkfb has been power off\n");
+                return;
+        }
+
+        /* #ifdef OPLUS_FEATURE_AOD */
+        mutex_lock(&fb_pow_mod_lock);
+        /* #endif */ /* OPLUS_FEATURE_AOD */
+        primary_display_set_power_mode(FB_SUSPEND);
+        primary_display_suspend();
+        /* #ifdef OPLUS_FEATURE_AOD */
+        mutex_unlock(&fb_pow_mod_lock);
+        /* #endif */ /* OPLUS_FEATURE_AOD */
+        MTKFB_LOG("[FB Driver] leave %s\n", __func__);
 }
 
 void mtkfb_clear_lcm(void)

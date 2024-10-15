@@ -40,7 +40,7 @@
 #endif
 
 #include <mt-plat/mtk_boot_common.h>
-#include <soc/oppo/oppo_project.h>
+
 static char bl_tb0[] = { 0x51, 0xff };
 extern int __attribute((weak)) tp_gesture_enable_flag(void) { return 0; };
 extern unsigned int __attribute((weak)) is_project(int project)  { return 0; }
@@ -580,6 +580,8 @@ static struct mtk_panel_params ext_params = {
 	},
 	.oplus_display_global_dre = 1,
 	//.oplus_teot_ns_multiplier = 90,
+	.physical_width_um = 68430,
+	.physical_height_um = 152570,
 };
 
 static struct mtk_panel_params ext_params_90hz = {
@@ -610,6 +612,8 @@ static struct mtk_panel_params ext_params_90hz = {
 		.hs_prpr = 10,
 	},
 	.oplus_display_global_dre = 1,
+	.physical_width_um = 68430,
+	.physical_height_um = 152570,
 };
 
 static int map_exp[4096] = {0};
@@ -712,7 +716,7 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 	return 0;
 }
 
-static int oppo_esd_backlight_check(void *dsi, dcs_write_gce cb,
+static int lcm_esd_backlight_check(void *dsi, dcs_write_gce cb,
 		void *handle)
 {
 	char bl_tb0[] = {0x51, 0x07, 0xff, 0x00};
@@ -784,9 +788,10 @@ static void cabc_switch(void *dsi, dcs_write_gce cb,
 {
 	char bl_tb0[] = {0x55, 0x00};
 	//char bl_tb3[] = {0x53, 0x2C};
-	pr_err("%s cabc = %d\n", __func__, cabc_mode);
 	bl_tb0[1] = (u8)cabc_mode;
-    usleep_range(5000, 5010);
+	if (cabc_mode > 0)
+    		usleep_range(5000, 5010);
+	pr_err("%s cabc = %d\n", __func__, cabc_mode);
 	//cb(dsi, handle, bl_tb3, ARRAY_SIZE(bl_tb3));//FB 01
 	cb(dsi, handle, bl_tb0, ARRAY_SIZE(bl_tb0));//55 0X
 /* #ifdef OPLUS_BUG_STABILITY */
@@ -809,7 +814,7 @@ static int panel_ext_reset(struct drm_panel *panel, int on)
 static struct mtk_panel_funcs ext_funcs = {
 	.reset = panel_ext_reset,
 	.set_backlight_cmdq = lcm_setbacklight_cmdq,
-	.esd_backlight_recovery = oppo_esd_backlight_check,
+	.esd_backlight_recovery = lcm_esd_backlight_check,
 	.panel_poweron = lcm_panel_poweron,
 	.panel_poweroff = lcm_panel_poweroff,
 	.ext_param_set = mtk_panel_ext_param_set,
@@ -866,8 +871,8 @@ static int lcm_get_modes(struct drm_panel *panel)
 	drm_mode_set_name(mode2);
 	mode2->type = DRM_MODE_TYPE_DRIVER;
 	drm_mode_probed_add(panel->connector, mode2);
-	panel->connector->display_info.width_mm = 68;
-	panel->connector->display_info.height_mm = 153;
+	//panel->connector->display_info.width_mm = 68;
+	//panel->connector->display_info.height_mm = 153;
 
 	return 1;
 }

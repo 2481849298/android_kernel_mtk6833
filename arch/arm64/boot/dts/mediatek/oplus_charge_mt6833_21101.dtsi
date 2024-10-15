@@ -63,14 +63,14 @@
 	status = "okay";
 };
 
-&mt6360_pmu {
+&subpmic_mtk {
 	mt6360,intr_gpio_num = <10>; /* direct defined GPIO num */
 	mt6360,intr_gpio = <&pio 10 0x0>;
 	disable_lpsd = <1>;
 
 	chg {
 		compatible = "mediatek,mt6360_pmu_chg";
-		interrupt-parent = <&mt6360_pmu>;
+		interrupt-parent = <&subpmic_mtk>;
 		interrupts = <4 0>, <6 0>, <7 0>, <9 0>,
 				<12 0>, <13 0>, <14 0>, <15 0>,
 				<27 0>, <29 0>, <30 0>, <32 0>,
@@ -136,8 +136,14 @@
 	};
 };
 
+&mt6360_chg {
+	pp_sense_l = <0x0f>;
+};
+
 &lk_charger{
 	support_tuv_authentication;
+	support_sdp_screenoff;
+	sdp_screenon_voltage = <3250>;
 	max_charger_voltage = <10000000>;
 
 	support_new_charger_stander;
@@ -183,10 +189,12 @@
 &charger {
 	io-channels = <&auxadc 4>,
 		<&auxadc 5>,
-		<&auxadc 3>;
+		<&auxadc 3>,
+		<&adc 10>;
 	io-channel-names = "auxadc4-usb_temp_v_l",
 		"auxadc5-usb_temp_v_r",
-		"auxadc3-chargeric_temp";
+		"auxadc3-chargeric_temp",
+		"auxadc10-batcon_temp";
 
 	pinctrl-names = "default", "charger_gpio_as_output_low", "charger_gpio_as_output_high",
 		"dischg_enable", "dischg_disable", "ntcctrl_pins_default", "ntcctrl_high", "ntcctrl_low";
@@ -380,7 +388,6 @@
 	//GPIO config:
 	qcom,chargerid_switch-gpio = <&pio 133 0x00>;
 	qcom,dischg-gpio = <&pio 134 0x00>;
-	qcom,ntcctrl-gpio = <&pio 46 0x00>;
 
 	qcom,vooc-max-input-volt-support = <10000>;     //10V
 	qcom,vooc-max-input-current-support = <3000>;   //3A
@@ -900,10 +907,6 @@
 	};
 };
 
-&mt6360_pmu_chg {
-	pp_sense_l = <0x0f>;
-};
-
 &pio {
 	charging_inter_active: charging_inter_active {
 		pins_cmd_dat {
@@ -973,14 +976,29 @@
 };
 
 &odm {
-	usbphy_tuning: usbphy_tuning {
-		compatible = "mediatek,phy_tuning";
-		u2_vrt_ref = <5>;
-		u2_term_ref = <7>;
-		u2_enhance = <3>;
-		host_u2_vrt_ref = <7>;
-		host_u2_term_ref = <4>;
-		host_u2_enhance = <2>;
+	mediatek_phy_tuning: mediatek_phy_tuning {
+		phy_tuning {
+			compatible = "mediatek,phy_tuning";
+			eye-vrt = <5>;
+			eye-term = <7>;
+			eye-rev6 = <3>;
+			host-eye-vrt = <7>;
+			host-eye-term = <4>;
+			host-eye-rev6 = <2>;
+		};
+	};
+	oplus,track-charge {
+		compatible = "oplus,track-charge";
+		track,fast_chg_break_t_thd = <1000>;
+		track,general_chg_break_t_thd = <200>;
+		track,voocphy_type = <2>;
+		track,wired_max_power = <33000>;
+		track,wired_fast_chg_scheme = <4>;
 	};
 };
+
+&extcon_usb {
+	vbus-current = <1300000>;
+};
+
 //#endif /*OPLUS_FEATURE_CHG_BASIC*/

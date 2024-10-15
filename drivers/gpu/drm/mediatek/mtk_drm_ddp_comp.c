@@ -1,18 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2015 MediaTek Inc.
- * Authors:
- *	YT Shen <yt.shen@mediatek.com>
- *	CK Hu <ck.hu@mediatek.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/clk.h>
 #include <linux/iopoll.h>
@@ -175,6 +164,15 @@ void mtk_ddp_write_mask_cpu(struct mtk_ddp_comp *comp,
 
 	tmp = (tmp & ~mask) | (value & mask);
 	writel(tmp, comp->regs + offset);
+}
+
+static void mtk_write_cpu_relaxed(void __iomem *addr,
+	unsigned int value, unsigned int mask)
+{
+	unsigned int tmp = readl(addr);
+
+	tmp = (tmp & ~mask) | (value & mask);
+	writel_relaxed(tmp, addr);
 }
 
 void mtk_dither_set(struct mtk_ddp_comp *comp, unsigned int bpc,
@@ -995,13 +993,13 @@ void mt6877_mtk_sodi_config(struct drm_device *drm, enum mtk_ddp_comp_id id,
 
 	if (priv->data->bypass_infra_ddr_control) {
 		SET_VAL_MASK(infra_req_val1, infra_req_mask1,
-				0x1, MT6877_MM_PORT0_AXI_IDLE_ASYNC);
+				0x0, MT6877_MM_PORT0_AXI_IDLE_ASYNC);
 		SET_VAL_MASK(infra_req_val2, infra_req_mask2,
-				0x1, MT6877_MM_PORT1_AXI_IDLE_ASYNC);
+				0x0, MT6877_MM_PORT1_AXI_IDLE_ASYNC);
 		SET_VAL_MASK(infra_req_val3, infra_req_mask3,
-				0x1, MT6877_MDP2INFRA0_GALS_TX_AXI_IDLE);
+				0x0, MT6877_MDP2INFRA0_GALS_TX_AXI_IDLE);
 		SET_VAL_MASK(infra_req_val4, infra_req_mask4,
-				0x1, MT6877_COMM0_GALS_TX_AXI_IDLE);
+				0x0, MT6877_COMM0_GALS_TX_AXI_IDLE);
 	}
 
 	if (handle == NULL) {
@@ -1018,12 +1016,18 @@ void mt6877_mtk_sodi_config(struct drm_device *drm, enum mtk_ddp_comp_id id,
 		writel_relaxed(v, priv->config_regs +  MMSYS_EMI_REQ_CTL);
 		if (priv->data->bypass_infra_ddr_control) {
 			if (!IS_ERR(priv->infra_regs)) {
-				v = (readl(priv->infra_regs + MT6877_INFRA_MEM_IDLE_ASYNC_2)
-					| infra_req_mask1 | infra_req_mask2);
-				writel_relaxed(v, priv->infra_regs + MT6877_INFRA_MEM_IDLE_ASYNC_2);
-				v = (readl(priv->infra_regs + MT6877_INFRA_MEM_IDLE_ASYNC_3)
-					| infra_req_mask3 | infra_req_mask4);
-				writel_relaxed(v, priv->infra_regs + MT6877_INFRA_MEM_IDLE_ASYNC_3);
+				mtk_write_cpu_relaxed(
+					priv->infra_regs + MT6877_INFRA_MEM_IDLE_ASYNC_2,
+					infra_req_val1, infra_req_mask1);
+				mtk_write_cpu_relaxed(
+					priv->infra_regs + MT6877_INFRA_MEM_IDLE_ASYNC_2,
+					infra_req_val2, infra_req_mask2);
+				mtk_write_cpu_relaxed(
+					priv->infra_regs + MT6877_INFRA_MEM_IDLE_ASYNC_3,
+					infra_req_val3, infra_req_mask3);
+				mtk_write_cpu_relaxed(
+					priv->infra_regs + MT6877_INFRA_MEM_IDLE_ASYNC_3,
+					infra_req_val4, infra_req_mask4);
 			} else
 				DDPINFO("%s: failed to disable infra ddr control\n", __func__);
 		}
@@ -1032,7 +1036,7 @@ void mt6877_mtk_sodi_config(struct drm_device *drm, enum mtk_ddp_comp_id id,
 			writel_relaxed(0x0, priv->infra_regs + MT6877_INFRA_MEM_IDLE_ASYNC_3);
 			writel_relaxed(0x0, priv->infra_regs + 0x170);
 			writel_relaxed(0x0, priv->infra_regs + 0x174);
-		   }
+		}
 	} else {
 		cmdq_pkt_write(handle, NULL, priv->config_regs_pa +
 			MMSYS_SODI_REQ_MASK, sodi_req_val, sodi_req_mask);
@@ -1133,7 +1137,7 @@ void mt6833_mtk_sodi_config(struct drm_device *drm, enum mtk_ddp_comp_id id,
 
 	if (priv->data->bypass_infra_ddr_control)
 		SET_VAL_MASK(infra_req_val, infra_req_mask,
-				0xf, MT6833_INFRA_FLD_DDR_MASK);
+				0x0, MT6833_INFRA_FLD_DDR_MASK);
 
 	if (handle == NULL) {
 		unsigned int v;
@@ -1148,11 +1152,11 @@ void mt6833_mtk_sodi_config(struct drm_device *drm, enum mtk_ddp_comp_id id,
 		v += (emi_req_val & emi_req_mask);
 		writel_relaxed(v, priv->config_regs +  MMSYS_EMI_REQ_CTL);
 		if (priv->data->bypass_infra_ddr_control) {
-			if (!IS_ERR(priv->infra_regs)) {
-				v = (readl(priv->infra_regs + MT6833_INFRA_DISP_DDR_CTL)
-					| infra_req_mask);
-				writel_relaxed(v, priv->infra_regs + MT6833_INFRA_DISP_DDR_CTL);
-			} else
+			if (!IS_ERR(priv->infra_regs))
+				mtk_write_cpu_relaxed(
+					priv->infra_regs + MT6833_INFRA_DISP_DDR_CTL,
+					infra_req_val, infra_req_mask);
+			else
 				DDPINFO("%s: failed to disable infra ddr control\n", __func__);
 		}
 	} else {

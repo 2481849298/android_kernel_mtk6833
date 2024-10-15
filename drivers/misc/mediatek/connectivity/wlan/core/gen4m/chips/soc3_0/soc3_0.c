@@ -98,6 +98,9 @@
 #include <linux/pm_qos.h>
 #endif
 #endif /*#ifndef CFG_BUILD_X86_PLATFORM*/
+#if CFG_MTK_MDDP_SUPPORT
+#include "mddp.h"
+#endif
 
 /*******************************************************************************
 *                              C O N S T A N T S
@@ -967,7 +970,6 @@ struct BUS_INFO soc3_0_bus_info = {
 	.tx_ring_cmd_idx = CONNAC2X_CMD_TX_RING_IDX,
 	.tx_ring0_data_idx = 0,
 	.tx_ring1_data_idx = 2,
-	.tx_ring2_data_idx = 4,
 	.fw_own_clear_addr = CONNAC2X_BN0_IRQ_STAT_ADDR,
 	.fw_own_clear_bit = PCIE_LPCR_FW_CLR_OWN,
 	.fgCheckDriverOwnInt = FALSE,
@@ -1091,6 +1093,7 @@ struct CHIP_DBG_OPS soc3_0_debug_ops = {
 	.showPleInfo = connac2x_show_ple_info,
 	.showTxdInfo = connac2x_show_txd_Info,
 	.showWtblInfo = connac2x_show_wtbl_info,
+	.get_rssi_from_wtbl = connac2x_get_rssi_from_wtbl,
 	.showUmacFwtblInfo = connac2x_show_umac_wtbl_info,
 	.showCsrInfo = NULL,
 	.showDmaschInfo = connac2x_show_dmashdl_info,
@@ -1104,6 +1107,9 @@ struct CHIP_DBG_OPS soc3_0_debug_ops = {
 	.show_rx_rssi_info = connac2x_show_rx_rssi_info,
 	.show_stat_info = connac2x_show_stat_info,
 	.show_wfdma_dbg_probe_info = soc3_0_show_wfdma_dbg_probe_info,
+#if CFG_MTK_MDDP_SUPPORT
+	.mddp_notify_dump_debug_info = mddpNotifyDumpDebugInfo,
+#endif
 #ifdef CFG_SUPPORT_LINK_QUALITY_MONITOR
 	.get_rx_rate_info = connac2x_get_rx_rate_info
 #endif
@@ -2968,7 +2974,7 @@ uint32_t soc3_0_wlanImageSectionDownloadStage(
 	u_int8_t fgIsNotDownload = FALSE;
 	uint32_t u4Status = WLAN_STATUS_SUCCESS;
 	struct mt66xx_chip_info *prChipInfo = prAdapter->chip_info;
-	struct patch_dl_target target;
+	struct patch_dl_target target = {0};
 	struct PATCH_FORMAT_T *prPatchHeader;
 	struct ROM_EMI_HEADER *prRomEmiHeader;
 	struct FWDL_OPS_T *prFwDlOps;
@@ -3798,12 +3804,20 @@ static bool soc3_0_get_sw_interrupt_status(struct ADAPTER *prAdapter,
 {
 	struct BUS_INFO *prBusInfo = NULL;
 	uint32_t value = 0;
+	int check = 0;
 
 	ASSERT(prAdapter);
 	prBusInfo = prAdapter->chip_info->bus_info;
 
-	if (!conninfra_reg_readable())
-		return false;
+	check = soc3_0_wakeupConninfra();
+	if (check) {
+		DBGLOG(HAL, ERROR, "wake conninfra failed [%d]\n", prAdapter->fgIsFwOwn);
+		return FALSE;
+	}
+
+	if (soc3_0_CheckBusHang(prAdapter, TRUE)) {
+ 		return false;
+	}
 
 	HAL_MCR_WR(prAdapter,
 		prBusInfo->ap2wf_remap_1,
@@ -3816,7 +3830,8 @@ static bool soc3_0_get_sw_interrupt_status(struct ADAPTER *prAdapter,
 		value);
 
 	*status = value;
+	
+	soc3_0_disableConninfraForceOn();
 	return true;
 }
-
 #endif				/* soc3_0 */

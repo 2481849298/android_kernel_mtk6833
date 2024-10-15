@@ -84,6 +84,32 @@ void kalSetEmiMpuProtection(phys_addr_t emiPhyBase, bool enable)
 void kalSetDrvEmiMpuProtection(phys_addr_t emiPhyBase, uint32_t offset,
 			       uint32_t size)
 {
+#if KERNEL_VERSION(5, 10, 0) <= CFG80211_VERSION_CODE
+	struct emimpu_region_t region;
+	unsigned long long start = emiPhyBase + offset;
+	unsigned long long end = emiPhyBase + offset + size - 1;
+	int ret;
+
+	DBGLOG(INIT, INFO, "emiPhyBase: 0x%p, offset: %d, size: %d\n",
+				emiPhyBase, offset, size);
+
+	ret = mtk_emimpu_init_region(&region, 24);
+	if (ret) {
+		DBGLOG(INIT, ERROR, "mtk_emimpu_init_region failed, ret: %d\n",
+				ret);
+		return;
+	}
+	mtk_emimpu_set_addr(&region, start, end);
+	mtk_emimpu_set_apc(&region, DOMAIN_AP, MTK_EMIMPU_NO_PROTECTION);
+	mtk_emimpu_set_apc(&region, DOMAIN_CONN, MTK_EMIMPU_NO_PROTECTION);
+	mtk_emimpu_lock_region(&region, MTK_EMIMPU_LOCK);
+	ret = mtk_emimpu_set_protection(&region);
+	if (ret)
+		DBGLOG(INIT, ERROR,
+			"mtk_emimpu_set_protection failed, ret: %d\n",
+			ret);
+	mtk_emimpu_free_region(&region);
+#else
 	struct emi_region_info_t region_info;
 
 	DBGLOG(INIT, INFO, "emiPhyBase: 0x%x, offset: %u, size: %u\n",
@@ -92,12 +118,13 @@ void kalSetDrvEmiMpuProtection(phys_addr_t emiPhyBase, uint32_t offset,
 	/*set MPU for EMI share Memory */
 	region_info.start = emiPhyBase + offset;
 	region_info.end = emiPhyBase + offset + size - 1;
-	region_info.region = 29;
+	region_info.region = 24;
 	SET_ACCESS_PERMISSION(region_info.apc, LOCK, FORBIDDEN, FORBIDDEN,
 			      FORBIDDEN, FORBIDDEN, FORBIDDEN, FORBIDDEN,
 			      FORBIDDEN, FORBIDDEN, FORBIDDEN, FORBIDDEN,
 			      FORBIDDEN, FORBIDDEN, FORBIDDEN, NO_PROTECTION,
 			      FORBIDDEN, NO_PROTECTION);
 	emi_mpu_set_protection(&region_info);
+#endif
 }
 #endif

@@ -365,6 +365,10 @@ void asicConnac2xWfdmaReInit(
 	prBusInfo = prAdapter->chip_info->bus_info;
 	prSwWfdmaInfo = &prBusInfo->rSwWfdmaInfo;
 
+	/* for bus hang debug purpose */
+	if (prAdapter->chip_info->checkbushang)
+		prAdapter->chip_info->checkbushang((void *) prAdapter, TRUE);
+
 	/*WFDMA re-init flow after chip deep sleep*/
 	asicConnac2xWfdmaDummyCrRead(prAdapter, &fgResult);
 	if (fgResult) {
@@ -560,7 +564,7 @@ u_int8_t asicConnac2xWfdmaWaitIdle(
 {
 	uint32_t i = 0;
 	uint32_t u4RegAddr = 0;
-	union WPDMA_GLO_CFG_STRUCT GloCfg;
+	union WPDMA_GLO_CFG_STRUCT GloCfg = {0};
 	struct BUS_INFO *prBusInfo = prGlueInfo->prAdapter->chip_info->bus_info;
 	struct ADAPTER *prAdapter = prGlueInfo->prAdapter;
 
@@ -1930,7 +1934,6 @@ void asicConnac2xRxPerfIndProcessRXV(IN struct ADAPTER *prAdapter,
 	struct HW_MAC_RX_STS_GROUP_3 *prRxStatusGroup3;
 	uint8_t ucRCPI0 = 0, ucRCPI1 = 0;
 	uint32_t u4PhyRate;
-
 	uint16_t u2Rate = 0; /* Unit 500 Kbps */
 	struct RateInfo rRateInfo = {0};
 	int status;
@@ -1942,17 +1945,26 @@ void asicConnac2xRxPerfIndProcessRXV(IN struct ADAPTER *prAdapter,
 
 	prGlueInfo = prAdapter->prGlueInfo;
 	status = wlanGetRxRate(prGlueInfo, ucBssIndex, &u4PhyRate, NULL,
-			&rRateInfo);
+				&rRateInfo);
 	/* ucRate(500kbs) = u4PhyRate(100kbps) */
 	if (status < 0 || u4PhyRate == 0)
 		return;
 	u2Rate = u4PhyRate / 5;
+
 	if (rRateInfo.u4Nss == 1) {
 		if (prGlueInfo->PerfIndCache.ucCurRxNss[ucBssIndex] < 0xff)
 			prGlueInfo->PerfIndCache.ucCurRxNss[ucBssIndex]++;
 	} else if (rRateInfo.u4Nss == 2) {
 		if (prGlueInfo->PerfIndCache.ucCurRxNss2[ucBssIndex] < 0xff)
 			prGlueInfo->PerfIndCache.ucCurRxNss2[ucBssIndex]++;
+	}
+
+	/* mcs0 */
+	if (rRateInfo.u4Rate == 0) {
+		if (prAdapter->prGlueInfo->
+			PerfIndCache.ucCurRxMcs0[ucBssIndex] < 0xff)
+			prAdapter->prGlueInfo->PerfIndCache.
+				ucCurRxMcs0[ucBssIndex]++;
 	}
 
 	/* RCPI */

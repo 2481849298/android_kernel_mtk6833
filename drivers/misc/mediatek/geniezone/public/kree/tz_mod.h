@@ -1,14 +1,18 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
+ */
+
+/*
+ * GenieZone (hypervisor-based seucrity platform) enables hardware protected
+ * and isolated security execution environment, includes
+ * 1. GZ hypervisor
+ * 2. Hypervisor-TEE OS (built-in Trusty OS)
+ * 3. Drivers (ex: debug, communication and interrupt) for GZ and
+ *    hypervisor-TEE OS
+ * 4. GZ and hypervisor-TEE and GZ framework (supporting multiple TEE
+ *    ecosystem, ex: M-TEE, Trusty, GlobalPlatform, ...)
  */
 
 
@@ -41,7 +45,8 @@
 	_IO(MTEE_IOC_MAGIC, 17)
 #define MTEE_CMD_ADJUST_WQ_ATTR                                                \
 	_IOW(MTEE_IOC_MAGIC, 21, char *)
-
+#define TRUSTY_NOP_SET_PRI                                                     \
+	_IOW(MTEE_IOC_MAGIC, 23, struct user_adjust_nop_pri)
 
 #define DEV_IOC_MAXNR (10)
 
@@ -99,5 +104,7 @@ struct kree_user_sc_param {
 	struct kree_user_test_chm_param chmp;
 };
 
-
+struct user_adjust_nop_pri {
+	uint32_t policy;
+};
 #endif /* end of DEVFINO_H */

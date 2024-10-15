@@ -489,6 +489,10 @@ void nic_rxd_v1_check_wakeup_reason(
 	struct HW_MAC_RX_DESC *prRxStatus;
 	uint16_t u2PktLen = 0;
 	uint32_t u4HeaderOffset;
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+	//add for mtk connectivity power monitor
+	char pucLogContent[256] = {'\0'};
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 
 	prChipInfo = prAdapter->chip_info;
 
@@ -550,6 +554,15 @@ void nic_rxd_v1_check_wakeup_reason(
 				"IP Pkt [" IPV4STR ",IPID:0x%04x] wakeup host",
 				IPV4TOSTR(&pvHeader[ETH_HLEN + 12]),
 				u2Temp);
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+			//add for mtk connectivity power monitor
+			snprintf(pucLogContent, sizeof(pucLogContent), "wakeup_reason=%d;%d.%d.%d.%d;%u;%d.%d.%d.%d;%u;", pvHeader[ETH_HLEN + 9],
+				pvHeader[ETH_HLEN + 12], pvHeader[ETH_HLEN + 13], pvHeader[ETH_HLEN + 14], pvHeader[ETH_HLEN + 15],
+				(pvHeader[ETH_HLEN + 20] << 8) | pvHeader[ETH_HLEN + 21],
+				pvHeader[ETH_HLEN + 16], pvHeader[ETH_HLEN + 17], pvHeader[ETH_HLEN + 18], pvHeader[ETH_HLEN + 19],
+				(pvHeader[ETH_HLEN + 22] << 8) | pvHeader[ETH_HLEN + 23]);
+			kalSendUevent(pucLogContent);
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 			break;
 		case ETH_P_ARP:
 			break;
@@ -560,6 +573,17 @@ void nic_rxd_v1_check_wakeup_reason(
 #endif
 		case ETH_P_AARP:
 		case ETH_P_IPV6:
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+                        //add for mtk connectivity power monitor
+                        if (u2Temp == ETH_P_IPV6) {
+                                snprintf(pucLogContent, sizeof(pucLogContent), "wakeup_reason=%d;%pI6;%u;%pI6;%u;", pvHeader[ETH_HLEN + 6],
+                                        &(pvHeader[ETH_HLEN + 8]),
+                                        (pvHeader[ETH_HLEN + 40] << 8) | pvHeader[ETH_HLEN + 41],
+                                        &(pvHeader[ETH_HLEN + 24]),
+                                        (pvHeader[ETH_HLEN + 42] << 8) | pvHeader[ETH_HLEN + 43]);
+                                kalSendUevent(pucLogContent);
+                        }
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 		case ETH_P_IPX:
 		case 0x8100: /* VLAN */
 		case 0x890d: /* TDLS */
@@ -570,7 +594,14 @@ void nic_rxd_v1_check_wakeup_reason(
 		default:
 			if (HAL_RX_STATUS_IS_LLC_MIS(prRxStatus)) {
 				DBGLOG(RX, WARN,
-				"Undefined packet wakeup host\n");
+					"abnormal packet, Header translate fail\n");
+				DBGLOG_MEM8(RX, INFO,
+					(uint8_t *)prSwRfb->prRxStatus,
+					prChipInfo->rxd_size);
+				if (u2PktLen < CFG_RX_MAX_PKT_SIZE) {
+					DBGLOG_MEM8(RX, INFO,
+						pvHeader, u2PktLen);
+				}
 			} else {
 				DBGLOG(RX, WARN,
 					"EthType 0x%04x packet BMU[%d%d%d] TRS[%d] wakeup host\n",

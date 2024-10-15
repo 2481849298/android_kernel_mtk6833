@@ -197,6 +197,7 @@ void p2pFsmRunEventChGrant(IN struct ADAPTER *prAdapter,
 {
 	struct MSG_CH_GRANT *prMsgChGrant = (struct MSG_CH_GRANT *) NULL;
 	struct BSS_INFO *prP2pBssInfo = (struct BSS_INFO *) NULL;
+	struct P2P_ROLE_FSM_INFO *prP2pRoleFsmInfo = NULL;
 
 	do {
 		ASSERT_BREAK((prAdapter != NULL) && (prMsgHdr != NULL));
@@ -206,10 +207,12 @@ void p2pFsmRunEventChGrant(IN struct ADAPTER *prAdapter,
 		prP2pBssInfo =
 			GET_BSS_INFO_BY_INDEX(prAdapter,
 				prMsgChGrant->ucBssIndex);
-
+		if (!prP2pBssInfo)
+			break;
 		prAdapter->prP2pInfo->eConnState = P2P_CNN_NORMAL;
 		prAdapter->prP2pInfo->ucExtendChanFlag = 0;
-
+		prP2pRoleFsmInfo = P2P_ROLE_INDEX_2_ROLE_FSM_INFO(
+			prAdapter, prP2pBssInfo->u4PrivateData);
 		DBGLOG(P2P, TRACE, "P2P Run Event Channel Grant\n");
 
 #if CFG_SISO_SW_DEVELOP
@@ -219,7 +222,10 @@ void p2pFsmRunEventChGrant(IN struct ADAPTER *prAdapter,
 		prP2pBssInfo->ucPrimaryChannelGranted =
 			prMsgChGrant->ucPrimaryChannel;
 #endif
-
+		if (p2pFuncIsCsaBlockScan(prAdapter) == TRUE) {
+			cnmTimerStopTimer(prAdapter,
+				&prP2pRoleFsmInfo->rP2pCsaDoneTimer);
+		}
 		switch (prP2pBssInfo->eCurrentOPMode) {
 		case OP_MODE_P2P_DEVICE:
 			ASSERT(prP2pBssInfo->ucBssIndex
@@ -476,5 +482,34 @@ void p2pFsmRunEventTxCancelWait(IN struct ADAPTER *prAdapter,
 	} while (FALSE);
 
 }				/* p2pFsmRunEventTxCancelWait */
+
+void p2pFsmRunEventCsaDoneTimeOut(IN struct ADAPTER *prAdapter,
+		IN unsigned long ulParamPtr)
+{
+	DBGLOG(P2P, TRACE,
+		"CSA block scan timeout\n");
+}
+
+struct BSS_DESC *p2pGetTargetBssDesc(
+	IN struct ADAPTER *prAdapter,
+	IN uint8_t ucBssIndex) {
+
+	uint8_t i = 0;
+
+	for (i = 0 ; i < BSS_P2P_NUM; i++) {
+		if (!prAdapter->rWifiVar.aprP2pRoleFsmInfo[i])
+			continue;
+
+		if (prAdapter->rWifiVar.aprP2pRoleFsmInfo[i]->ucBssIndex
+			== ucBssIndex)
+			break;
+	}
+
+	if (i >= BSS_P2P_NUM)
+		return NULL;
+
+	return prAdapter->rWifiVar.aprP2pRoleFsmInfo[i]
+		->rJoinInfo.prTargetBssDesc;
+}
 
 #endif /* CFG_ENABLE_WIFI_DIRECT */

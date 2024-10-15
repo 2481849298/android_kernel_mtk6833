@@ -367,6 +367,8 @@
 	qcom,vbatt_pdqc_to_5v_thr = <4100>;
 	qcom,vbatt_pdqc_to_9v_thr = <4000>;
 
+	oplus,aging_ffc_version = <1>;
+
 	//GPIO config:
 	qcom,chargerid_switch-gpio = <&pio 25 0x00>;
 	qcom,ship-gpio = <&pio 108 0x00>;
@@ -597,6 +599,7 @@
 		reg = <0x06>;
 		qcom,support_vooc_by_normal_charger_path;
 		qcom,vooc_fw_update_newmethod;
+		qcom,fw_update_on_chargering_reboot;
 		qcom,vooc-fw-type = <3>;
 		qcom,vooc_reply_mcu_bits = <7>;
 		#include "mediatek/fastchg_fw/fw_svooc_10v6.3a_4.45v_oplus20181_op10_7b.dtsi"
@@ -994,16 +997,27 @@
 };
 
 &odm {
-	usbphy_tuning: usbphy_tuning {
-		compatible = "mediatek,phy_tuning";
-		u2_vrt_ref = <6>;
-		u2_term_ref = <6>;
-		u2_enhance = <3>;
-		u2_discth = <0xc>;
-		host_u2_vrt_ref = <6>;
-		host_u2_term_ref = <6>;
-		host_u2_enhance = <3>;
-		host_u2_discth = <0xc>;
+	mediatek_phy_tuning: mediatek_phy_tuning {
+		phy_tuning {
+			compatible = "mediatek,phy_tuning";
+			eye-vrt = <6>;
+			eye-term = <6>;
+			eye-rev6 = <3>;
+			u2_discth = <0xc>;
+			host-eye-vrt = <6>;
+			host-eye-term = <6>;
+			host-eye-rev6 = <3>;
+			host_u2_discth = <0xc>;
+		};
+	};
+
+	oplus,track-charge {
+		compatible = "oplus,track-charge";
+		track,fast_chg_break_t_thd = <1000>;
+		track,general_chg_break_t_thd = <200>;
+		track,voocphy_type = <4>;
+		track,wired_max_power = <65000>;
+		track,wired_fast_chg_scheme = <1>;
 	};
 };
 

@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -23,7 +15,8 @@
 #include <linux/delay.h>
 #include <mt-plat/upmu_common.h>
 #include "vibrator.h"
-
+#include "vibrator_hal.h"
+#include <linux/regulator/consumer.h>
 struct vibrator_hw *pvib_cust;
 
 static int debug_enable_vib_hal = 1;
@@ -39,20 +32,22 @@ static int debug_enable_vib_hal = 1;
 
 #define OC_INTR_INIT_DELAY      (3)
 
-void vibr_Enable_HW(void)
+void vibr_Enable_HW(struct regulator *reg)
 {
 #ifdef CONFIG_MTK_PMIC_NEW_ARCH
-	pmic_set_register_value(PMIC_RG_LDO_VIBR_EN, 1);
+	if (regulator_enable(reg))
+		pr_notice("set vibr_reg enable failed!\n");
 	mdelay(OC_INTR_INIT_DELAY);
 	pmic_enable_interrupt(INT_VIBR_OC, 1, "vibr");
 #endif
 }
 
-void vibr_Disable_HW(void)
+void vibr_Disable_HW(struct regulator *reg)
 {
 #ifdef CONFIG_MTK_PMIC_NEW_ARCH
 	pmic_enable_interrupt(INT_VIBR_OC, 0, "vibr");
-	pmic_set_register_value(PMIC_RG_LDO_VIBR_EN, 0);
+	if (regulator_disable(reg))
+		pr_notice("set vibr_reg enable failed!\n");
 #endif
 }
 

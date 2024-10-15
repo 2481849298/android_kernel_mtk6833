@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef TCPM_H_
@@ -145,7 +137,13 @@ enum {
 	TCP_NOTIFY_REQUEST_BAT_INFO,
 	TCP_NOTIFY_WD_STATUS,
 	TCP_NOTIFY_CABLE_TYPE,
-	TCP_NOTIFY_MISC_END = TCP_NOTIFY_CABLE_TYPE,
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	TCP_NOTIFY_PLUG_OUT,
+	TCP_NOTIFY_CHRDET_STATE,
+	TCP_NOTIFY_SWITCH_GET_STATE,
+	TCP_NOTIFY_SWITCH_SET_STATE,
+	TCP_NOTIFY_MISC_END = TCP_NOTIFY_SWITCH_SET_STATE,
+#endif
 };
 
 struct tcp_ny_pd_state {
@@ -303,6 +301,25 @@ enum tcpc_cable_type {
 struct tcp_ny_cable_type {
 	enum tcpc_cable_type type;
 };
+#ifdef OPLUS_FEATURE_CHG_BASIC
+struct tcp_ny_chrdet_state {
+	bool chrdet;
+};
+
+struct tcp_ny_switch_set_status {
+	bool	 state;		/* 0: DP/DM state;  1: fastchg state */
+	bool 	(*pfunc)(int);	/* recevier call the pfunc to ack.*/
+};
+
+struct tcp_ny_switch_get_status {
+	bool	(*pfunc)(int);  /*recevier call the pfunc to ack.
+				* 0: default DP/DM state
+				* 1: fastchg state
+				* 2: audio state
+				* 3: unknow state
+				*/
+};
+#endif
 
 struct tcp_notify {
 	union {
@@ -322,6 +339,11 @@ struct tcp_notify {
 		struct tcp_ny_request_bat request_bat;
 		struct tcp_ny_wd_status wd_status;
 		struct tcp_ny_cable_type cable_type;
+#ifdef OPLUS_FEATURE_CHG_BASIC
+		struct tcp_ny_chrdet_state chrdet_state;
+		struct tcp_ny_switch_set_status switch_set_status;
+		struct tcp_ny_switch_get_status switch_get_status;
+#endif
 	};
 };
 
@@ -436,11 +458,13 @@ enum pd_cable_current_limit {
 #ifdef OPLUS_FEATURE_CHG_BASIC
 #define DPM_CAP_ATTEMP_DISCOVER_SVID		(1<<16)
 #endif
+
 enum dpm_cap_pr_check_prefer {
 	DPM_CAP_PR_CHECK_DISABLE = 0,
 	DPM_CAP_PR_CHECK_PREFER_SNK = 1,
 	DPM_CAP_PR_CHECK_PREFER_SRC = 2,
 };
+
 #ifdef OPLUS_FEATURE_CHG_BASIC
 #define DPM_CAP_PR_CHECK_PROP(cap)			((cap & 0x03) << 18)
 #define DPM_CAP_EXTRACT_PR_CHECK(raw)		((raw >> 18) & 0x03)
@@ -548,8 +572,6 @@ enum tcp_dpm_return_code {
 	TCP_DPM_RET_DROP_ERROR_REOCVERY,
 	TCP_DPM_RET_DROP_SEND_BIST,
 	TCP_DPM_RET_DROP_PE_BUSY,	/* SinkTXNg*/
-	TCP_DPM_RET_DROP_DISCARD,
-	TCP_DPM_RET_DROP_UNEXPECTED,
 
 	TCP_DPM_RET_WAIT,
 	TCP_DPM_RET_REJECT,

@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef __LINUX_RT_TCPCI_CORE_H
@@ -30,7 +22,7 @@
 #ifdef CONFIG_USB_POWER_DELIVERY
 #include "pd_core.h"
 #ifdef CONFIG_USB_PD_WAIT_BC12
-#include <mt-plat/charger_type.h>
+#include <linux/power_supply.h>
 #endif /* CONFIG_USB_PD_WAIT_BC12 */
 #endif
 
@@ -220,8 +212,11 @@ struct tcpc_ops {
 	int (*init_alert_mask)(struct tcpc_device *tcpc);
 	int (*alert_status_clear)(struct tcpc_device *tcpc, uint32_t mask);
 	int (*fault_status_clear)(struct tcpc_device *tcpc, uint8_t status);
+	int (*get_chip_id)(struct tcpc_device *tcpc, uint32_t *chip_id);
 	int (*set_alert_mask)(struct tcpc_device *tcpc, uint32_t mask);
 	int (*get_alert_mask)(struct tcpc_device *tcpc, uint32_t *mask);
+	int (*get_chip_pid)(struct tcpc_device *tcpc,uint32_t *chip_pid);
+	int (*get_chip_vid)(struct tcpc_device *tcpc,uint32_t *chip_vid);
 	int (*get_alert_status)(struct tcpc_device *tcpc, uint32_t *alert);
 	int (*get_power_status)(struct tcpc_device *tcpc, uint16_t *pwr_status);
 	int (*get_fault_status)(struct tcpc_device *tcpc, uint8_t *status);
@@ -259,10 +254,6 @@ struct tcpc_ops {
 	int (*set_auto_discharge)(struct tcpc_device *tcpc, bool en);
 #endif	/* CONFIG_TCPC_AUTO_DISCHARGE_IC */
 #endif	/* CONFIG_TYPEC_CAP_AUTO_DISCHARGE */
-
-#ifdef OPLUS_FEATURE_CHG_BASIC
-	int (*set_bleed_discharge)(struct tcpc_device *tcpc, bool en);
-#endif /* OPLUS_FEATURE_CHG_BASIC */
 
 #ifdef CONFIG_USB_POWER_DELIVERY
 	int (*set_msg_header)(struct tcpc_device *tcpc,
@@ -357,14 +348,16 @@ struct tcpc_device {
 	struct srcu_notifier_head evt_nh[TCP_NOTIFY_IDX_NR];
 	struct tcpc_managed_res *mr_head;
 	struct mutex mr_lock;
-
+#ifdef OPLUS_FEATURE_CHG_BASIC
+/********* workaround MO.230913213000256759: sc6607 workaround for pd abnormal start*********/
+	int recv_msg_cnt;
+	int int_invaild_cnt;
+/********* workaround MO.230913213000256759: sc6607 workaround for pd abnormal end*********/
+#endif
 	/* For TCPC TypeC */
 	uint8_t typec_state;
 	uint8_t typec_role;
-	#ifdef OPLUS_FEATURE_CHG_BASIC
-	//add by tongfeng
 	uint8_t typec_role_new;
-	#endif
 	uint8_t typec_attach_old;
 	uint8_t typec_attach_new;
 	uint8_t typec_local_cc;
@@ -497,6 +490,7 @@ struct tcpc_device {
 #endif /* CONFIG_USB_PD_REV30 */
 #ifdef CONFIG_USB_PD_WAIT_BC12
 	uint8_t pd_wait_bc12_count;
+	struct power_supply *chg_psy;
 #endif /* CONFIG_USB_PD_WAIT_BC12 */
 #endif /* CONFIG_USB_POWER_DELIVERY */
 	u8 vbus_level:2;
@@ -511,6 +505,7 @@ struct tcpc_device {
         bool wd_already;
 #endif
 	int usbid_calib;
+	int bootmode;
 #endif /* CONFIG_WATER_DETECTION */
 #ifdef CONFIG_CABLE_TYPE_DETECTION
 	enum tcpc_cable_type typec_cable_type;

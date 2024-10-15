@@ -293,6 +293,12 @@ int fan53870_ldo3_20615_set_voltage(int set_uV)
     unsigned int reg_value = 0x11; /*1.144V*/
     struct fan53870_pw_chip *pchip = fan53870_pchip;
 
+    if (!pchip || !pchip->regmap) {
+        pr_err("pchip or pchip->regmap is NULL\n");
+        ret = -1;
+        goto out;
+    }
+
     pr_err("fan53870_ldo3_set_voltage: voltage = %d!\n", set_uV);
     ret = regmap_write(pchip->regmap, FAN53870_LDO3_VOUT_REG, reg_value);
     pr_info("Writing 0x%02x to 0x%02x \n", reg_value, FAN53870_LDO3_VOUT_REG);
@@ -339,8 +345,6 @@ int fan53870_cam_ldo_set_voltage(unsigned int LDO_NUM, int set_mv)
                 reg_value = 0x89;    /*1.104V*/
             } else if (set_mv == 1200) {
                 reg_value = 0x95;    /*1.200V*/
-            } else if (set_mv == 1100) {
-                reg_value = 0x89;
             } else {
                 reg_value = 0x80;    /*1.032V*/
             }

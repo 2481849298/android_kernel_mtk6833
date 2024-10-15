@@ -1,15 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (C) 2016 MediaTek Inc.
  */
+
 #include <linux/kernel.h>
 #include "cam_cal_list.h"
 #include "eeprom_i2c_common_driver.h"
@@ -18,6 +11,7 @@
 
 #define MAX_EEPROM_SIZE_16K 0x4000
 #define MAX_EEPROM_SIZE_32K 0x8000
+#define MAX_EEPROM_SIZE_8K 0x2000
 
 struct stCAM_CAL_LIST_STRUCT g_camCalList[] = {
 
@@ -96,10 +90,47 @@ struct stCAM_CAL_LIST_STRUCT g_camCalList[] = {
 	{S5KGM1ST_SENSOR_ID_MOSSA, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{GC02M1_SENSOR_ID_MOSSA, 0xA4, Common_read_region},
 
+	{IMX766_SENSOR_ID22693, 0xA0, Common_read_region, MAX_EEPROM_SIZE_32K},
+	{S5KHM6SP_SENSOR_ID22693, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{S5K3P9SP_SENSOR_ID22693, 0xA8, Common_read_region},
+	{IMX355_SENSOR_ID22693, 0xA2, Common_read_region},
+	{GC02M1_SENSOR_ID22693, 0xA4, Common_read_region},
+	{S5KJN1_SENSOR_ID23707, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{HI1634Q_SENSOR_ID23707, 0xA2, Common_read_region, MAX_EEPROM_SIZE_8K},
+
+	{S5KHP3SP_SENSOR_ID22629, 0xA0, Common_read_region, MAX_EEPROM_SIZE_32K},
+	{IMX615_SENSOR_ID22629, 0xA8, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{IMX355_SENSOR_ID22629, 0xA2, Common_read_region},
+	{GC02M1_SENSOR_ID22629, 0xA4, Common_read_region},
+
+	{IMX882_SENSOR_ID23687, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{IMX890_SENSOR_ID23689, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{HI1634Q_SENSOR_ID23687, 0xA2, Common_read_region, MAX_EEPROM_SIZE_8K},
+	{HI846W_SENSOR_ID23687, 0x42, hi846w_read_region, MAX_EEPROM_SIZE_8K},
+	{GC02M1_SENSOR_ID23687, 0xA4, Common_read_region},
+	{IMX882PD_SENSOR_ID23687, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+
+	{OVA0B4_SENSOR_ID22633, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{S5K3P9SP_SENSOR_ID22633, 0xA8, Common_read_region},
+
 	{OV48B_SENSOR_ID_CHIVAS, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{OV32A_SENSOR_ID_CHIVAS, 0xA8, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{HI846_SENSOR_ID_CHIVAS, 0xA2, Common_read_region, MAX_EEPROM_SIZE_16K},
 	{GC02K0_SENSOR_ID_CHIVAS, 0xA4, Common_read_region},
+
+	{OV64B_SENSOR_ID22277, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{OV32C_SENSOR_ID22277, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{IMX355_SENSOR_ID22277, 0xA2, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{IMX709_SENSOR_ID22277, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+
+	{IMX882_SENSOR_ID23231, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{OV32C_SENSOR_ID23231, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{IMX355_SENSOR_ID23231, 0xA2, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{IMX709_SENSOR_ID23231, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{IMX882PD_SENSOR_ID23231, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+
+	{OV64B_SENSOR_ID23031, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
+	{OV08D_SENSOR_ID23031, 0xA0, Common_read_region, MAX_EEPROM_SIZE_16K},
 	/*  ADD before this line */
 	{0, 0, 0}       /*end of list */
 };

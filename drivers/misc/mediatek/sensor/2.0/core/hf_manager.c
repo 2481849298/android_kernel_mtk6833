@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (C) 2020 MediaTek Inc.
  */
 
 #define pr_fmt(fmt) "[hf_manager]" fmt
@@ -29,6 +21,11 @@
 #include <linux/log2.h>
 
 #include "hf_manager.h"
+
+
+static int major;
+static struct class *hf_manager_class;
+static struct task_struct *task;
 
 struct coordinate {
 	int8_t sign[3];
@@ -1586,10 +1583,8 @@ static const struct file_operations hf_manager_proc_fops = {
 
 static int __init hf_manager_init(void)
 {
-	int major = -1;
-	struct class *hf_manager_class;
+	int ret;
 	struct device *dev;
-	struct task_struct *task;
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO / 2 };
 
 	init_hf_core(&hfcore);
@@ -1597,18 +1592,23 @@ static int __init hf_manager_init(void)
 	major = register_chrdev(0, "hf_manager", &hf_manager_fops);
 	if (major < 0) {
 		pr_err("Unable to get major\n");
-		return major;
+		ret = major;
+		goto err_exit;
 	}
+
 	hf_manager_class = class_create(THIS_MODULE, "hf_manager");
 	if (IS_ERR(hf_manager_class)) {
 		pr_err("Failed to create class\n");
-		return PTR_ERR(hf_manager_class);
+		ret = PTR_ERR(hf_manager_class);
+		goto err_chredev;
 	}
+
 	dev = device_create(hf_manager_class, NULL, MKDEV(major, 0),
 		NULL, "hf_manager");
 	if (IS_ERR(dev)) {
 		pr_err("Failed to create device\n");
-		return PTR_ERR(dev);
+		ret = PTR_ERR(dev);
+		goto err_class;
 	}
 
 	if (!proc_create_data("hf_manager", 0440, NULL,
@@ -1619,12 +1619,32 @@ static int __init hf_manager_init(void)
 			&hfcore.kworker, "hf_manager");
 	if (IS_ERR(task)) {
 		pr_err("Failed to create kthread\n");
-		return PTR_ERR(task);
+		ret = PTR_ERR(task);
+		goto err_device;
 	}
 	sched_setscheduler(task, SCHED_FIFO, &param);
 	return 0;
+
+err_device:
+	device_destroy(hf_manager_class, MKDEV(major, 0));
+err_class:
+	class_destroy(hf_manager_class);
+err_chredev:
+	unregister_chrdev(major, "hf_manager");
+err_exit:
+	return ret;
 }
+
+static void __exit hf_manager_exit(void)
+{
+	kthread_stop(task);
+	device_destroy(hf_manager_class, MKDEV(major, 0));
+	class_destroy(hf_manager_class);
+	unregister_chrdev(major, "hf_manager");
+}
+
 subsys_initcall(hf_manager_init);
+module_exit(hf_manager_exit);
 
 MODULE_DESCRIPTION("high frequency manager");
 MODULE_AUTHOR("Hongxu Zhao <hongxu.zhao@mediatek.com>");

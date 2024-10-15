@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (C) 2019 MediaTek Inc.
  */
 
 #ifndef _UFS_MTK_BLOCK_H
@@ -17,11 +9,12 @@
 #include <linux/types.h>
 #include <mt-plat/mtk_blocktag.h>
 #include "ufshcd.h"
+#include "ufs-mediatek.h"
 
 #if defined(CONFIG_MTK_UFS_BLOCK_IO_LOG)
 
-int ufs_mtk_biolog_init(bool qos_allowed);
-int ufs_mtk_biolog_exit(void);
+int ufs_mtk_biolog_init(struct ufs_mtk_host *host, bool qos_allowed);
+int ufs_mtk_biolog_exit(struct ufs_mtk_host *host);
 
 void ufs_mtk_biolog_send_command(unsigned int task_id,
 				 struct scsi_cmnd *cmd);

@@ -456,6 +456,8 @@ static void preview_setting(void)
 	write_cmos_sensor8(0x3637,0x23);
 	write_cmos_sensor8(0x3638,0xc7);
 	write_cmos_sensor8(0x3639,0xf4);
+	write_cmos_sensor8(0x3650,0x51);
+	write_cmos_sensor8(0x3651,0x9f);
 	write_cmos_sensor8(0x3670,0x4b);
 	write_cmos_sensor8(0x3674,0xc0);
 	write_cmos_sensor8(0x3675,0xa6);
@@ -583,6 +585,8 @@ static void capture_setting(kal_uint16 currefps)
 	write_cmos_sensor8(0x3637,0x23);
 	write_cmos_sensor8(0x3638,0xc7);
 	write_cmos_sensor8(0x3639,0xf4);
+	write_cmos_sensor8(0x3650,0x51);
+	write_cmos_sensor8(0x3651,0x9f);
 	write_cmos_sensor8(0x3670,0x4b);
 	write_cmos_sensor8(0x3674,0xc0);
 	write_cmos_sensor8(0x3675,0xa6);
@@ -710,6 +714,8 @@ static void normal_video_setting(void)
 	write_cmos_sensor8(0x3637,0x23);
 	write_cmos_sensor8(0x3638,0xc7);
 	write_cmos_sensor8(0x3639,0xf4);
+	write_cmos_sensor8(0x3650,0x51);
+	write_cmos_sensor8(0x3651,0x9f);
 	write_cmos_sensor8(0x3670,0x4b);
 	write_cmos_sensor8(0x3674,0xc0);
 	write_cmos_sensor8(0x3675,0xa6);
@@ -847,6 +853,8 @@ static void hs_video_setting(void)
 	write_cmos_sensor8(0x3637,0x23);
 	write_cmos_sensor8(0x3638,0xc7);
 	write_cmos_sensor8(0x3639,0xf4);
+	write_cmos_sensor8(0x3650,0x51);
+	write_cmos_sensor8(0x3651,0x9f);
 	write_cmos_sensor8(0x3670,0x4b);
 	write_cmos_sensor8(0x3674,0xc0);
 	write_cmos_sensor8(0x3675,0xa6);
@@ -993,6 +1001,8 @@ static void slim_video_setting(void)
 	write_cmos_sensor8(0x34a9,0x18);
 	write_cmos_sensor8(0x34ab,0xc6);
 	write_cmos_sensor8(0x34ad,0xc6);
+	write_cmos_sensor8(0x3650,0x51);
+	write_cmos_sensor8(0x3651,0x9f);
 	write_cmos_sensor8(0x3621,0x68);
 	write_cmos_sensor8(0x3622,0x83);
 	write_cmos_sensor8(0x3627,0x14);
@@ -1097,7 +1107,15 @@ static kal_uint32 set_test_pattern_mode(kal_bool enable)
 		write_cmos_sensor8(0x391d, 0x18);
 	}
 	else {
+		write_cmos_sensor8(0x0100, 0x00);
 		write_cmos_sensor8(0x4501, 0xb4);
+		write_cmos_sensor8(0x3902, 0xc5);
+		write_cmos_sensor8(0x3908, 0x41);
+		write_cmos_sensor8(0x3909, 0x00);
+		write_cmos_sensor8(0x390a, 0x00);
+		write_cmos_sensor8(0x391d, 0x19);
+		write_cmos_sensor8(0x0100, 0x01);
+		write_cmos_sensor8(0x302d, 0x00);
 	}
 	spin_lock(&imgsensor_drv_lock);
 	imgsensor.test_pattern = enable;
@@ -1117,14 +1135,14 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 			do {
 				*sensor_id =return_sensor_id();
 				LOG_INF("sensor id: 0x%x\n",*sensor_id);
-				if (*sensor_id == imgsensor_info.sensor_id) {				
+				if (*sensor_id == imgsensor_info.sensor_id) {
 					LOG_INF("i2c write id  : 0x%x, sensor id: 0x%x\n", imgsensor.i2c_write_id,*sensor_id);
 					if(deviceInfo_register_value == 0x00){
 							Eeprom_DataInit(1, SC800CS_SENSOR_ID_BLADE);
 							deviceInfo_register_value = 0x01;
-					}					
+					}
 					return ERROR_NONE;
-				}	
+				}
 				LOG_INF("get_imgsensor_id Read sensor id fail, i2c write id: 0x%x,sensor id: 0x%x\n", imgsensor.i2c_write_id,*sensor_id);
 				retry--;
 			} while(retry > 0);

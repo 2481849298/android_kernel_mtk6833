@@ -440,6 +440,12 @@ static void nicRxProcessRxv(IN struct ADAPTER *prAdapter,
 	if (!prChipInfo || !prChipInfo->asicRxProcessRxvforMSP)
 		return;
 
+	if (prSwRfb->fgIsBC || prSwRfb->fgIsMC)
+		return;
+
+	if (qmIsIndependentPkt(prSwRfb))
+		return;
+
 	prChipInfo->asicRxProcessRxvforMSP(prAdapter, prSwRfb);
 #endif /* CFG_SUPPORT_MSP == 1 */
 }
@@ -1185,7 +1191,7 @@ void nicRxProcessPktWithoutReorder(IN struct ADAPTER
 	if (kalProcessRxPacket(prAdapter->prGlueInfo,
 			       prSwRfb->pvPacket,
 			       prSwRfb->pvHeader,
-			       (uint32_t) prSwRfb->u2PacketLen, fgIsRetained,
+			       (uint32_t) prSwRfb->u2PacketLen,
 			       prSwRfb->aeCSUM) != WLAN_STATUS_SUCCESS) {
 		DBGLOG(RX, ERROR,
 		       "kalProcessRxPacket return value != WLAN_STATUS_SUCCESS\n");
@@ -1324,12 +1330,10 @@ void nicRxProcessForwardPkt(IN struct ADAPTER *prAdapter,
 
 	if (prMsduInfo &&
 	    kalProcessRxPacket(prAdapter->prGlueInfo,
-			       prSwRfb->pvPacket,
-			       prSwRfb->pvHeader,
-			       (uint32_t) prSwRfb->u2PacketLen,
-			       prRxCtrl->rFreeSwRfbList.u4NumElem <
-			       CFG_RX_RETAINED_PKT_THRESHOLD ? TRUE : FALSE,
-			       prSwRfb->aeCSUM) == WLAN_STATUS_SUCCESS) {
+			prSwRfb->pvPacket,
+			prSwRfb->pvHeader,
+			(uint32_t) prSwRfb->u2PacketLen,
+			prSwRfb->aeCSUM) == WLAN_STATUS_SUCCESS) {
 
 		/* parsing forward frame */
 		wlanProcessTxFrame(prAdapter, (void *) (prSwRfb->pvPacket));
@@ -1589,6 +1593,10 @@ void nicRxGetNoiseLevelAndLastRate(IN struct ADAPTER *prAdapter,
 	uint8_t ucMcs;
 	uint8_t ucFrMode;
 	uint8_t ucShortGI;
+	uint8_t ucGroupid;
+	uint8_t ucNsts;
+	uint32_t u4PhyRate;
+	struct HW_MAC_RX_STS_GROUP_3 *prRxStatusGroup3;
 
 	if (prAdapter == NULL || prSwRfb == NULL)
 		return;
@@ -1597,8 +1605,8 @@ void nicRxGetNoiseLevelAndLastRate(IN struct ADAPTER *prAdapter,
 	if (prStaRec == NULL)
 		return;
 
-	noise_level = ((prSwRfb->prRxStatusGroup3->u4RxVector[5] &
-		RX_VT_NF0_MASK) >> 1);
+	prRxStatusGroup3 = prSwRfb->prRxStatusGroup3;
+	noise_level = (prRxStatusGroup3->u4RxVector[5] & RX_VT_NF0_MASK) >> 1);
 
 	if (noise_level == 0) {
 		DBGLOG(RX, TRACE, "Invalid noise level\n");
@@ -1613,27 +1621,38 @@ void nicRxGetNoiseLevelAndLastRate(IN struct ADAPTER *prAdapter,
 		prStaRec->ucNoise_avg, noise_level);
 
 	/* Rx rate */
-	ucRxMode = ((prSwRfb->prRxStatusGroup3->u4RxVector[0] &
-				RX_VT_RX_MODE_MASK) >> RX_VT_RX_MODE_OFFSET);
+	ucRxMode = (prRxStatusGroup3->u4RxVector[0] & RX_VT_RX_MODE_MASK)
+						>> RX_VT_RX_MODE_OFFSET;
 
 	/* Bit Number 2 RATE */
 	if (ucRxMode == RX_VT_LEGACY_CCK || ucRxMode == RX_VT_LEGACY_OFDM) {
 		/* Bit[2:0] for Legacy CCK, Bit[3:0] for Legacy OFDM */
-		ucRxRate =
-		(prSwRfb->prRxStatusGroup3->u4RxVector[0] & BITS(0, 3));
+		ucRxRate = prRxStatusGroup3->u4RxVector[0] & BITS(0, 3);
 		prStaRec->u4LastPhyRate = nicGetHwRateByPhyRate(ucRxRate) * 5;
 	} else {
-		ucMcs = (prSwRfb->prRxStatusGroup3->u4RxVector[0] &
-			RX_VT_RX_RATE_AC_MASK);
+		ucMcs = prRxStatusGroup3->u4RxVector[0] & RX_VT_RX_RATE_AC_MASK;
 		/* VHTA1 B0-B1 */
-		ucFrMode = ((prSwRfb->prRxStatusGroup3->u4RxVector[0] &
-			RX_VT_FR_MODE_MASK) >> RX_VT_FR_MODE_OFFSET);
-		ucShortGI = (prSwRfb->prRxStatusGroup3->u4RxVector[0] &
-			RX_VT_SHORT_GI) ? 1 : 0;
+		ucFrMode = (prRxStatusGroup3->u4RxVector[0] &
+				RX_VT_FR_MODE_MASK) >> RX_VT_FR_MODE_OFFSET;
+		ucShortGI = (prRxStatusGroup3->u4RxVector[0] &
+				RX_VT_SHORT_GI) ? 1 : 0;
+		ucNsts = (prRxStatusGroup3->u4RxVector[1] &
+				RX_VT_NSTS_MASK) >> RX_VT_NSTS_OFFSET;
+		ucGroupid = (prRxStatusGroup3->u4RxVector[1] &
+				RX_VT_GROUP_ID_MASK) >> RX_VT_GROUP_ID_OFFSET;
 
-		/* ucRate(500kbs) = u4PhyRate(100kbps) / 5,max ucRate = 0xFF */
-		prStaRec->u4LastPhyRate = nicGetPhyRateByMcsRate(ucMcs,
-				ucFrMode, ucShortGI);
+		if (ucNsts == 0)
+			ucNsts = 1;
+		if (!ucGroupid || ucGroupid == 63)
+			ucNsts += 1;
+
+		if (ucRxMode == RX_VT_MIXED_MODE)
+			ucMcs %= 8;
+		/* ucRate(500kbs) = u4PhyRate(100kbps) / 5, max ucRate = 0xFF */
+		u4PhyRate = nicGetPhyRateByMcsRate(ucMcs, ucFrMode, ucShortGI);
+		if (ucRxMode == RX_VT_MIXED_MODE)
+			u4PhyRate *= ucNsts;
+		prStaRec->u4LastPhyRate = u4PhyRate;
 	}
 }
 #endif /* fos_change end */
@@ -1645,6 +1664,7 @@ void nicRxIndicatePackets(IN struct ADAPTER *prAdapter,
 	struct mt66xx_chip_info *prChipInfo;
 	struct SW_RFB *prRetSwRfb, *prNextSwRfb;
 	struct STA_RECORD *prStaRec;
+	uint8_t ucBssIndex;
 
 	prRxCtrl = &prAdapter->rRxCtrl;
 	prChipInfo = prAdapter->chip_info;
@@ -1652,10 +1672,10 @@ void nicRxIndicatePackets(IN struct ADAPTER *prAdapter,
 
 	while (prRetSwRfb) {
 		/**
-		* Collect RXV information,
-		* prAdapter->arStaRec[i].u4RxVector[*] updated.
-		* wlanGetRxRate() can get new rate values
-		*/
+		 * Collect RXV information,
+		 * prAdapter->arStaRec[i].u4RxVector[*] updated.
+		 * wlanGetRxRate() can get new rate values
+		 */
 		nicRxProcessRxv(prAdapter, prRetSwRfb);
 
 /* fos_change begin */
@@ -1678,6 +1698,8 @@ void nicRxIndicatePackets(IN struct ADAPTER *prAdapter,
 		case RX_PKT_DESTINATION_HOST:
 			prStaRec = cnmGetStaRecByIndex(prAdapter,
 					prRetSwRfb->ucStaRecIdx);
+			if (prStaRec)
+				ucBssIndex = prStaRec->ucBssIndex;
 #if ARP_MONITER_ENABLE
 			if (prStaRec &&
 				IS_STA_IN_AIS(prStaRec)) {
@@ -1704,14 +1726,11 @@ void nicRxIndicatePackets(IN struct ADAPTER *prAdapter,
 			}
 #endif
 #endif /* CFG_SUPPORT_WIFI_SYSDVT */
-			if (prStaRec &&
-			prStaRec->ucBssIndex < MAX_BSSID_NUM) {
+			if (prStaRec && ucBssIndex < MAX_BSSID_NUM) {
 				GET_BOOT_SYSTIME(
-					&prRxCtrl->u4LastRxTime
-					[prStaRec->ucBssIndex]);
+					&prRxCtrl->u4LastRxTime[ucBssIndex]);
 			}
-			nicRxProcessPktWithoutReorder(
-				prAdapter, prRetSwRfb);
+			nicRxProcessPktWithoutReorder(prAdapter, prRetSwRfb);
 			break;
 
 		case RX_PKT_DESTINATION_FORWARD:
@@ -1900,6 +1919,16 @@ void nicRxProcessEventPacket(IN struct ADAPTER *prAdapter,
 	prChipInfo = prAdapter->chip_info;
 	prEvent = (struct WIFI_EVENT *)
 			(prSwRfb->pucRecvBuff + prChipInfo->rxd_size);
+
+	if (prEvent->u2PacketLength >
+		(CFG_RX_MAX_PKT_SIZE - prChipInfo->rxd_size)) {
+		DBGLOG(NIC, WARN,
+			"Drop Abnormal Event ID[0x%02X] SEQ[%u] LEN[%u]\n",
+			prEvent->ucEID, prEvent->ucSeqNum,
+			prEvent->u2PacketLength);
+		goto end;
+	}
+
 	if (prEvent->ucEID != EVENT_ID_DEBUG_MSG
 	    && prEvent->ucEID != EVENT_ID_ASSERT_DUMP) {
 		DBGLOG(NIC, TRACE,
@@ -1968,6 +1997,7 @@ void nicRxProcessEventPacket(IN struct ADAPTER *prAdapter,
 		}
 	}
 
+end:
 	/* Reset Chip NoAck flag */
 	if (prAdapter->fgIsChipNoAck) {
 		DBGLOG_LIMITED(RX, WARN,
@@ -4270,7 +4300,7 @@ uint8_t nicIsActionFrameValid(IN struct SW_RFB *prSwRfb)
 		return FALSE;
 	prActFrame = (struct WLAN_ACTION_FRAME *) prSwRfb->pvHeader;
 
-	DBGLOG(RSN, INFO, "Action frame category=%d action=%d\n",
+	DBGLOG(RSN, TRACE, "Action frame category=%d action=%d\n",
 	       prActFrame->ucCategory, prActFrame->ucAction);
 
 	u2ActionIndex = prActFrame->ucCategory | prActFrame->ucAction << 8;
@@ -4458,6 +4488,47 @@ uint32_t nicRxProcessNanPubActionFrame(IN struct ADAPTER *prAdapter,
 }
 #endif
 
+#define TPLINK_OUI 0x000AEB
+#define TPLINK_MULTI_WIFI_PROTO 0x0A0001
+#define H3C_OUI 0x000FE2
+#define ROUTER_MONITOR_PROTO 0xC8C802
+
+static bool matchRxVendorActionFrame(IN struct ADAPTER *
+				 prAdapter, IN struct SW_RFB *prSwRfb) {
+	struct WLAN_VENDOR_SPECIFIC_ACTION_FRAME *prActVenSpecFrame;
+	struct WLAN_VENDOR_SPECIFIC_ACTION_FRAME_PROTO_SUBTYPE *prActVenSpecSubFrame;
+
+	u_int32_t u4Oui,u4Proto;
+
+	DEBUGFUNC("matchRxVendorActionFrame");
+
+	if (prAdapter == NULL || prSwRfb == NULL) {
+		DBGLOG(RX, ERROR, "Invalid parameter.\n");
+		return false;
+	}
+	prActVenSpecFrame = (struct WLAN_VENDOR_SPECIFIC_ACTION_FRAME *) prSwRfb->pvHeader;
+	switch (prActVenSpecFrame->ucCategory) {
+		case CATEGORY_VENDOR_SPECIFIC_ACTION:
+			if (prSwRfb->u2PacketLen < (sizeof(struct WLAN_VENDOR_SPECIFIC_ACTION_FRAME) + sizeof(struct WLAN_VENDOR_SPECIFIC_ACTION_FRAME_PROTO_SUBTYPE) - 1)) {
+				break;
+			}
+
+			WLAN_GET_FIELD_BE24(prActVenSpecFrame->ucOUI, &u4Oui);
+			if (u4Oui != H3C_OUI) {
+				break;
+			}
+			prActVenSpecSubFrame = (struct WLAN_VENDOR_SPECIFIC_ACTION_FRAME_PROTO_SUBTYPE *) prActVenSpecFrame->ucActionDetails;
+			WLAN_GET_FIELD_BE24(prActVenSpecSubFrame->ucProto, &u4Proto);
+			if (u4Proto != ROUTER_MONITOR_PROTO) {
+				break;
+			}
+			return true;
+		default:
+			break;
+	}
+	return false;
+}
+
 /*----------------------------------------------------------------------------*/
 /*!
  * @brief
@@ -4565,6 +4636,10 @@ uint32_t nicRxProcessActionFrame(IN struct ADAPTER *
 		fpProcessVendorSpecProtectedFrame(prAdapter, prSwRfb);
 		break;
 	case CATEGORY_VENDOR_SPECIFIC_ACTION:
+		if(matchRxVendorActionFrame(prAdapter, prSwRfb)) {
+			aisFuncValidateRxActionFrame(prAdapter,prSwRfb);
+			DBGLOG(INIT, INFO,"notify supplicant CATEGORY_VENDOR_SPECIFIC_ACTION\n");
+		}
 #if CFG_ENABLE_WIFI_DIRECT
 		if (prAdapter->fgIsP2PRegistered) {
 			if (prBssInfo)
@@ -4787,4 +4862,3 @@ int32_t nicRxGetLastRxRssi(struct ADAPTER *prAdapter, IN char *pcCommand,
 
 	return i4BytesWritten;
 }
-

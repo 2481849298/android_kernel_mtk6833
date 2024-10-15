@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2020 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include <linux/backlight.h>
@@ -718,7 +710,7 @@ static const struct drm_display_mode performance_mode_2 = {
 #if defined(CONFIG_MTK_PANEL_EXT)
 
 static struct mtk_panel_params ext_params = {
-	.vfp_low_power = 4180,
+	.vfp_low_power = 4120,
 	.cust_esd_check = 0,
 	.esd_check_enable = 1,
 	.lcm_esd_check_table[0] = {
@@ -768,8 +760,11 @@ static struct mtk_panel_params ext_params = {
 	.ssc_disable = 1,
 	.dyn = {
 		.switch_en = 1,
-		.pll_clk = 501,
-		.hbp = 20,
+		.pll_clk = 498,
+		.hfp = 141,
+		.vfp = 2481,
+		.vsa = 7,
+		.vfp_lp_dyn = 4121,
 	},
 };
 
@@ -824,8 +819,11 @@ static struct mtk_panel_params ext_params_mode_1 = {
 	.ssc_disable = 1,
 	.dyn = {
 		.switch_en = 1,
-		.pll_clk = 501,
-		.hbp = 20,
+		.pll_clk = 498,
+		.hfp = 141,
+		.vfp = 838,
+		.vsa = 7,
+		.vfp_lp_dyn = 2481,
 	},
 };
 
@@ -880,8 +878,11 @@ static struct mtk_panel_params ext_params_mode_2 = {
 	.ssc_disable = 1,
 	.dyn = {
 		.switch_en = 1,
-		.pll_clk = 501,
-		.hbp = 20,
+		.pll_clk = 498,
+		.hfp = 141,
+		.vfp = 21,
+		.vsa = 7,
+		.vfp_lp_dyn = 2481,
 	},
 };
 
@@ -953,7 +954,7 @@ static int panel_ext_reset(struct drm_panel *panel, int on)
 
 static int panel_ata_check(struct drm_panel *panel)
 {
-#if 0
+#ifdef BDG_PORTING_DBG
 	struct tianma *ctx = panel_to_tianma(panel);
 	struct mipi_dsi_device *dsi = to_mipi_dsi_device(ctx->dev);
 	unsigned char data[3] = {0x00, 0x00, 0x00};

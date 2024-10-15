@@ -17,7 +17,8 @@
 #include <linux/i2c.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
-
+#include <linux/pinctrl/devinfo.h>
+#include <linux/pinctrl/consumer.h>
 #include "camera_ldo.h"
 
 /*****************************************************************************

@@ -39,7 +39,9 @@
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 #include "../mediatek/mtk_corner_pattern/mtk_data_hw_roundedpattern.h"
 #endif
-
+#if (defined(OPLUS_BUG_STABILITY) && defined(CONFIG_MFD_MT6370_PMU))
+        extern unsigned int pmic_custom_flag;
+#endif
 struct lcm {
 	struct device *dev;
 	struct drm_panel panel;
@@ -877,7 +879,9 @@ static int lcm_probe(struct mipi_dsi_device *dsi)
 	struct device_node *backlight;
 	int ret;
 	struct device_node *dsi_node, *remote_node = NULL, *endpoint = NULL;
-
+#if (defined(OPLUS_BUG_STABILITY) && defined(CONFIG_MFD_MT6370_PMU))
+	pmic_custom_flag = 1;
+#endif
 	dsi_node = of_get_parent(dev->of_node);
 	if (dsi_node) {
 		endpoint = of_graph_get_next_endpoint(dsi_node, NULL);

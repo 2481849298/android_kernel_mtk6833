@@ -178,7 +178,12 @@ struct MSDU_INFO *cnmPktAllocWrapper(struct ADAPTER *prAdapter,
 {
 	struct MSDU_INFO *prMsduInfo;
 
+#if CFG_DBG_MGT_BUF
+	prMsduInfo = cnmPktAllocX(prAdapter, u4Length, pucStr);
+#else
 	prMsduInfo = cnmPktAlloc(prAdapter, u4Length);
+#endif
+
 	log_dbg(MEM, LOUD, "Alloc MSDU_INFO[0x%p] by [%s]\n",
 		prMsduInfo, pucStr);
 
@@ -212,7 +217,12 @@ void cnmPktFreeWrapper(struct ADAPTER *prAdapter, struct MSDU_INFO *prMsduInfo,
  * \return none
  */
 /*----------------------------------------------------------------------------*/
+#if CFG_DBG_MGT_BUF
+struct MSDU_INFO *cnmPktAllocX(struct ADAPTER *prAdapter, uint32_t u4Length,
+	uint8_t *fileAndLine)
+#else
 struct MSDU_INFO *cnmPktAlloc(struct ADAPTER *prAdapter, uint32_t u4Length)
+#endif
 {
 	struct MSDU_INFO *prMsduInfo;
 	struct QUE *prQueList;
@@ -229,9 +239,15 @@ struct MSDU_INFO *cnmPktAlloc(struct ADAPTER *prAdapter, uint32_t u4Length)
 
 	if (prMsduInfo) {
 		if (u4Length) {
+#if CFG_DBG_MGT_BUF
+			prMsduInfo->prPacket = cnmMemAllocX(prAdapter,
+				RAM_TYPE_BUF, u4Length, fileAndLine);
+#else
 			prMsduInfo->prPacket = cnmMemAlloc(prAdapter,
 				RAM_TYPE_BUF, u4Length);
+#endif
 			prMsduInfo->eSrc = TX_PACKET_MGMT;
+			prMsduInfo->ucControlFlag = 0;
 
 			if (prMsduInfo->prPacket == NULL) {
 				KAL_ACQUIRE_SPIN_LOCK(prAdapter,
@@ -649,8 +665,9 @@ struct STA_RECORD *cnmStaRecAlloc(struct ADAPTER *prAdapter,
 
 			LINK_INITIALIZE(&prStaRec->rMscsMonitorList);
 			LINK_INITIALIZE(&prStaRec->rMscsTcpMonitorList);
-			DBGLOG(MEM, WARN, "LINK_INITIALIZE list: %p\n",
-						&prStaRec->rMscsMonitorList);
+			DBGLOG(MEM, WARN,
+				"LINK_INITIALIZE list=%p, BssIdx=%d, StaRecIdx=%d\n",
+				&prStaRec->rMscsMonitorList, ucBssIndex, i);
 #if CFG_ENABLE_PER_STA_STATISTICS && CFG_ENABLE_PKT_LIFETIME_PROFILE
 			prStaRec->u4TotalTxPktsNumber = 0;
 			prStaRec->u4TotalTxPktsTime = 0;
@@ -713,17 +730,13 @@ struct STA_RECORD *cnmStaRecAlloc(struct ADAPTER *prAdapter,
 /*----------------------------------------------------------------------------*/
 void cnmStaRecFree(struct ADAPTER *prAdapter, struct STA_RECORD *prStaRec)
 {
-	uint8_t ucStaRecIndex, ucBssIndex;
-
 	ASSERT(prAdapter);
 
 	if (!prStaRec)
 		return;
 
-	log_dbg(CNM, INFO, "cnmStaRecFree %d\n", prStaRec->ucIndex);
-
-	ucStaRecIndex = prStaRec->ucIndex;
-	ucBssIndex = prStaRec->ucBssIndex;
+	log_dbg(CNM, INFO, "BssIdx=%d, StaRecIdx=%d, InUse=%d\n",
+		prStaRec->ucBssIndex, prStaRec->ucIndex, prStaRec->fgIsInUse);
 
 	if (prStaRec->fgIsInUse) {
 		nicFreePendingTxMsduInfo(prAdapter, prStaRec->ucWlanIndex,
@@ -732,7 +745,7 @@ void cnmStaRecFree(struct ADAPTER *prAdapter, struct STA_RECORD *prStaRec)
 		cnmStaRoutinesForAbort(prAdapter, prStaRec);
 
 		cnmStaSendRemoveCmd(prAdapter, STA_REC_CMD_ACTION_STA,
-			ucStaRecIndex, ucBssIndex);
+			prStaRec->ucIndex, prStaRec->ucBssIndex);
 	} else {
 		log_dbg(CNM, ERROR, "prStaRec is not in use\n");
 	}

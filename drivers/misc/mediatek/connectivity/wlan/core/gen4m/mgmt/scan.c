@@ -1391,8 +1391,8 @@ void scanHandleRnrSsid(IN struct PARAM_SCAN_REQUEST_ADV *prScanRequest,
 	}
 }
 
-uint8_t scanGetRnrChannel(IN struct NEIGHBOR_AP_INFO_FIELD
-						*prNeighborAPInfoField)
+uint8_t scanGetRnrChannel(IN struct ADAPTER *prAdapter,
+	IN struct NEIGHBOR_AP_INFO_FIELD *prNeighborAPInfoField)
 {
 	uint8_t ucRnrChNum;
 	struct ieee80211_channel *prChannel;
@@ -1415,6 +1415,14 @@ uint8_t scanGetRnrChannel(IN struct NEIGHBOR_AP_INFO_FIELD
 	}
 
 	ucRnrChNum = nicFreq2ChannelNum(prChannel->center_freq * 1000);
+
+#if (CFG_SUPPORT_WIFI_6G == 1)
+	/* Check if current country not support 6G channel, return 0 */
+	if (band == NL80211_BAND_6GHZ &&
+		!rlmDomainIsLegalChannel(prAdapter, BAND_6G, ucRnrChNum)) {
+		return 0;
+	}
+#endif
 
 	return ucRnrChNum;
 }
@@ -1522,11 +1530,11 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 	IN struct BSS_DESC *prBssDesc, IN uint8_t *pucIE)
 {
 	uint8_t *pucProfileIE, i = 0, j = 0, ucNewLink = FALSE;
-	uint8_t ucShortSsidOffset, ucBssParamOffset;
-	uint8_t ucBssidNum = 0, ucCurrentLength = 0, ucShortSsidNum = 0;
+	uint8_t ucShortSsidOffset, ucBssParamOffset, ucTbttInfoType;
+	uint8_t ucBssidNum = 0, ucShortSsidNum = 0;
 	uint8_t ucRnrChNum, ucHasBssid = FALSE, ucScanEnable = TRUE;
 	uint8_t aucNullAddr[] = NULL_MAC_ADDR;
-	uint16_t u2TbttInfoCount, u2TbttInfoLength;
+	uint16_t u2TbttInfoCount, u2TbttInfoLength, u2CurrentLength = 0;
 	struct SCAN_INFO *prScanInfo;
 	struct NEIGHBOR_AP_INFO *prNeighborAPInfo = NULL;
 	struct NEIGHBOR_AP_INFO_FIELD *prNeighborAPInfoField;
@@ -1542,8 +1550,8 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 		return;
 	}
 
-	while (ucCurrentLength < IE_LEN(pucIE)) {
-		pucProfileIE = &IE_ID_EXT(pucIE) + ucCurrentLength;
+	while (u2CurrentLength < IE_LEN(pucIE)) {
+		pucProfileIE = &IE_ID_EXT(pucIE) + u2CurrentLength;
 		prNeighborAPInfoField =
 			(struct NEIGHBOR_AP_INFO_FIELD *)pucProfileIE;
 
@@ -1558,29 +1566,44 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 		u2TbttInfoLength = (prNeighborAPInfoField->u2TbttInfoHdr &
 						TBTT_INFO_HDR_LENGTH)
 						>> TBTT_INFO_HDR_LENGTH_OFFSET;
+		ucTbttInfoType = (prNeighborAPInfoField->u2TbttInfoHdr &
+						TBTT_INFO_HDR_FIELD_TYPE);
 
+		/* Check Tbtt Info type is valid or not*/
+		if (ucTbttInfoType != 0) {
+			DBGLOG(SCN, ERROR,
+				"Invalid TBTT info type=%d,["MACSTR"]\n",
+				ucTbttInfoType,
+				MAC2STR(prBssDesc->aucBSSID));
+			return;
+		}
 		/* Check Tbtt Info length is valid or not*/
 		if (!scanValidRnrTbttInfo(u2TbttInfoLength)) {
-			DBGLOG(SCN, ERROR, "Invalid TBTT info length = %d\n",
-				u2TbttInfoLength);
+			DBGLOG(SCN, ERROR,
+				"Invalid TBTT info length=%d,["MACSTR"]\n",
+				u2TbttInfoLength,
+				MAC2STR(prBssDesc->aucBSSID));
 			return;
 		}
 		/* If opClass is not 6G, no need to do extra scan
 		 * directly check next neighborAPInfo if exist
 		 */
 		if (!IS_6G_OP_CLASS(prNeighborAPInfoField->ucOpClass)) {
-			DBGLOG(SCN, TRACE, "RNR op class(%d) is not 6G\n",
-				prNeighborAPInfoField->ucOpClass);
+			DBGLOG(SCN, INFO,
+				"RNR op class(%d) is not 6G,Len=(%d,%d),TbttInfo(%d,%d)\n",
+				prNeighborAPInfoField->ucOpClass,
+				IE_LEN(pucIE), u2CurrentLength,
+				u2TbttInfoCount, u2TbttInfoLength);
 
 			/* Calculate next NeighborAPInfo's index if exists */
-			ucCurrentLength += 4 +
+			u2CurrentLength += 4 +
 				(u2TbttInfoCount * u2TbttInfoLength);
 			continue;
 		} else {
 			/* RNR bring 6G channel, but chip not support 6G */
 			/* Calculate next NeighborAPInfo's index if exists */
 #if !(CFG_SUPPORT_WIFI_6G)
-			ucCurrentLength += 4 +
+			u2CurrentLength += 4 +
 				(u2TbttInfoCount * u2TbttInfoLength);
 			continue;
 #endif
@@ -1640,7 +1663,8 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 					prIeShortSsidList->ucLength + 2;
 			prScanRequest->ucScnFuncMask |=
 						ENUM_SCN_USE_PADDING_AS_BSSID;
-			prScanRequest->ucBssIndex = GET_IOCTL_BSSIDX(prAdapter);
+			prScanRequest->ucBssIndex =
+					prScanInfo->rScanParam.ucBssIndex;
 			/* IE used to save short SSID list*/
 			prScanRequest->pucIE = prNeighborAPInfo->aucScanIEBuf;
 
@@ -1653,14 +1677,17 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 		}
 
 		/* Get RNR channel */
-		ucRnrChNum = scanGetRnrChannel(prNeighborAPInfoField);
+		ucRnrChNum =
+			scanGetRnrChannel(prAdapter, prNeighborAPInfoField);
 		if (ucRnrChNum == 0 || IS_6G_PSC_CHANNEL(ucRnrChNum)) {
 			DBGLOG(SCN, TRACE, "Not handle RNR channel(%d)!\n",
 					ucRnrChNum);
-			if (LINK_IS_EMPTY(&prAdapter->rNeighborAPInfoList))
+			if (ucNewLink) {
 				cnmMemFree(prAdapter, prNeighborAPInfo);
+				ucNewLink = FALSE;
+			}
 			/* Calculate next NeighborAPInfo's index if exists */
-			ucCurrentLength += 4 +
+			u2CurrentLength += 4 +
 				(u2TbttInfoCount * u2TbttInfoLength);
 			continue;
 		}
@@ -1706,6 +1733,12 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 				/* only support neighbor AP info with
 				*  BSSID
 				*/
+				DBGLOG(SCN, WARN,
+					"RNR w/o BSSID, length(%d,%d),TBTT(%d,%d)\n",
+					IE_LEN(pucIE), u2CurrentLength,
+					u2TbttInfoCount, u2TbttInfoLength);
+				u2CurrentLength += 4 +
+				        (u2TbttInfoCount * u2TbttInfoLength);
 				continue;
 			}
 
@@ -1783,7 +1816,7 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 						ucBssidNum);
 		}
 		/* Calculate next NeighborAPInfo's index if exists */
-		ucCurrentLength += 4 + (u2TbttInfoCount * u2TbttInfoLength);
+		u2CurrentLength += 4 + (u2TbttInfoCount * u2TbttInfoLength);
 
 		/* Only handle RnR with BSSID */
 		if (ucHasBssid && ucScanEnable) {
@@ -1821,8 +1854,10 @@ void scanParsingRnrElement(IN struct ADAPTER *prAdapter,
 					MAC2STR(prScanRequest->aucBssid[3]));
 			ucHasBssid = FALSE;
 		}
-		if (LINK_IS_EMPTY(&prAdapter->rNeighborAPInfoList))
+		if (ucNewLink) {
 			cnmMemFree(prAdapter, prNeighborAPInfo);
+			ucNewLink = FALSE;
+		}
 	}
 }
 
@@ -2815,11 +2850,20 @@ struct BSS_DESC *scanAddToBssDesc(IN struct ADAPTER *prAdapter,
 
 	/* 4 <3.3> Check rate information in related IEs. */
 	if (prIeSupportedRate || prIeExtSupportedRate) {
+		if ((prIeSupportedRate &&
+			prIeSupportedRate->ucLength > RATE_NUM_SW) ||
+			(prIeExtSupportedRate &&
+			prIeExtSupportedRate->ucLength >=
+			ELEM_MAX_LEN_EXTENDED_SUP_RATES)) {
+			DBGLOG(SCN, ERROR,
+				"ERR! SupportedRate IE length too big\n");
+			return NULL;
+		}
 		rateGetRateSetFromIEs(prIeSupportedRate,
-				      prIeExtSupportedRate,
-				      &prBssDesc->u2OperationalRateSet,
-				      &prBssDesc->u2BSSBasicRateSet,
-				      &prBssDesc->fgIsUnknownBssBasicRate);
+				prIeExtSupportedRate,
+				&prBssDesc->u2OperationalRateSet,
+				&prBssDesc->u2BSSBasicRateSet,
+				&prBssDesc->fgIsUnknownBssBasicRate);
 	}
 
 	/* 4 <4> Update information from HIF RX Header */
@@ -3218,6 +3262,8 @@ uint32_t scanAddScanResult(IN struct ADAPTER *prAdapter,
 	ASSERT(prSwRfb);
 
 	prScanInfo = &(prAdapter->rWifiVar.rScanInfo);
+	kalMemZero(&rConfiguration, sizeof(rConfiguration));
+	kalMemZero(&rSsid, sizeof(rSsid));
 
 	if (prBssDesc->eBand == BAND_2G4) {
 		if ((prBssDesc->u2OperationalRateSet & RATE_SET_OFDM)

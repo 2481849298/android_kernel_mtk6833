@@ -1,14 +1,7 @@
-/* Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifdef pr_fmt
 #undef pr_fmt
@@ -503,8 +496,6 @@ void msdc_HQA_set_voltage(struct msdc_host *host)
 
 	pr_info("[MSDC%d HQA] adj Vcore 0x%x, Vio_sel=%x, Vio_trim 0x%x, Vio_cal= 0x%x(0x9 = +90mv)\n",
 	host->id, vcore, vio_sel, vio_trim, vio_cal);
-	pmic_config_interface(PMIC_RG_VIO18_VOSEL_ADDR,
-		vio_sel, PMIC_RG_VIO18_VOSEL_MASK, PMIC_RG_VIO18_VOSEL_SHIFT);
 	pmic_config_interface(PMIC_RG_VIO18_VOCAL_ADDR,
 		vio_cal, PMIC_RG_VIO18_VOCAL_MASK, PMIC_RG_VIO18_VOCAL_SHIFT);
 

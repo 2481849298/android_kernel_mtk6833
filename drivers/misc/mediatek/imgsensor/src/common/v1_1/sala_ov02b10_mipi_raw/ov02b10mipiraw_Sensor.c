@@ -21,7 +21,7 @@
 #include <linux/atomic.h>
 #include <linux/types.h>
 #include "ov02b10mipiraw_Sensor.h"
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #include <soc/oplus/system/oplus_project_oldcdt.h>
 
 #ifndef OPLUS_FEATURE_CAMERA_COMMON

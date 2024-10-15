@@ -34,7 +34,7 @@
 #include "kd_imgsensor_errcode.h"
 //#include <linux/hardware_info.h>
 #include "gc02m1bmipi_Sensor.h"
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 /************************** Modify Following Strings for Debug **************************/
 #define PFX "gc02m1b_camera_sensor"
 #define LOG_1 LOG_INF("GC02M1B, MIPI 1LANE\n")
@@ -330,6 +330,7 @@ static void set_shutter(kal_uint16 shutter)
 	write_cmos_sensor(0x04, shutter  & 0xff);
 	LOG_INF("shutter = %d, framelength = %d\n", shutter, imgsensor.frame_length);
 }
+
 
 static void set_shutter_frame_length(kal_uint16 shutter,
 				     kal_uint16 target_frame_length)
@@ -1511,6 +1512,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 	case SENSOR_FEATURE_CHECK_SENSOR_ID:
 		get_imgsensor_id(feature_return_para_32);
 		break;
+	
 	case SENSOR_FEATURE_SET_SHUTTER_FRAME_TIME:
 		set_shutter_frame_length((UINT16) (*feature_data), (UINT16) (*(feature_data + 1)));
 		break;

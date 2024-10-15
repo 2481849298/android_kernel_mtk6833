@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2018 MediaTek Inc.
@@ -33,7 +32,9 @@
 /****************************************************************************
  * variables
  ***************************************************************************/
-
+#ifdef OPLUS_BUG_STABILITY
+	int max_brightness_custom = 0;
+#endif
 struct led_debug_info {
 	unsigned long long current_t;
 	unsigned long long last_t;
@@ -136,7 +137,7 @@ static int brightness_maptolevel(struct led_conf_info *led_dat, int brightness)
  * add API for temperature control
  ***************************************************************************/
 
-int setMaxBrightness(char *name, int percent, bool enable)
+int mt_leds_max_brightness_set(char *name, int percent, bool enable)
 {
 	struct mtk_led_data *led_dat;
 	int max_l = 0, limit_l = 0, cur_l = 0;
@@ -172,7 +173,7 @@ int setMaxBrightness(char *name, int percent, bool enable)
 	return 0;
 
 }
-EXPORT_SYMBOL(setMaxBrightness);
+EXPORT_SYMBOL(mt_leds_max_brightness_set);
 
 int mt_leds_brightness_set(char *name, int level)
 {
@@ -381,7 +382,10 @@ static int led_level_set(struct led_classdev *led_cdev, enum led_brightness brig
 		return 0;
 
 	trans_level = brightness_maptolevel(led_conf, brightness);
-
+#ifdef OPLUS_BUG_STABILITY
+	if (max_brightness_custom)
+		trans_level = brightness;
+#endif
 #ifdef MET_USER_EVENT_SUPPORT
 	if (enable_met_backlight_tag())
 		output_met_backlight_tag(brightness);
@@ -480,7 +484,13 @@ static int mtk_leds_parse_dt(struct device *dev, struct mtk_leds_info *m_leds)
 			dev_info(dev, "No led-bits, use default value 8\n");
 			s_led->conf.cdev.max_brightness = (1 << s_led->conf.led_bits) - 1;
 		}
-
+#ifdef OPLUS_BUG_STABILITY
+		ret = of_property_read_u32(child, "max_brightness_custom", &max_brightness_custom);
+		if (ret) {
+			max_brightness_custom = 0;
+			pr_info("not support max_brightness_custom property = 0\n");
+		}
+#endif
 		ret = of_property_read_u32(child, "trans-bits", &(s_led->conf.trans_bits));
 		if (ret) {
 			dev_info(dev, "No trans-bits, use default value 10\n");

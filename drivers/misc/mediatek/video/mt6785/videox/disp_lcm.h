@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef _DISP_LCM_H_
 #define _DISP_LCM_H_
@@ -85,6 +77,7 @@ int disp_lcm_aod_doze_resume(struct disp_lcm_handle *plcm);
 int disp_lcm_is_arr_support(struct disp_lcm_handle *plcm);
 
 #ifdef OPLUS_BUG_STABILITY
+/* Add for Porting cabc interface */
 int disp_lcm_oplus_set_lcm_cabc_cmd(struct disp_lcm_handle *plcm, void *handle, unsigned int level);
 int disp_lcm_poweron_before_ulps(struct disp_lcm_handle *plcm);
 int disp_lcm_poweroff_after_ulps(struct disp_lcm_handle *plcm);
@@ -95,7 +88,7 @@ int disp_lcm_poweroff_after_ulps(struct disp_lcm_handle *plcm);
 */
 int disp_lcm_set_hbm(struct disp_lcm_handle *plcm, void *handle, unsigned int hbm_level);
 int mtk_disp_lcm_set_hbm(bool en, struct disp_lcm_handle *plcm, void *qhandle);
-int disp_lcm_set_hbm_wait_ramless(bool wait, struct disp_lcm_handle *plcm, void *qhandle);
+//int disp_lcm_set_hbm_wait_ramless(bool wait, struct disp_lcm_handle *plcm, void *qhandle);
 /*hbm*/
 int disp_lcm_set_hbm_ramless(bool en, struct disp_lcm_handle *plcm, void *qhandle);
 int disp_lcm_get_hbm_state(struct disp_lcm_handle *plcm);

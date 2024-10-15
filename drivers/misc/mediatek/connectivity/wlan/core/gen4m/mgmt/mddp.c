@@ -434,6 +434,7 @@ int32_t mddpNotifyDrvTxd(IN struct ADAPTER *prAdapter,
 #endif
 
 	if (!prNetDevPrivate->ucMddpSupport) {
+		DBGLOG(NIC, ERROR, "mddp not support\n");
 		goto exit;
 	}
 
@@ -739,7 +740,11 @@ int32_t mddpNotifyWifiOnEnd(void)
 #if (CFG_SUPPORT_CONNAC2X == 0 || CFG_TRI_TX_RING == 1)
 	ret = mddpNotifyWifiStatus(MDDPW_DRV_INFO_STATUS_ON_END);
 #else
+#ifdef SOC3_0
+	ret = mddpNotifyWifiStatus(MDDPW_DRV_INFO_STATUS_ON_END);
+#else
 	ret = mddpNotifyWifiStatus(MDDPW_DRV_INFO_STATUS_ON_END_QOS);
+#endif
 #endif
 	if (ret == 0)
 		ret = wait_for_md_on_complete() ?
@@ -908,6 +913,17 @@ int32_t mddpMdNotifyInfo(struct mddpw_md_notify_info_t *prMdInfo)
 		glSetRstReason(RST_MDDP_MD_TRIGGER_EXCEPTION);
 		GL_RESET_TRIGGER(prAdapter, event->u4RstFlag
 			| RST_FLAG_DO_CORE_DUMP);
+	} else if (prMdInfo->info_type == MDDPW_MD_EVENT_NOTIFY_MD_INFO_EMI) {
+		struct mddpw_get_drv_emi *prEmi =
+			(struct mddpw_get_drv_emi *)&(prMdInfo->buf[1]);
+		uint32_t u4Size = prEmi->emi_size;
+
+		if (u4Size > MD_MAX_EMI_SIZE)
+			u4Size = MD_MAX_EMI_SIZE;
+		DBGLOG(INIT, INFO, "emi_start_addr=0x%08x\n",
+		       prEmi->emi_start_addr);
+		DBGLOG_MEM32(INIT, INFO, prEmi->emi_payload, u4Size);
+		DBGLOG_MEM32(INIT, INFO, prMdInfo, 64);
 	} else if (prMdInfo->info_type == MDDPW_MD_EVENT_COMMUNICATION) {
 		struct wsvc_md_event_comm_t *event;
 

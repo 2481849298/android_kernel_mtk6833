@@ -1,20 +1,12 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef _MTK_BATTERY_TABLE_H
 #define _MTK_BATTERY_TABLE_H
 
-#include "mtk_battery.h"
+#include "v1/mtk_battery.h"
 
 #ifndef _DEA_MODIFY_
 #else
@@ -32,10 +24,6 @@
 
 /* multiple battery profile compile options */
 /*#define MTK_GET_BATTERY_ID_BY_AUXADC*/
-#ifdef OPLUS_FEATURE_CHG_BASIC
-#define MTK_GET_BATTERY_ID_BY_AUXADC
-#endif /*OPLUS_FEATURE_CHG_BASIC*/
-
 
 /* if ACTIVE_TABLE == 0 && MULTI_BATTERY == 0
  * load g_FG_PSEUDO100_Tx from dtsi
@@ -87,13 +75,8 @@ int g_Q_MAX_SYS_VOLTAGE[TOTAL_BATTERY_NUMBER] = { 3400, 3400, 3400, 3400};
 
 /* 0~0.5V for battery 0, 0.5~1V for battery 1*/
 /* 1~1.5V for battery 2, -1 for the last one (battery 3) */
-#ifndef OPLUS_FEATURE_CHG_BASIC
 int g_battery_id_voltage[TOTAL_BATTERY_NUMBER] = {
 	500000, 1000000, 1500000, -1};
-#else /*OPLUS_FEATURE_CHG_BASIC*/
-int g_battery_id_voltage[TOTAL_BATTERY_NUMBER] = {
-	800000, 1000000, 1500000, -1};
-#endif /*OPLUS_FEATURE_CHG_BASIC*/
 
 int g_FG_PSEUDO1[MAX_TABLE][TOTAL_BATTERY_NUMBER] = {
 	/*bat1,   bat2,   bat3,    bat4*/
@@ -109,21 +92,19 @@ int g_FG_PSEUDO1[MAX_TABLE][TOTAL_BATTERY_NUMBER] = {
 	{ 13, 14, 15, 16} /*T9*/
 };
 
-#ifdef OPLUS_FEATURE_CHG_BASIC
 int g_FG_PSEUDO100[MAX_TABLE][TOTAL_BATTERY_NUMBER] = {
 	/*bat1,   bat2,   bat3,    bat4*/
-	{ 97, 97, 97, 97},/*T0*/
-	{ 99, 99, 99, 99},/*T1*/
-	{ 94, 94, 94, 94},/*T2*/
-	{ 90, 90, 90, 90},/*T3*/
-	{ 90, 90, 90, 90},/*T4*/
-	{ 97, 97, 97, 97},/*T5*/
-	{ 97, 97, 97, 97},/*T6*/
-	{ 97, 97, 97, 97},/*T7*/
-	{ 97, 97, 97, 97},/*T8*/
-	{ 97, 97, 97, 97} /*T9*/
+	{ 100, 100, 100, 100},/*T0*/
+	{ 100, 100, 100, 100},/*T1*/
+	{ 100, 100, 100, 100},/*T2*/
+	{ 100, 100, 100, 100},/*T3*/
+	{ 100, 100, 100, 100},/*T4*/
+	{ 100, 100, 100, 100},/*T5*/
+	{ 100, 100, 100, 100},/*T6*/
+	{ 100, 100, 100, 100},/*T7*/
+	{ 100, 100, 100, 100},/*T8*/
+	{ 100, 100, 100, 100} /*T9*/
 };
-#endif /*OPLUS_FEATURE_CHG_BASIC*/
 
 /* shutdown_hl_zcv */
 int g_SHUTDOWN_HL_ZCV[MAX_TABLE][TOTAL_BATTERY_NUMBER] = {
@@ -210,11 +191,7 @@ int g_temperature[MAX_TABLE] = {
 #define BAT_NTC_47 0
 
 #if (BAT_NTC_10 == 1)
-#ifndef OPLUS_FEATURE_CHG_BASIC
 #define RBAT_PULL_UP_R             24000
-#else /*OPLUS_FEATURE_CHG_BASIC*/
-#define RBAT_PULL_UP_R             16000
-#endif /*OPLUS_FEATURE_CHG_BASIC*/
 #endif
 
 #if (BAT_NTC_47 == 1)
@@ -225,9 +202,9 @@ int g_temperature[MAX_TABLE] = {
 
 #define BIF_NTC_R 16000
 
-#if (BAT_NTC_10 == 1)
-#ifndef OPLUS_FEATURE_CHG_BASIC
-struct FUELGAUGE_TEMPERATURE Fg_Temperature_Table[21] = {
+#ifdef OPLUS_FEATURE_CHG_BASIC
+/* add for 0.1 precision battery temp */
+struct FUELGAUGE_TEMPERATURE Fg_Temperature_01_Precision_Table[] = {
 		{-40, 195652},
 		{-35, 148171},
 		{-30, 113347},
@@ -250,7 +227,9 @@ struct FUELGAUGE_TEMPERATURE Fg_Temperature_Table[21] = {
 		{55, 3535},
 		{60, 3014}
 };
-#else /*OPLUS_FEATURE_CHG_BASIC*/
+#endif
+
+#if (BAT_NTC_10 == 1)
 struct FUELGAUGE_TEMPERATURE Fg_Temperature_Table[27] = {
 		{-40, 195652},
 		{-35, 148171},
@@ -274,13 +253,12 @@ struct FUELGAUGE_TEMPERATURE Fg_Temperature_Table[27] = {
 		{55, 3535},
 		{60, 3014},
 		{65, 2586},
-		{70, 2227},
-		{75, 1924},
-		{80, 1668},
+		{70, 2228},
+		{75, 1925},
+		{80, 1669},
 		{85, 1452},
 		{90, 1268}
 };
-#endif /*OPLUS_FEATURE_CHG_BASIC*/
 #endif
 
 #if (BAT_NTC_47 == 1)

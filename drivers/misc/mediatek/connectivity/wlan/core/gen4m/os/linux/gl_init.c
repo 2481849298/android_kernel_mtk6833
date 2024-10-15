@@ -95,8 +95,10 @@
 #if (CFG_SUPPORT_CONNINFRA == 1)
 #include "fw_log_wifi.h"
 #endif
+#include "conn_dbg.h"
 
 #ifdef OPLUS_FEATURE_WIFI_OPLUSWFD
+//CONNECTIVITY.WIFI.BASIC.26106,20200703
 void oplus_wfd_set_hdd_ctx(struct wireless_dev *hdd_ctx);
 void oplus_register_oplus_wfd_wlan_ops_mtk(void);
 #endif
@@ -757,6 +759,7 @@ static struct cfg80211_ops mtk_cfg_ops = {
 #endif /* CFG_SUPPORT_SCHED_SCAN */
 
 	.connect = mtk_cfg_connect,
+	.update_connect_params = mtk_cfg_update_connect_params,
 	.disconnect = mtk_cfg_disconnect,
 	.join_ibss = mtk_cfg_join_ibss,
 	.leave_ibss = mtk_cfg_leave_ibss,
@@ -875,7 +878,7 @@ static const struct wiphy_vendor_command
 		.doit = mtk_cfg80211_vendor_set_band
 #if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
 		,
-		.policy = nal_parse_wifi_setband,
+		.policy = qca_wlan_vendor_attr_policy,
 		.maxattr = QCA_WLAN_VENDOR_ATTR_MAX
 #endif
 	},
@@ -899,14 +902,15 @@ static const struct wiphy_vendor_command
 	{
 		{
 			.vendor_id = OUI_QCA,
-			.subcmd = WIFI_SUBCMD_SET_ROAMING
+			.subcmd = QCA_NL80211_VENDOR_SUBCMD_ROAMING
 		},
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
 			 WIPHY_VENDOR_CMD_NEED_NETDEV,
 		.doit = mtk_cfg80211_vendor_set_roaming_policy
 #if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
 		,
-		.policy = VENDOR_CMD_RAW_DATA
+		.policy = qca_wlan_vendor_attr_policy,
+		.maxattr = QCA_WLAN_VENDOR_ATTR_MAX
 #endif
 	},
 	{
@@ -1276,7 +1280,8 @@ static const struct wiphy_vendor_command
 		.doit = mtk_cfg80211_vendor_get_trx_stats
 #if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
 		,
-		.policy = VENDOR_CMD_RAW_DATA
+		.policy = nla_trx_stats_policy,
+		.maxattr = WIFI_ATTRIBUTE_STATS_MAX
 #endif
 	},
 	/* Get Wifi Reset */
@@ -1291,6 +1296,50 @@ static const struct wiphy_vendor_command
 #if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
 		,
 		.policy = VENDOR_CMD_RAW_DATA
+#endif
+	},
+	/* Set Tx Latency Monitor Parameter */
+	{
+		{
+			.vendor_id = OUI_MTK,
+			.subcmd = NL80211_VENDOR_SUBCMD_SET_TX_LAT_MONTR_PARAM
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+				WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = mtk_cfg80211_vendor_set_tx_lat_montr_param
+#if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
+		,
+		.policy = mtk_tx_lat_montr_param_policy,
+		.maxattr = WIFI_ATTR_TX_LAT_MONTR_MAX
+#endif
+	},
+	/* Set WFD Tx Bitrate Monitor */
+	{
+		{
+			.vendor_id = OUI_MTK,
+			.subcmd = NL80211_VENDOR_SUBCMD_SET_WFD_TX_BR_MONTR
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+				WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = mtk_cfg80211_vendor_set_wfd_tx_br_montr
+#if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
+		,
+		.policy = mtk_wfd_tx_br_montr_policy,
+		.maxattr = WIFI_ATTR_WFD_TX_BR_MONTR_MAX
+#endif
+	},
+	/* Get WFD Predicted Tx Bitrate  */
+	{
+		{
+			.vendor_id = OUI_MTK,
+			.subcmd = NL80211_VENDOR_SUBCMD_GET_WFD_PRED_TX_BR
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+				WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = mtk_cfg80211_vendor_get_wfd_pred_tx_br
+#if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
+		,
+		.policy = VENDOR_CMD_RAW_DATA,
 #endif
 	},
 };
@@ -2349,6 +2398,7 @@ static int wlanOpen(struct net_device *prDev)
 static int wlanStop(struct net_device *prDev)
 {
 	struct GLUE_INFO *prGlueInfo = NULL;
+	uint8_t fgNeedAbortScan = FALSE;
 
 	GLUE_SPIN_LOCK_DECLARATION();
 
@@ -2356,18 +2406,27 @@ static int wlanStop(struct net_device *prDev)
 
 	prGlueInfo = *((struct GLUE_INFO **) netdev_priv(prDev));
 
-	/* CFG80211 down, report to kernel directly and run normal
-	*  scan abort procedure
-	*/
-	GLUE_ACQUIRE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
-	if (prGlueInfo->prScanRequest) {
-		DBGLOG(INIT, INFO, "wlanStop abort scan!\n");
-		kalCfg80211ScanDone(prGlueInfo->prScanRequest, TRUE);
-		aisFsmStateAbort_SCAN(prGlueInfo->prAdapter,
-					wlanGetBssIdx(prDev));
+	if (!prGlueInfo) {
+		DBGLOG(INIT, WARN, "driver is not ready, prGlueInfo is NULL\n");
+	} else if (prGlueInfo->u4ReadyFlag == 0) {
+		DBGLOG(INIT, WARN, "driver is not ready, u4ReadyFlag = 0\n");
 		prGlueInfo->prScanRequest = NULL;
+	} else {
+		/* CFG80211 down, report to kernel directly and run normal
+		*  scan abort procedure
+		*/
+		GLUE_ACQUIRE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
+		if (prGlueInfo->prScanRequest) {
+			DBGLOG(INIT, INFO, "wlanStop abort scan!\n");
+			kalCfg80211ScanDone(prGlueInfo->prScanRequest, TRUE);
+			prGlueInfo->prScanRequest = NULL;
+			fgNeedAbortScan = TRUE;
+		}
+		GLUE_RELEASE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
+		if (fgNeedAbortScan)
+			aisFsmStateAbort_SCAN(prGlueInfo->prAdapter,
+							wlanGetBssIdx(prDev));
 	}
-	GLUE_RELEASE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
 
 	netif_tx_stop_all_queues(prDev);
 
@@ -2576,7 +2635,7 @@ void wlanUpdateDfsChannelTable(struct GLUE_INFO *prGlueInfo,
 		ARRAY_SIZE(mtk_5ghz_channels),
 		&ucNumOfChannel, aucChannelList);
 
-	if (ucRoleIdx >= 0 && ucRoleIdx < KAL_P2P_NUM)
+	if (ucRoleIdx < KAL_P2P_NUM)
 		prGlueP2pInfo = prGlueInfo->prP2PInfo[ucRoleIdx];
 	else
 		prGlueP2pInfo = prGlueInfo->prP2PInfo[0];
@@ -2666,8 +2725,8 @@ static int32_t wlanNetRegister(struct wireless_dev *prWdev)
 			prNetDevPrivate->ucIsP2p = FALSE;
 #endif
 #if CFG_MTK_MDDP_SUPPORT
-			/* only wlan0 supports mddp */
-			prNetDevPrivate->ucMddpSupport = (u4Idx == 0);
+			/* support both wlan0 and wlan1 */
+			prNetDevPrivate->ucMddpSupport = TRUE;
 #else
 			prNetDevPrivate->ucMddpSupport = FALSE;
 #endif
@@ -3105,6 +3164,7 @@ static void wlanDestroyAllWdev(void)
 	int i = 0;
 #endif
 #ifdef OPLUS_FEATURE_WIFI_OPLUSWFD
+    //CONNECTIVITY.WIFI.BASIC.26106,20200703
     DBGLOG(INIT, INFO, "wlanDestroyAllWdev");
     oplus_wfd_set_hdd_ctx(NULL);
 #endif
@@ -3254,6 +3314,13 @@ struct wireless_dev *wlanNetCreate(void *pvData,
 	if (prWdev == NULL) {
 		DBGLOG(INIT, ERROR,
 		       "No wireless dev exist, abort power on\n");
+		//#ifndef OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR
+		//conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+		//       "No wireless dev exist, abort power on\n");
+		//#else
+		conn_dbg_add_log(CONN_DBG_LOG_TYPE_HW_ERR,
+		       "wlan+wireless-dev-exist\n");
+		//#endif /* OPLUS_FEATURE_WIFI_HAREDWARE_ERROR_MONITOR */
 		return NULL;
 	}
 
@@ -3507,6 +3574,7 @@ void wlanNetDestroy(struct wireless_dev *prWdev)
 
 	ASSERT(prWdev);
 #ifdef OPLUS_FEATURE_WIFI_OPLUSWFD
+    //CONNECTIVITY.WIFI.BASIC.26106,20200703
     oplus_wfd_set_hdd_ctx(NULL);
 #endif
 	if (!prWdev) {
@@ -3758,7 +3826,7 @@ void reset_p2p_mode(struct GLUE_INFO *prGlueInfo)
 			FALSE, FALSE, TRUE, &u4BufLen);
 
 	if (rWlanStatus != WLAN_STATUS_SUCCESS)
-		prGlueInfo->prAdapter->fgIsP2PRegistered = FALSE;
+		p2pRemove(prGlueInfo);
 
 	DBGLOG(INIT, INFO,
 			"ret = 0x%08x\n", (uint32_t) rWlanStatus);
@@ -4376,7 +4444,7 @@ enum ENUM_ICS_LOG_LEVEL_T {
 };
 
 static uint32_t u4IcsLogOnOffCache;
-static uint32_t u4IcsLogLevelCache = ENUM_ICS_LOG_LEVEL_MAC;
+static uint32_t u4IcsLogLevelCache = ENUM_ICS_LOG_LEVEL_DISABLE;
 #endif /* CFG_SUPPORT_ICS */
 
 static uint32_t u4LogOnOffCache;
@@ -4975,7 +5043,7 @@ static int32_t wlanOnPreNetRegister(struct GLUE_INFO *prGlueInfo,
 	/* set MAC address */
 	if (!bAtResetFlow) {
 		uint32_t rStatus = WLAN_STATUS_FAILURE;
-		struct sockaddr MacAddr;
+		struct sockaddr MacAddr = {0};
 		uint32_t u4SetInfoLen = 0;
 		struct net_device *prDevHandler;
 
@@ -5497,6 +5565,14 @@ static int32_t wlanOnAtReset(void)
 #if (CFG_SUPPORT_STATISTICS == 1)
 		wlanWakeStaticsInit();
 #endif
+
+		if (prGlueInfo->i4TxPendingCmdNum != 0) {
+			DBGLOG(INIT, INFO, "wlanOnReset clear %d command\n",
+				prGlueInfo->i4TxPendingCmdNum);
+
+			kalClearCommandQueue(prAdapter->prGlueInfo, FALSE);
+		}
+
 		/* wlanNetCreate partial process */
 		QUEUE_INITIALIZE(&prGlueInfo->rCmdQueue);
 		prGlueInfo->i4TxPendingCmdNum = 0;
@@ -5940,6 +6016,7 @@ static int32_t wlanProbe(void *pvData, void *pvDriverData)
 		}
 	}
 #ifdef OPLUS_FEATURE_WIFI_OPLUSWFD
+//CONNECTIVITY.WIFI.BASIC.26106,20200703
     if (i4Status == 0) {
         oplus_wfd_set_hdd_ctx(gprWdev[0]);
         oplus_register_oplus_wfd_wlan_ops_mtk();
@@ -5998,8 +6075,10 @@ static void wlanRemove(void)
 #if CFG_SUPPORT_PERSIST_NETDEV
 	uint8_t i;
 #endif
+
 	DBGLOG(INIT, INFO, "Remove wlan!\n");
 #ifdef OPLUS_FEATURE_WIFI_OPLUSWFD
+    //CONNECTIVITY.WIFI.BASIC.26106,20200703
     oplus_wfd_set_hdd_ctx(NULL);
 #endif
 	kalSetHalted(TRUE);
@@ -6178,8 +6257,6 @@ static void wlanRemove(void)
 	kalMetRemoveProcfs();
 #endif
 
-	kalWlanUeventDeinit();
-
 #if CFG_MET_TAG_SUPPORT
 	if (GL_MET_TAG_UNINIT() != 0)
 		DBGLOG(INIT, ERROR, "MET_TAG_UNINIT error!\n");
@@ -6192,6 +6269,8 @@ static void wlanRemove(void)
 #endif
 
 	wlanAdapterStop(prAdapter, FALSE);
+
+	kalWlanUeventDeinit();
 
 	HAL_LP_OWN_SET(prAdapter, &fgResult);
 	DBGLOG(INIT, INFO, "HAL_LP_OWN_SET(%d)\n",

@@ -98,10 +98,8 @@
 #define NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_RADAR_DETECTED 60
 #define NL80211_VENDOR_SUBCMD_DFS_CAPABILITY 11
 #define NL80211_VENDOR_SUBCMD_GET_FEATURES 55
+#define QCA_NL80211_VENDOR_SUBCMD_ROAMING 9
 #define QCA_NL80211_VENDOR_SUBCMD_ROAM 64
-#define QCA_WLAN_VENDOR_ATTR_SETBAND_VALUE 12
-#define QCA_WLAN_VENDOR_ATTR_SETBAND_MASK 43
-#define QCA_WLAN_VENDOR_ATTR_MAX 44
 #define QCA_NL80211_VENDOR_SUBCMD_SETBAND 105
 #define NL80211_VENDOR_SUBCMD_NAN 12
 #define NL80211_VENDOR_SUBCMD_GET_APF_CAPABILITIES 14
@@ -111,6 +109,11 @@
 #define NL80211_VENDOR_SUBCMD_GET_TRX_STATS 48
 #define MTK_NL80211_OP_MODE_CHANGE 14
 #define MTK_NL80211_TRIGGER_RESET 15
+
+#define NL80211_VENDOR_SUBCMD_SET_TX_LAT_MONTR_PARAM 49
+
+#define NL80211_VENDOR_SUBCMD_GET_WFD_PRED_TX_BR 50
+#define NL80211_VENDOR_SUBCMD_SET_WFD_TX_BR_MONTR 51
 
 #define WIFI_VENDOR_ATTR_FEATURE_FLAGS 7
 #define WIFI_VENDOR_DATA_OP_MODE_CHANGE(bssIdx, channelBw, TxNss, RxNss) \
@@ -257,7 +260,41 @@ enum WIFI_STATS_ATTRIBUTE {
 	WIFI_ATTRIBUTE_STATS_TX  = 0,
 	WIFI_ATTRIBUTE_STATS_RX,
 	WIFI_ATTRIBUTE_STATS_CGS,
+	WIFI_ATTRIBUTE_STATS_TX_NUM,
+	WIFI_ATTRIBUTE_STATS_TX_TAG_LIST,
+	WIFI_ATTRIBUTE_STATS_RX_NUM,
+	WIFI_ATTRIBUTE_STATS_RX_TAG_LIST,
+	WIFI_ATTRIBUTE_STATS_CGS_NUM,
+	WIFI_ATTRIBUTE_STATS_CGS_TAG_LIST,
+	WIFI_ATTRIBUTE_STATS_VERSION,
 	WIFI_ATTRIBUTE_STATS_MAX,
+};
+
+#define TX_LAT_MONTR_INTVL_MIN		10
+#define TX_LAT_MONTR_INTVL_MAX		5000
+#define TX_LAT_MONTR_CRIT_MIN		1
+#define TX_LAT_MONTR_CRIT_MAX		1000
+
+enum WIFI_TX_LAT_MONTR_PARAMS_ATTRIBUTE {
+	WIFI_ATTR_TX_LAT_MONTR_INVALID = 0,
+	WIFI_ATTR_TX_LAT_MONTR_EN,
+	WIFI_ATTR_TX_LAT_MONTR_INTVL,
+	WIFI_ATTR_TX_LAT_MONTR_DRIVER_CRIT,
+	WIFI_ATTR_TX_LAT_MONTR_MAC_CRIT,
+	WIFI_ATTR_TX_LAT_MONTR_IS_AVG,
+	WIFI_ATTR_TX_LAT_MONTR_MAX,
+};
+
+enum WIFI_WFD_TX_BR_MONTR_ATTRIBUTE {
+	WIFI_ATTR_WFD_TX_BR_MONTR_INVALID = 0,
+	WIFI_ATTR_WFD_TX_BR_MONTR_EN,
+	WIFI_ATTR_WFD_TX_BR_MONTR_MAX,
+};
+
+enum WIFI_WFD_ATTRIBUTE {
+	WIFI_ATTR_WFD_CUR_TX_BR    = 0,
+	WIFI_ATTR_WFD_PRED_TX_BR   = 1,
+	WIFI_ATTR_WFD_MAX
 };
 
 enum WIFI_RSSI_MONITOR_ATTRIBUTE {
@@ -375,9 +412,32 @@ enum QCA_ATTR_ROAMING_PARAMS {
 	QCA_ATTR_ROAMING_PARAM_AFTER_LAST - 1,
 };
 
-enum QCA_ATTR_DFS_PARAMS {
+enum QCA_WLAN_ATTR {
 	/* used by NL80211_VENDOR_SUBCMD_DFS_CAPABILITY */
 	QCA_ATTR_DFS_CAPAB = 1,
+	/* used by QCA_NL80211_VENDOR_SUBCMD_ROAMING, u32 with values defined
+	 * by enum qca_roaming_policy.
+	 */
+	QCA_WLAN_VENDOR_ATTR_ROAMING_POLICY = 5,
+	QCA_WLAN_VENDOR_ATTR_MAC_ADDR = 6,
+	/* Unsigned 32-bit value from enum qca_set_band. The allowed values for
+	 * this attribute are limited to QCA_SETBAND_AUTO, QCA_SETBAND_5G, and
+	 * QCA_SETBAND_2G. This attribute is deprecated. Recommendation is to
+	 * use QCA_WLAN_VENDOR_ATTR_SETBAND_MASK instead.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SETBAND_VALUE = 12,
+	/* Unsigned 32-bitmask value from enum qca_set_band. Substitutes the
+	 * attribute QCA_WLAN_VENDOR_ATTR_SETBAND_VALUE for which only a subset
+	 * of single values from enum qca_set_band are valid. This attribute
+	 * uses bitmask combinations to define the respective allowed band
+	 * combinations and this attributes takes precedence over
+	 * QCA_WLAN_VENDOR_ATTR_SETBAND_VALUE if both attributes are included.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SETBAND_MASK = 43,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_MAX = QCA_WLAN_VENDOR_ATTR_AFTER_LAST - 1,
 };
 
 enum WIFI_VENDOR_ATTR_PREFERRED_FREQ_LIST {
@@ -483,7 +543,7 @@ extern const struct nla_policy nla_parse_wifi_rssi_monitor[
 		WIFI_ATTRIBUTE_RSSI_MONITOR_ATTRIBUTE_MAX + 1];
 extern const struct nla_policy nla_parse_wifi_attribute[
 		WIFI_ATTRIBUTE_MAX + 1];
-extern const struct nla_policy nal_parse_wifi_setband[
+extern const struct nla_policy qca_wlan_vendor_attr_policy[
 		QCA_WLAN_VENDOR_ATTR_MAX + 1];
 extern const struct nla_policy nla_get_version_policy[
 		LOGGER_ATTRIBUTE_MAX + 1];
@@ -501,6 +561,15 @@ extern const struct nla_policy qca_roaming_param_policy[
 
 extern const struct nla_policy nla_get_apf_policy[
 		APF_ATTRIBUTE_MAX + 1];
+
+extern const struct nla_policy nla_trx_stats_policy[
+	WIFI_ATTRIBUTE_STATS_MAX + 1];
+
+extern const struct nla_policy mtk_tx_lat_montr_param_policy[
+		WIFI_ATTR_TX_LAT_MONTR_MAX + 1];
+
+extern const struct nla_policy mtk_wfd_tx_br_montr_policy[
+		WIFI_ATTR_WFD_TX_BR_MONTR_MAX + 1];
 
 /*******************************************************************************
  *                           MACROS
@@ -1110,6 +1179,10 @@ int mtk_cfg80211_vendor_llstats_get_info(struct wiphy
 		*wiphy, struct wireless_dev *wdev,
 		const void *data, int data_len);
 
+int mtk_cfg80211_vendor_set_tx_lat_montr_param(struct wiphy
+		*wiphy, struct wireless_dev *wdev,
+		const void *data, int data_len);
+
 int mtk_cfg80211_vendor_set_band(struct wiphy *wiphy,
 				 struct wireless_dev *wdev,
 				 const void *data, int data_len);
@@ -1217,6 +1290,15 @@ int mtk_cfg80211_vendor_set_scan_param(struct wiphy *wiphy,
 		struct wireless_dev *wdev, const void *data, int data_len);
 
 int mtk_cfg80211_vendor_get_trx_stats(struct wiphy *wiphy,
+					   struct wireless_dev *wdev,
+					   const void *data,
+					   int data_len);
+
+int mtk_cfg80211_vendor_set_wfd_tx_br_montr(struct wiphy *wiphy,
+					   struct wireless_dev *wdev,
+					   const void *data,
+					   int data_len);
+int mtk_cfg80211_vendor_get_wfd_pred_tx_br(struct wiphy *wiphy,
 					   struct wireless_dev *wdev,
 					   const void *data,
 					   int data_len);

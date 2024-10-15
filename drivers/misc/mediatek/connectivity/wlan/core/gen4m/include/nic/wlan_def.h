@@ -814,6 +814,13 @@ enum ENUM_CHNL_SORT_POLICY {
 	CHNL_SORT_POLICY_BY_CH_DOMAIN
 };
 
+enum ENUM_STBC_MRC_STATE {
+	STBC_MRC_STATE_DISABLED = 0,
+	STBC_MRC_STATE_DISABLING,
+	STBC_MRC_STATE_ENABLING,
+	STBC_MRC_STATE_ENABLED,
+};
+
 /*----------------------------------------------------------------------------*/
 /* Information Element (IE) handlers                                          */
 /*----------------------------------------------------------------------------*/

@@ -205,7 +205,12 @@
 #define NIC_TX_MGMT_DEFAULT_RETRY_COUNT_LIMIT   30
 
 /* in unit of ms */
-#define NIC_TX_DEFAULT_REMAINING_TX_TIME	2000
+#if (CFG_SUPPORT_CONNAC2X == 0)
+   #define NIC_TX_DEFAULT_REMAINING_TX_TIME    0
+#else
+   #define NIC_TX_DEFAULT_REMAINING_TX_TIME    2000
+#endif
+
 #define NIC_TX_AC_BE_REMAINING_TX_TIME		NIC_TX_DEFAULT_REMAINING_TX_TIME
 #define NIC_TX_AC_BK_REMAINING_TX_TIME		NIC_TX_DEFAULT_REMAINING_TX_TIME
 #define NIC_TX_AC_VO_REMAINING_TX_TIME		NIC_TX_DEFAULT_REMAINING_TX_TIME
@@ -233,6 +238,7 @@
 	+ HW_MAC_TX_DESC_APPEND_T_LENGTH)
 
 #define NIC_MSDU_REPORT_DUMP_TIMEOUT		5	/* sec */
+#define NIC_MSDU_REPORT_TIMEOUT_SER_TIME	60	/* sec */
 
 /*------------------------------------------------------------------------*/
 /* Tx status related information                                          */

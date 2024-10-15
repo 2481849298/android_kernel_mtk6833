@@ -123,7 +123,9 @@ void p2pSetSuspendMode(struct GLUE_INFO *prGlueInfo, u_int8_t fgEnable)
 	if (!prGlueInfo)
 		return;
 
-	if (!prGlueInfo->prAdapter->fgIsP2PRegistered) {
+	if (!prGlueInfo->prAdapter->fgIsP2PRegistered ||
+		(prGlueInfo->prAdapter->rP2PNetRegState !=
+			ENUM_NET_REG_STATE_REGISTERED)) {
 		DBGLOG(INIT, INFO, "%s: P2P is not enabled, SKIP!\n", __func__);
 		return;
 	}
@@ -219,20 +221,40 @@ void p2pResumeStatisticsTimer(struct GLUE_INFO *prGlueInfo,
 /*---------------------------------------------------------------------------*/
 u_int8_t p2pLaunch(struct GLUE_INFO *prGlueInfo)
 {
-	if (prGlueInfo->prAdapter->fgIsP2PRegistered == TRUE) {
-		DBGLOG(P2P, INFO, "p2p is already registered\n");
+	struct ADAPTER *prAdapter = NULL;
+
+	GLUE_SPIN_LOCK_DECLARATION();
+
+	prAdapter = prGlueInfo->prAdapter;
+
+	ASSERT(prGlueInfo);
+	ASSERT(prAdapter);
+
+	GLUE_ACQUIRE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
+	if (prAdapter->rP2PRegState != ENUM_P2P_REG_STATE_UNREGISTERED) {
+		DBGLOG(P2P, INFO, "skip launch, p2p_state=%d, net_state=%d\n",
+			prAdapter->rP2PRegState,
+			prAdapter->rP2PNetRegState);
+		GLUE_RELEASE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
 		return FALSE;
 	}
+
+	prAdapter->rP2PRegState = ENUM_P2P_REG_STATE_REGISTERING;
+	GLUE_RELEASE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
 
 	if (!glRegisterP2P(prGlueInfo, ifname, ifname2, mode)) {
 		DBGLOG(P2P, ERROR, "Launch failed\n");
+		prAdapter->rP2PRegState = ENUM_P2P_REG_STATE_UNREGISTERED;
 		return FALSE;
 	}
 
-	prGlueInfo->prAdapter->fgIsP2PRegistered = TRUE;
-	prGlueInfo->prAdapter->p2p_scan_report_all_bss =
-		CFG_P2P_SCAN_REPORT_ALL_BSS;
-	DBGLOG(P2P, TRACE, "Launch success, fgIsP2PRegistered TRUE\n");
+	GLUE_ACQUIRE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
+	prAdapter->fgIsP2PRegistered = TRUE;
+	prAdapter->p2p_scan_report_all_bss = CFG_P2P_SCAN_REPORT_ALL_BSS;
+	prAdapter->rP2PRegState = ENUM_P2P_REG_STATE_REGISTERED;
+	DBGLOG(P2P, INFO, "Launch success, fgIsP2PRegistered TRUE\n");
+	GLUE_RELEASE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
+
 	return TRUE;
 }
 
@@ -292,22 +314,70 @@ void p2pSetMode(IN uint8_t ucAPMode)
 /*---------------------------------------------------------------------------*/
 u_int8_t p2pRemove(struct GLUE_INFO *prGlueInfo)
 {
+	struct ADAPTER *prAdapter = NULL;
 	u_int8_t idx = 0;
+	u_int32_t wait = 0;
 
 	GLUE_SPIN_LOCK_DECLARATION();
-	GLUE_ACQUIRE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
+
+	prAdapter = prGlueInfo->prAdapter;
+
+	ASSERT(prGlueInfo);
+	ASSERT(prAdapter);
 
 	g_P2pPrDev = NULL;
 
-	if (prGlueInfo->prAdapter->fgIsP2PRegistered == FALSE) {
-		DBGLOG(P2P, INFO, "p2p is not registered\n");
-		GLUE_RELEASE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
+	/* We must guarantee that all p2p net devices are unregistered with
+	 * kernel before the net devices are freed. Otherwise, when p2pLaunch
+	 * is invoked next time, we will get kernel exception because the old
+	 * p2p net devices registered to kernel were volatile.
+	 */
+retry:
+	wait = 0;
+	while (wait < 2000) {
+		/* p2p net devices are unregistered */
+		if (prAdapter->rP2PRegState == ENUM_P2P_REG_STATE_REGISTERED &&
+			prAdapter->rP2PNetRegState ==
+				ENUM_NET_REG_STATE_UNREGISTERED)
+			break;
+
+		/* p2p net devices are not unregistered yet */
+		if (prAdapter->rP2PRegState == ENUM_P2P_REG_STATE_REGISTERED &&
+			prAdapter->rP2PNetRegState ==
+				ENUM_NET_REG_STATE_REGISTERED) {
+			p2pNetUnregister(prGlueInfo, FALSE);
+			break;
+		}
+
+		kalMsleep(100);
+		wait += 100;
+	}
+
+	if (wait >= 2000) {
+		DBGLOG(P2P, INFO, "skip remove, p2p_state=%d, net_state=%d\n",
+			prAdapter->rP2PRegState,
+			prAdapter->rP2PNetRegState);
 		return FALSE;
 	}
 
-	prGlueInfo->prAdapter->fgIsP2PRegistered = FALSE;
-	prGlueInfo->prAdapter->p2p_scan_report_all_bss = FALSE;
+	/* Make sure that p2p is in registered state and p2p net is in
+	 * unregistered state before continuing the removal procedure.
+	 */
+	GLUE_ACQUIRE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
+	if (prAdapter->rP2PRegState == ENUM_P2P_REG_STATE_REGISTERED &&
+		prAdapter->rP2PNetRegState == ENUM_NET_REG_STATE_UNREGISTERED)
+		prAdapter->rP2PRegState = ENUM_P2P_REG_STATE_UNREGISTERING;
+	else {
+		/* Someone has changed p2p net register state. Try again. */
+		DBGLOG(P2P, INFO, "retry remove, p2p_state=%d, net_state=%d\n",
+			prAdapter->rP2PRegState,
+			prAdapter->rP2PNetRegState);
+		GLUE_RELEASE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
+		goto retry;
+	}
 	GLUE_RELEASE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
+
+	prAdapter->p2p_scan_report_all_bss = FALSE;
 
 	glUnregisterP2P(prGlueInfo, 0xff);
 
@@ -350,6 +420,11 @@ u_int8_t p2pRemove(struct GLUE_INFO *prGlueInfo)
 	if (gprP2pWdev[0] != NULL)
 		set_wiphy_dev(gprP2pWdev->wiphy, NULL);
 #endif
+
+	GLUE_ACQUIRE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
+	prAdapter->rP2PRegState = ENUM_P2P_REG_STATE_UNREGISTERED;
+	prAdapter->fgIsP2PRegistered = FALSE;
+	GLUE_RELEASE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
 
 	return TRUE;
 }

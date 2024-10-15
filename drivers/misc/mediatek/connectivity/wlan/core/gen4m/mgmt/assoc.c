@@ -2149,6 +2149,8 @@ void assocGenerateMDIE(IN struct ADAPTER *prAdapter,
 	struct FT_IES *prFtIEs = aisGetFtIe(prAdapter, ucBssIndex);
 	struct GL_WPA_INFO *prWpaInfo = aisGetWpaInfo(prAdapter,
 		ucBssIndex);
+	struct BSS_DESC *prBssDesc = aisGetTargetBssDesc(prAdapter,
+		ucBssIndex);
 
 	/* don't include MDIE in assoc request frame if auth mode is not FT
 	 * related
@@ -2162,9 +2164,10 @@ void assocGenerateMDIE(IN struct ADAPTER *prAdapter,
 		IW_AUTH_ALG_FT)) /* Non-RSN FT */
 		return;
 
+	if (!prBssDesc)
+		return;
+
 	if (!prFtIEs->prMDIE) {
-		struct BSS_DESC *prBssDesc =
-		    aisGetTargetBssDesc(prAdapter, ucBssIndex);
 		uint8_t *pucIE = &prBssDesc->aucIEBuf[0];
 		uint16_t u2IeLen = prBssDesc->u2IELength;
 		uint16_t u2IeOffSet = 0;

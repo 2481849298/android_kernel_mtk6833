@@ -376,6 +376,20 @@ static kal_uint16 ov64b2q_burst_write_cmos_sensor(
     return 0;
 }
 
+static void CalDacEeprom(void)
+{
+    kal_uint32 Dac_master = 0, Dac_mac = 0, Dac_inf = 0;
+
+    Dac_mac = (Eeprom_1ByteDataRead(0x93, 0xA0) << 8) | Eeprom_1ByteDataRead(0x92, 0xA0);
+    Dac_inf = (Eeprom_1ByteDataRead(0x95, 0xA0) << 8) | Eeprom_1ByteDataRead(0x94, 0xA0);
+    Dac_master = (5*Dac_mac+36*Dac_inf)/41;
+    printk("Dac_inf:%d Dac_Mac:%d Dac_master:%d\n", Dac_inf, Dac_mac, Dac_master);
+
+    memcpy(&gImgEepromInfo.camNormdata[2][28], &Dac_master, 4);
+    memcpy(&gImgEepromInfo.camNormdata[0][48], &Dac_mac, 4);
+    memcpy(&gImgEepromInfo.camNormdata[0][52], &Dac_inf, 4);
+}
+
 /*OVPD-1:720Bytes & Crosstalk 288Bytes*/
 static kal_uint16 ov64b_QSC_OVPD_setting[720*2];
 static kal_uint16 ov64b_QSC_CT_setting[288*2];
@@ -1004,6 +1018,7 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
             imgsensor.i2c_write_id, *sensor_id);
             read_EepromQSC();
             LOG_INF("RENM0_module_id=%d\n",imgsensor_info.module_id);
+            CalDacEeprom();
             Eeprom_DataInit(IMGSENSOR_SENSOR_IDX_MAIN, *sensor_id);
             return ERROR_NONE;
         }
@@ -2049,7 +2064,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
         }
         break;
     case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
-        *(MINT32 *)(signed long)(*(feature_data + 1)) = -17200000;
+        *(MINT32 *)(signed long)(*(feature_data + 1)) = -2700000;
         break;
     case SENSOR_FEATURE_GET_PIXEL_CLOCK_FREQ_BY_SCENARIO:
         switch (*feature_data) {

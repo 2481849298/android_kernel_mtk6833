@@ -455,6 +455,7 @@ struct CHIP_DBG_OPS soc7_0_DebugOps = {
 	.showPleInfo = connac2x_show_ple_info,
 	.showTxdInfo = connac2x_show_txd_Info,
 	.showWtblInfo = connac2x_show_wtbl_info,
+	.get_rssi_from_wtbl = connac2x_get_rssi_from_wtbl,
 	.showUmacFwtblInfo = connac2x_show_umac_wtbl_info,
 	.showCsrInfo = NULL,
 	.showDmaschInfo = connac2x_show_dmashdl_info,
@@ -1747,6 +1748,15 @@ static int wf_pwr_off_consys_mcu(void)
 	value |= CONN_SEMAPHORE_CONN_SEMA24_M0_OWN_REL_CONN_SEMA24_M0_OWN_REL_MASK;
 	wf_ioremap_write(CONN_SEMAPHORE_CONN_SEMA24_M0_OWN_REL_ADDR, value);
 
+	/* Clear WFSYS ccif irq with ack
+	 * Address: 0x1803_D014[7:0]
+	 * Data: 8'hFF
+	 * Action: write
+	 */
+	wf_ioremap_read(AP2WF_CONN_INFRA_ON_CCIF4_AP2WF_PCCIF_ACK_ADDR, &value);
+	value |= 0x000000FF;
+	wf_ioremap_write(AP2WF_CONN_INFRA_ON_CCIF4_AP2WF_PCCIF_ACK_ADDR, value);
+
 	/* Disable A-die top_ck_en_1
 	 * Address: 0x18003124[0]
 	 * Data: 1'b0
@@ -2009,7 +2019,7 @@ uint32_t soc7_0_wlanImageSectionDownloadStage(
 	u_int8_t fgIsNotDownload = FALSE;
 	uint32_t u4Status = WLAN_STATUS_SUCCESS;
 	struct mt66xx_chip_info *prChipInfo = prAdapter->chip_info;
-	struct patch_dl_target target;
+	struct patch_dl_target target = {0};
 	struct PATCH_FORMAT_T *prPatchHeader;
 	struct ROM_EMI_HEADER *prRomEmiHeader;
 	struct FWDL_OPS_T *prFwDlOps;
@@ -2618,6 +2628,12 @@ static void soc7_0_DumpOtherCr(struct ADAPTER *prAdapter)
 	DBGLOG(INIT, INFO, "MD_AOR_STATUS 0x10001BF4=[%x]\n", u4Val);
 
 	/* Dump WFDMA CR */
+	connac2x_DbgCrRead(NULL, 0x184be008, &u4Val);
+	DBGLOG(INIT, INFO, "WFDMA clock 0x184be008=[%x]\n", u4Val);
+	connac2x_DbgCrRead(NULL, 0x184c0800, &u4Val);
+	DBGLOG(INIT, INFO, "WFDMA rst 0x184c0800=[%x]\n", u4Val);
+	connac2x_DbgCrRead(NULL, 0x184c161c, &u4Val);
+	DBGLOG(INIT, INFO, "WPLL_RDY 0x184c161c=[%x]\n", u4Val);
 	connac2x_DumpCrRange(prAdapter, 0x18024200, 7, "WFDMA 0x18024200");
 	connac2x_DumpCrRange(prAdapter, 0x18024300, 16, "WFDMA 0x18024300");
 	connac2x_DumpCrRange(prAdapter, 0x18024380, 16, "WFDMA x18024380");
@@ -2693,6 +2709,8 @@ static int soc7_0_CheckBusHang(void *adapter, uint8_t ucWfResetEnable)
 	struct GLUE_INFO *prGlueInfo;
 	struct GL_HIF_INFO *prHifInfo;
 	struct ERR_RECOVERY_CTRL_T *prErrRecoveryCtrl;
+	uint32_t u4WfdmaRstVal = 0;
+	uint32_t u4WfdmaClockVal = 0;
 
 	WIPHY_PRIV(wlanGetWiphy(), prGlueInfo);
 	prAdapter = prGlueInfo->prAdapter;
@@ -2728,7 +2746,7 @@ static int soc7_0_CheckBusHang(void *adapter, uint8_t ucWfResetEnable)
  * 2. Check conn2wf sleep protect
 ` *  - 0x1800_1444[29] (sleep protect enable ready), should be 1'b0
  */
-		connac2x_DbgCrRead(prAdapter, 0x18001444, &u4Value);
+		wf_ioremap_read(0x18001444, &u4Value);
 		if (u4Value & BIT(29)) {
 			DBGLOG(HAL, ERROR, "0x18001444[29]=1'b1\n");
 			break;
@@ -2746,7 +2764,7 @@ static int soc7_0_CheckBusHang(void *adapter, uint8_t ucWfResetEnable)
  * 4. Check wf_mcusys bus hang irq status
 ` *  - 0x1802_362C[0] =1'b0
  */
-		connac2x_DbgCrRead(prAdapter, 0x1802362C, &u4Value);
+		wf_ioremap_read(0x1802362C, &u4Value);
 		if (u4Value & BIT(0)) {
 			set_wf_monflg_on_mailbox_wf();
 
@@ -2821,6 +2839,28 @@ static int soc7_0_CheckBusHang(void *adapter, uint8_t ucWfResetEnable)
 		} else if (ucWfResetEnable) {
 			g_IsWfsysBusHang = TRUE;
 			glResetWholeChipResetTrigger("wifi bus hang");
+		}
+	} else {
+		connac2x_DbgCrRead(NULL, 0x184be008, &u4WfdmaClockVal);
+		connac2x_DbgCrRead(NULL, 0x184c0800, &u4WfdmaRstVal);
+		if ((u4WfdmaClockVal == 0xdead0003) ||
+			(u4WfdmaRstVal == 0xdead0003)) {
+			soc7_0_DumpHostCr(prAdapter);
+		} else if ((u4WfdmaClockVal == 0xdead0001) ||
+			(u4WfdmaRstVal == 0xdead0001)) {
+			DBGLOG(INIT, INFO,
+				"clk 0x184be008=[%x] rst 0x184c0800=[%x]\n",
+				u4WfdmaClockVal, u4WfdmaRstVal);
+		} else if ((u4WfdmaClockVal & BIT(26)) &&
+			(!(u4WfdmaClockVal & BIT(9)))) {
+			DBGLOG(INIT, INFO,
+				"clk 0x184be008=[%x] rst 0x184c0800=[%x]\n",
+				u4WfdmaClockVal, u4WfdmaRstVal);
+		} else if ((!(u4WfdmaRstVal & BIT(2))) ||
+			(!(u4WfdmaRstVal & BIT(3)))) {
+			DBGLOG(INIT, INFO,
+				"clk 0x184be008=[%x] rst 0x184c0800=[%x]\n",
+				u4WfdmaClockVal, u4WfdmaRstVal);
 		}
 	}
 

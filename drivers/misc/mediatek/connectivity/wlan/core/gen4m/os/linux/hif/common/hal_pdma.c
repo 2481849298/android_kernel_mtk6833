@@ -682,6 +682,12 @@ u_int8_t halTxIsCmdBufEnough(IN struct ADAPTER *prAdapter)
 #endif
 #endif /* CFG_SUPPORT_CONNAC2X == 1 */
 
+	/* Port idx sanity */
+	if (u2Port >= NUM_OF_TX_RING) {
+		DBGLOG(HAL, ERROR, "Invalid Port[%u]\n", u2Port);
+		return FALSE;
+	}
+
 	prTxRing = &prHifInfo->TxRing[u2Port];
 
 	if (prTxRing->u4UsedCnt + 1 < TX_RING_SIZE)
@@ -854,9 +860,14 @@ void halInitMsduTokenInfo(IN struct ADAPTER *prAdapter)
 		prTokenInfo->aprTokenStack[u4Idx] = prToken;
 	}
 
-	prTokenInfo->u4MaxBssFreeCnt = HIF_TX_MSDU_TOKEN_NUM;
-	for (u4Idx = 0; u4Idx < MAX_BSSID_NUM; u4Idx++)
+	prTokenInfo->fgEnAdjustCtrl = false;
+	prTokenInfo->u4MinBssTxCredit = HIF_DEFAULT_MIN_BSS_TX_CREDIT;
+	prTokenInfo->u4MaxBssTxCredit = HIF_DEFAULT_MAX_BSS_TX_CREDIT;
+	for (u4Idx = 0; u4Idx < MAX_BSSID_NUM; u4Idx++) {
 		prTokenInfo->u4TxBssCnt[u4Idx] = 0;
+		prTokenInfo->u4LastTxBssCnt[u4Idx] = 0;
+		prTokenInfo->u4TxCredit[u4Idx] = prTokenInfo->u4MinBssTxCredit;
+	}
 
 	spin_lock_init(&prTokenInfo->rTokenLock);
 
@@ -909,9 +920,13 @@ void halUninitMsduTokenInfo(IN struct ADAPTER *prAdapter)
 
 	prTokenInfo->u4UsedCnt = 0;
 
-	prTokenInfo->u4MaxBssFreeCnt = HIF_DEFAULT_BSS_FREE_CNT;
-	for (u4Idx = 0; u4Idx < MAX_BSSID_NUM; u4Idx++)
+	prTokenInfo->u4MinBssTxCredit = HIF_DEFAULT_MIN_BSS_TX_CREDIT;
+	prTokenInfo->u4MaxBssTxCredit = HIF_DEFAULT_MAX_BSS_TX_CREDIT;
+	for (u4Idx = 0; u4Idx < MAX_BSSID_NUM; u4Idx++) {
 		prTokenInfo->u4TxBssCnt[u4Idx] = 0;
+		prTokenInfo->u4LastTxBssCnt[u4Idx] = 0;
+		prTokenInfo->u4TxCredit[u4Idx] = prTokenInfo->u4MinBssTxCredit;
+	}
 
 	DBGLOG(HAL, INFO, "Msdu Token Uninit: Tot[%u] Used[%u]\n",
 		HIF_TX_MSDU_TOKEN_NUM, prTokenInfo->u4UsedCnt);
@@ -958,9 +973,10 @@ struct MSDU_TOKEN_ENTRY *halAcquireMsduToken(IN struct ADAPTER *prAdapter,
 	prToken->fgInUsed = TRUE;
 	prTokenInfo->u4UsedCnt++;
 
+	prToken->ucBssIndex = ucBssIndex;
 	if (ucBssIndex < BSS_DEFAULT_NUM) {
-		prToken->ucBssIndex = ucBssIndex;
 		prTokenInfo->u4TxBssCnt[ucBssIndex]++;
+		prTokenInfo->u4LastTxBssCnt[ucBssIndex]++;
 	}
 
 	spin_unlock_irqrestore(&prTokenInfo->rTokenLock, flags);
@@ -1019,8 +1035,10 @@ static void halResetMsduToken(IN struct ADAPTER *prAdapter)
 		prTokenInfo->aprTokenStack[u4Idx] = prToken;
 	}
 	prTokenInfo->u4UsedCnt = 0;
-	for (u4Idx = 0; u4Idx < MAX_BSSID_NUM; u4Idx++)
+	for (u4Idx = 0; u4Idx < MAX_BSSID_NUM; u4Idx++) {
 		prTokenInfo->u4TxBssCnt[u4Idx] = 0;
+		prTokenInfo->u4LastTxBssCnt[u4Idx] = 0;
+	}
 }
 
 void halReturnMsduToken(IN struct ADAPTER *prAdapter, uint32_t u4TokenNum)
@@ -1220,69 +1238,117 @@ void halHifSwInfoUnInit(IN struct GLUE_INFO *prGlueInfo)
 }
 
 #if CFG_SUPPORT_TX_LATENCY_STATS
-void halAddDriverLatencyCount(IN struct ADAPTER *prAdapter,
-	uint32_t u4DriverLatency)
+static void countTxDelayOverLimit(IN struct ADAPTER *prAdapter,
+		IN enum ENUM_TX_OVER_LIMIT_DELAY_TYPE type,
+		IN uint32_t u4Latency)
 {
-	uint32_t *pMaxDriverDelay = prAdapter->rWifiVar.au4DriverTxDelayMax;
-	uint32_t *pDriverDelay =
-		prAdapter->rMsduReportStats.rCounting.au4DriverLatency;
-	int i;
+	struct TX_DELAY_OVER_LIMIT_REPORT_STATS *stats =
+			&prAdapter->rTxDelayOverLimitStats;
 
-	for (i = 0; i < LATENCY_STATS_MAX_SLOTS; i++, pDriverDelay++) {
-		if (u4DriverLatency <= *pMaxDriverDelay++) {
-			GLUE_INC_REF_CNT(*pDriverDelay);
-			break;
-		}
+	if (!stats->fgTxDelayOverLimitReportEnabled)
+		return;
+
+	if (stats->eTxDelayOverLimitStatsType == REPORT_AVERAGE) {
+		stats->u4Delay[type] += u4Latency;
+		stats->u4DelayNum[type]++;
+	} else if (u4Latency >= stats->u4DelayLimit[type] &&
+		   !stats->fgReported[type]) {
+		reportTxDelayOverLimit(prAdapter, type, u4Latency);
+		stats->fgReported[type] = true;
 	}
 }
 
-static void halAddConnsysLatencyCount(IN struct ADAPTER *prAdapter,
-	uint32_t u4ConnsysLatency)
+void halAddDriverLatencyCount(IN struct ADAPTER *prAdapter,
+		IN uint8_t ucBssIndex, IN uint32_t u4DriverLatency)
 {
-	uint32_t *pMaxConnsysDelay = prAdapter->rWifiVar.au4ConnsysTxDelayMax;
-	uint32_t *pConnsysDelay =
-		prAdapter->rMsduReportStats.rCounting.au4ConnsysLatency;
+	struct TX_LATENCY_STATS *prCounting;
+	uint32_t *pDriverDelay;
+	uint32_t *pMaxDriverDelay = prAdapter->rWifiVar.au4DriverTxDelayMax;
 	uint8_t i;
 
-	for (i = 0; i < LATENCY_STATS_MAX_SLOTS; i++, pConnsysDelay++) {
+	prCounting = &prAdapter->rMsduReportStats.rCounting;
+	prCounting->au8AccumulatedDelay[DRIVER_TX_DELAY][ucBssIndex] +=
+					u4DriverLatency;
+
+	pDriverDelay = prCounting->au4DriverLatency[ucBssIndex];
+
+	if (ucBssIndex >= BSSID_NUM)
+		return;
+
+	for (i = 0; i < LATENCY_STATS_MAX_SLOTS; i++) {
+		if (u4DriverLatency <= *pMaxDriverDelay++) {
+			GLUE_INC_REF_CNT(pDriverDelay[i]);
+			break;
+		}
+	}
+
+	countTxDelayOverLimit(prAdapter, DRIVER_DELAY, u4DriverLatency);
+}
+
+static void halAddConnsysLatencyCount(IN struct ADAPTER *prAdapter,
+		IN uint8_t ucBssIndex, IN uint32_t u4ConnsysLatency)
+{
+	struct TX_LATENCY_STATS *prCounting;
+	uint32_t *pConnsysDelay;
+	uint32_t *pMaxConnsysDelay = prAdapter->rWifiVar.au4ConnsysTxDelayMax;
+	uint8_t i;
+
+	prCounting = &prAdapter->rMsduReportStats.rCounting;
+	prCounting->au8AccumulatedDelay[CONNSYS_TX_DELAY][ucBssIndex] +=
+					u4ConnsysLatency;
+	pConnsysDelay = prCounting->au4ConnsysLatency[ucBssIndex];
+
+	for (i = 0; i < LATENCY_STATS_MAX_SLOTS; i++) {
 		if (u4ConnsysLatency <= *pMaxConnsysDelay++) {
-			GLUE_INC_REF_CNT(*pConnsysDelay);
+			GLUE_INC_REF_CNT(pConnsysDelay[i]);
 			break;
 		}
 	}
 }
 
 static void halAddTxFailConnsysLatencyCount(IN struct ADAPTER *prAdapter,
-	uint32_t u4ConnsysLatency)
+		IN uint8_t ucBssIndex, IN uint32_t u4ConnsysLatency)
 {
+	struct TX_LATENCY_STATS *prCounting;
+	uint32_t *pFailConnsysDelay;
 	uint32_t *pMaxFailConnsysDelay =
 		prAdapter->rWifiVar.au4ConnsysTxFailDelayMax;
-	uint32_t *pFailConnsysDelay =
-		prAdapter->rMsduReportStats.rCounting.au4FailConnsysLatency;
 	uint8_t i;
+
+	prCounting = &prAdapter->rMsduReportStats.rCounting;
+	prCounting->au8AccumulatedDelay[FAIL_CONNSYS_TX_DELAY][ucBssIndex] +=
+					u4ConnsysLatency;
+	pFailConnsysDelay = prCounting->au4FailConnsysLatency[ucBssIndex];
 
 	for (i = 0; i < LATENCY_STATS_MAX_SLOTS; i++) {
 		if (u4ConnsysLatency <= *pMaxFailConnsysDelay++) {
-			GLUE_INC_REF_CNT(*pFailConnsysDelay);
+			GLUE_INC_REF_CNT(pFailConnsysDelay[i]);
 			break;
 		}
 	}
 }
 
 static void halAddMacLatencyCount(IN struct ADAPTER *prAdapter,
-	uint32_t u4MacLatency)
+		IN uint8_t ucBssIndex, IN uint32_t u4MacLatency)
 {
-	uint32_t *pMaxMacDelay = prAdapter->rWifiVar.au4ConnsysTxFailDelayMax;
-	uint32_t *pMacDelay =
-		prAdapter->rMsduReportStats.rCounting.au4MacLatency;
+	struct TX_LATENCY_STATS *prCounting;
+	uint32_t *pMacDelay;
+	uint32_t *pMaxMacDelay = prAdapter->rWifiVar.au4MacTxDelayMax;
 	uint8_t i;
+
+	prCounting = &prAdapter->rMsduReportStats.rCounting;
+	prCounting->au8AccumulatedDelay[MAC_TX_DELAY][ucBssIndex] +=
+					u4MacLatency;
+	pMacDelay = prCounting->au4MacLatency[ucBssIndex];
 
 	for (i = 0; i < LATENCY_STATS_MAX_SLOTS; i++) {
 		if (u4MacLatency <= *pMaxMacDelay++) {
-			GLUE_INC_REF_CNT(*pMacDelay);
+			GLUE_INC_REF_CNT(pMacDelay[i]);
 			break;
 		}
 	}
+
+	countTxDelayOverLimit(prAdapter, MAC_DELAY, u4MacLatency);
 }
 #endif
 
@@ -1297,6 +1363,7 @@ static void halMsduReportStatsP0(IN struct ADAPTER *prAdapter,
 	uint32_t u4ConnsysLatency;
 	uint32_t u4MacLatency;
 	struct timespec64 rNowTs;
+	uint8_t ucBssIndex;
 
 	if (u4Token >= HIF_TX_MSDU_TOKEN_NUM)
 		return;
@@ -1304,6 +1371,10 @@ static void halMsduReportStatsP0(IN struct ADAPTER *prAdapter,
 	prTokenEntry = halGetMsduTokenEntry(prAdapter, u4Token);
 	prWifiVar = &prAdapter->rWifiVar;
 	report->fgTxLatencyEnabled = 1;
+	ucBssIndex = prTokenEntry->ucBssIndex;
+
+	if (ucBssIndex >= BSSID_NUM)
+		return;
 
 	/*
 	 * Driver latency counted in wlanTxLifetimeTagPacket,
@@ -1320,12 +1391,13 @@ static void halMsduReportStatsP0(IN struct ADAPTER *prAdapter,
 		(rNowTs.tv_nsec - prTokenEntry->rTs.tv_nsec) / NSEC_PER_MSEC;
 
 	u4MacLatency = msduToken->rFormatV3.rP0.u4TxCnt;
-	halAddMacLatencyCount(prAdapter, u4MacLatency);
+	halAddMacLatencyCount(prAdapter, ucBssIndex, u4MacLatency);
 
 	if (unlikely(msduToken->rFormatV3.rP0.u4Stat)) {
 		GLUE_INC_REF_CNT(stats->u4TxFail);
 		GLUE_INC_REF_CNT(report->u4ContinuousTxFail);
-		halAddTxFailConnsysLatencyCount(prAdapter, u4ConnsysLatency);
+		halAddTxFailConnsysLatencyCount(prAdapter, ucBssIndex,
+					u4ConnsysLatency);
 		if (prAdapter->rWifiVar.u4ContinuousTxFailThreshold <=
 			report->u4ContinuousTxFail) {
 			char uevent[64];
@@ -1336,7 +1408,8 @@ static void halMsduReportStatsP0(IN struct ADAPTER *prAdapter,
 			kalSendUevent(uevent);
 		}
 	} else {
-		halAddConnsysLatencyCount(prAdapter, u4ConnsysLatency);
+		halAddConnsysLatencyCount(prAdapter, ucBssIndex,
+					u4ConnsysLatency);
 		report->u4ContinuousTxFail = 0;
 	}
 
@@ -1805,7 +1878,14 @@ bool halWpdmaAllocTxRing(struct GLUE_INFO *prGlueInfo, uint32_t u4Num,
 		}
 
 		pTxD = (struct TXD_STRUCT *)prTxCell->AllocVa;
-		pTxD->DMADONE = 1;
+#if CFG_TRI_TX_RING
+		if (u4Num == TX_RING_CMD_IDX_4 || u4Num == TX_RING_FWDL_IDX_5)
+#else
+		if (u4Num == TX_RING_CMD_IDX_3 || u4Num == TX_RING_FWDL_IDX_4)
+#endif /* CFG_TRI_TX_RING */
+			pTxD->DMADONE = 0;
+		else
+			pTxD->DMADONE = 1;
 	}
 
 	DBGLOG(HAL, TRACE, "TxRing[%d]: total %d entry allocated\n",
@@ -2071,7 +2151,7 @@ u_int8_t halWpdmaWaitIdle(struct GLUE_INFO *prGlueInfo,
 	int32_t round, int32_t wait_us)
 {
 	int32_t i = 0;
-	union WPDMA_GLO_CFG_STRUCT GloCfg;
+	union WPDMA_GLO_CFG_STRUCT GloCfg = {0};
 
 	do {
 		kalDevRegRead(prGlueInfo, WPDMA_GLO_CFG, &GloCfg.word);
@@ -2317,6 +2397,13 @@ void halWpdmaProcessCmdDmaDone(IN struct GLUE_INFO *prGlueInfo,
 		pBuffer = prTxRing->Cell[u4SwIdx].pBuffer;
 		PacketPa = prTxRing->Cell[u4SwIdx].PacketPa;
 		pTxD = (struct TXD_STRUCT *) prTxRing->Cell[u4SwIdx].AllocVa;
+
+		if (prTxRing->u4UsedCnt == 0) {
+			DBGLOG(HAL, ERROR,
+			       "DMA done: port[%u] dma[%u] idx[%u] done[%u]\n",
+			       u2Port, u4DmaIdx, u4SwIdx, pTxD->DMADONE);
+			break;
+		}
 
 		if (pTxD->DMADONE == 0)
 			break;
@@ -2594,6 +2681,11 @@ static bool halWpdmaFillTxRing(struct GLUE_INFO *prGlueInfo,
 	u2Port = halTxRingDataSelect(
 		prGlueInfo->prAdapter, prToken->prMsduInfo);
 	prTxRing = &prHifInfo->TxRing[u2Port];
+
+	if (prTxRing->TxCpuIdx >= TX_RING_SIZE) {
+		DBGLOG(HAL, ERROR, "Error TxCpuIdx[%u]\n", prTxRing->TxCpuIdx);
+		return false;
+	}
 
 	pTxCell = &prTxRing->Cell[prTxRing->TxCpuIdx];
 	prToken->u4CpuIdx = prTxRing->TxCpuIdx;
@@ -3570,55 +3662,91 @@ void halNotifyMdCrash(IN struct ADAPTER *prAdapter)
 	}
 }
 
-bool halIsTxBssCntFull(struct ADAPTER *prAdapter, uint8_t ucBssIndex)
+uint32_t halGetBssTxCredit(struct ADAPTER *prAdapter, uint8_t ucBssIndex)
 {
 	struct GL_HIF_INFO *prHifInfo = NULL;
 	struct MSDU_TOKEN_INFO *prTokenInfo;
-	uint8_t aucStrBuf[MAX_BSSID_NUM * 20];
-	uint32_t u4Idx, u4Offset = 0;
-	uint32_t u4DebugLevel = 0;
-
-	ASSERT(prAdapter);
-	ASSERT(prAdapter->prGlueInfo);
 
 	prHifInfo = &prAdapter->prGlueInfo->rHifInfo;
 	prTokenInfo = &prHifInfo->rTokenInfo;
 
-	if (ucBssIndex >= MAX_BSSID_NUM ||
-	    prTokenInfo->u4TxBssCnt[ucBssIndex] < prTokenInfo->u4MaxBssFreeCnt)
-		return false;
+	if (!prTokenInfo->fgEnAdjustCtrl)
+		return prTokenInfo->u4MaxBssTxCredit;
 
-	wlanGetDriverDbgLevel(DBG_TX_IDX, &u4DebugLevel);
+	if (prTokenInfo->u4TxBssCnt[ucBssIndex] >
+	    prTokenInfo->u4TxCredit[ucBssIndex])
+		return 0;
 
-	if (u4DebugLevel & DBG_CLASS_TRACE) {
-		kalMemZero(aucStrBuf, MAX_BSSID_NUM * 20);
-		for (u4Idx = 0; u4Idx < MAX_BSSID_NUM; u4Idx++) {
-			u4Offset += kalSprintf(
-				aucStrBuf + u4Offset,
-				u4Idx == 0 ? "%u" : ":%u",
-				prTokenInfo->u4TxBssCnt[u4Idx]);
-		}
-
-		DBGLOG(HAL, TRACE, "Bss[%d] tx full, Cnt[%s]\n",
-			ucBssIndex, aucStrBuf);
-	}
-
-	return true;
+	return prTokenInfo->u4TxCredit[ucBssIndex] -
+		prTokenInfo->u4TxBssCnt[ucBssIndex];
 }
 
-void halSetTxRingBssTokenCnt(struct ADAPTER *prAdapter, uint32_t u4Cnt)
+static bool halIsHighCreditUsage(uint32_t u4Credit, uint32_t u4Used)
+{
+	return (u4Used * 100 / u4Credit) > HIF_TX_CREDIT_HIGH_USAGE;
+}
+
+static bool halIsLowCreditUsage(uint32_t u4Credit, uint32_t u4Used)
+{
+	return (u4Used * 100 / u4Credit) < HIF_TX_CREDIT_LOW_USAGE;
+}
+
+void halSetAdjustCtrl(struct ADAPTER *prAdapter, bool fgEn)
 {
 	struct GL_HIF_INFO *prHifInfo = NULL;
 	struct MSDU_TOKEN_INFO *prTokenInfo;
 
-	ASSERT(prAdapter);
-	ASSERT(prAdapter->prGlueInfo);
-
 	prHifInfo = &prAdapter->prGlueInfo->rHifInfo;
 	prTokenInfo = &prHifInfo->rTokenInfo;
 
-	prTokenInfo->u4MaxBssFreeCnt = u4Cnt ? u4Cnt : HIF_TX_MSDU_TOKEN_NUM;
+	if (prTokenInfo->fgEnAdjustCtrl != fgEn)
+		DBGLOG(HAL, INFO, "fgEnAdjustCtrl[%u].\n", fgEn);
 
-	DBGLOG(HAL, INFO, "SetTxRingBssTokenCnt=[%u].\n",
-	       prTokenInfo->u4MaxBssFreeCnt);
+	prTokenInfo->fgEnAdjustCtrl = fgEn;
+}
+
+void halAdjustBssTxCredit(struct ADAPTER *prAdapter, uint8_t ucBssIndex)
+{
+	struct GL_HIF_INFO *prHifInfo = NULL;
+	struct MSDU_TOKEN_INFO *prTokenInfo;
+	uint32_t u4Credit, u4Used, u4Delta = 0;
+
+	prHifInfo = &prAdapter->prGlueInfo->rHifInfo;
+	prTokenInfo = &prHifInfo->rTokenInfo;
+	u4Credit = prTokenInfo->u4TxCredit[ucBssIndex];
+	u4Used = prTokenInfo->u4TxBssCnt[ucBssIndex];
+
+	if (!prTokenInfo->fgEnAdjustCtrl)
+		return;
+
+	if (prTokenInfo->u4LastTxBssCnt[ucBssIndex] > u4Used)
+		u4Delta = prTokenInfo->u4LastTxBssCnt[ucBssIndex] - u4Used;
+
+	if (u4Delta == 0)
+		return;
+
+	if (halIsLowCreditUsage(u4Credit, u4Used) &&
+	    halIsHighCreditUsage(u4Credit, u4Delta)) {
+		u4Credit += HIF_TX_CREDIT_STEP_COUNT;
+	} else {
+		if (u4Credit > HIF_TX_CREDIT_STEP_COUNT)
+			u4Credit -= HIF_TX_CREDIT_STEP_COUNT;
+	}
+
+	if (u4Credit > prTokenInfo->u4MaxBssTxCredit)
+		u4Credit = prTokenInfo->u4MaxBssTxCredit;
+
+	if (u4Credit < prTokenInfo->u4MinBssTxCredit)
+		u4Credit = prTokenInfo->u4MinBssTxCredit;
+
+	if (u4Credit != prTokenInfo->u4TxCredit[ucBssIndex]) {
+		DBGLOG(HAL, TRACE,
+		       "adjust tx credit Bss[%u], [%u]->[%u], used[%u], delta[%u]\n",
+		       ucBssIndex, prTokenInfo->u4TxCredit[ucBssIndex],
+		       u4Credit, u4Used, u4Delta);
+		prTokenInfo->u4TxCredit[ucBssIndex] = u4Credit;
+	}
+
+	prTokenInfo->u4LastTxBssCnt[ucBssIndex] =
+		prTokenInfo->u4TxBssCnt[ucBssIndex];
 }

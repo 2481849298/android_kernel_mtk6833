@@ -16,6 +16,9 @@
 #ifndef _GC02M1_MIPI_RAW_H
 #define _GC02M1_MIPI_RAW_H
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 
 typedef enum{
     IMGSENSOR_MODE_INIT,

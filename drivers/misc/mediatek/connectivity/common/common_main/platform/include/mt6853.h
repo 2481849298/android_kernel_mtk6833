@@ -16,11 +16,9 @@
 #define CONSYS_PWR_ON_OFF_API_AVAILABLE	1
 #define CONSYS_RC_MODE_ENABLE		1
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
-#define COMMON_KERNEL_EMI_MPU_SUPPORT	1
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 #define COMMON_KERNEL_PMIC_SUPPORT	1
 #else
-#define COMMON_KERNEL_EMI_MPU_SUPPORT	0
 #define COMMON_KERNEL_PMIC_SUPPORT	0
 #endif
 
@@ -293,6 +291,12 @@
 #define SPI_TOP_ADDR	0x50
 #define SPI_TOP_WDAT	0x54
 #define SPI_TOP_RDAT	0x58
+
+/**********************************************************************/
+/* Base: conn_mcu_btif_0 (0x180a_2000) */
+/**********************************************************************/
+#define CONN_MCU_BTIF_0_BASE	0x180a2000
+#define BTIF_WAK_ADDR_OFFSET	0x64
 
 /**********************************************************************/
 /* Base: conn_mcu_cfg_on_base (0x180a_3000) */

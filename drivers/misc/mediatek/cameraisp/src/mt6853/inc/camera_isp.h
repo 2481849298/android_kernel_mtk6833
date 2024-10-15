@@ -1,15 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (C) 2016 MediaTek Inc.
  */
+
 
 #ifndef _MT_ISP_H
 #define _MT_ISP_H
@@ -61,6 +54,7 @@ extern void mt_irq_set_polarity(unsigned int irq, unsigned int polarity);
 
 #define ISP_REG_RANGE           (0x8000)
 #define ISPSV_REG_RANGE         (0x1000)
+#define USERKEY_STR_LEN 32
 
 /* In order with the suquence of device nodes defined in dtsi */
 /* in dtsi rule, one hw module should mapping to one node. */
@@ -209,7 +203,7 @@ struct ISP_WAIT_IRQ_STRUCT {
 struct ISP_REGISTER_USERKEY_STRUCT {
 	int userKey;
 	/* this size must the same as the icamiopipe api - registerIrq(...) */
-	char userName[32];
+	char userName[USERKEY_STR_LEN];
 };
 
 struct ISP_CLEAR_IRQ_ST {

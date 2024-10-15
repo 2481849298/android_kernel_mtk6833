@@ -158,13 +158,6 @@ static VOID wmt_lib_assert_work_cb(struct work_struct *work);
 *                              F U N C T I O N S
 ********************************************************************************
 */
-INT32 __weak mtk_wcn_consys_stp_btif_dpidle_ctrl(UINT32 en_flag)
-{
-	WMT_ERR_FUNC("mtk_wcn_consys_stp_btif_dpidle_ctrl is not define!!!\n");
-
-	return 0;
-}
-
 INT32 wmt_lib_wlan_lock_aquire(VOID)
 {
 	return osal_lock_sleepable_lock(&gDevWmt.wlan_lock);
@@ -2645,6 +2638,7 @@ UINT8 *wmt_lib_get_fwinfor_from_emi(UINT8 section, UINT32 offset, UINT8 *buf, UI
 			WMT_ERR_FUNC("wmt-lib: get EMI virtual base address fail\n");
 		} else {
 			#ifndef OPLUS_BUG_STABILITY
+			//CONNECTIVITY.WIFI.BASE.LOG.1120881, 2017/09/27,
 			//Remove for reduce useless log.
 			WMT_INFO_FUNC("vir addr(0x%p)\n", pAddr);
 			#endif /* OPLUS_BUG_STABILITY */
@@ -2682,6 +2676,7 @@ UINT8 *wmt_lib_get_fwinfor_from_emi(UINT8 section, UINT32 offset, UINT8 *buf, UI
 				WMT_ERR_FUNC("wmt-lib: get EMI virtual base address fail\n");
 			} else {
 				#ifndef OPLUS_BUG_STABILITY
+				//CONNECTIVITY.WIFI.BASE.LOG.1120881, 2017/09/27,
 				//Remove for reduce useless log.
 				WMT_INFO_FUNC("vir addr(0x%p)\n", pAddr);
 				#endif /* OPLUS_BUG_STABILITY */

@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2016 MediaTek Inc.
  */
 
 #include <linux/fdtable.h>
@@ -378,7 +370,7 @@ struct ion_handle *ccu_ion_import_handle(int fd)
 	handle = ion_import_dma_buf_fd(_ccu_ion_client, fd);
 	LOG_INF_MUST("ccu_ion_import_fd : %d, %s : 0x%p\n",
 		fd, __func__, handle);
-	if (!(handle)) {
+	if (IS_ERR(handle)) {
 		LOG_ERR("ccu import ion handle failed!\n");
 		return NULL;
 	}

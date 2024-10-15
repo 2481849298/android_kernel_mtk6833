@@ -3058,7 +3058,7 @@ static kal_uint32 set_test_pattern_mode(kal_bool enable)
 		write_cmos_sensor(0x0b04, 0x00D9);
 		write_cmos_sensor(0x0C0a, 0x0100);
 	} else {
-		write_cmos_sensor(0x0b04, 0x009C);
+		write_cmos_sensor(0x0b04, 0x0094);
 		write_cmos_sensor(0x0C0a, 0x0000);
 	}
 	spin_lock(&imgsensor_drv_lock);
@@ -3188,7 +3188,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 
 	/*add for ITS--sensor_fusion*/
 	case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
-		*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -26475000;
+		*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -210000;
 		break;
 
 	case SENSOR_FEATURE_GET_PERIOD_BY_SCENARIO:

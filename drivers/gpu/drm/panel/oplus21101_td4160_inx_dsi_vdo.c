@@ -40,9 +40,8 @@
 #endif
 
 #include <mt-plat/mtk_boot_common.h>
-#include <soc/oppo/oppo_project.h>
 static char bl_tb0[] = { 0x51, 0xff };
-extern int tp_control_irq(bool enable, int mode);
+extern int __attribute((weak)) tp_control_irq(bool enable, int mode) { return 0; };
 extern int __attribute((weak)) tp_gesture_enable_flag(void) { return 0; };
 extern unsigned int __attribute((weak)) is_project(int project)  { return 0; }
 /*****************************************************************************
@@ -63,7 +62,7 @@ static void cabc_switch(void *dsi, dcs_write_gce cb,
                 void *handle, unsigned int cabc_mode);
 /* #endif */
 static int backlight_gamma = 0;
-extern int tp_control_reset_gpio(bool enable);
+extern int __attribute((weak)) tp_control_reset_gpio(bool enable) { return 0; };
 extern unsigned int g_shutdown_flag;
 static int last_powerflag = 0;
 
@@ -248,6 +247,7 @@ static void lcm_panel_init(struct lcm *ctx)
 	lcm_dcs_write_seq_static(ctx, 0xB0, 0x04);
 	lcm_dcs_write_seq_static(ctx, 0xB8, 0x02, 0x4a, 0x06, 0x00, 0x04, 0x5a);
 	lcm_dcs_write_seq_static(ctx, 0xB9, 0x02, 0x4a, 0x18, 0x00, 0x09, 0xb4);
+	lcm_dcs_write_seq_static(ctx, 0xF0, 0xC6, 0x1B, 0x15);
 	lcm_dcs_write_seq_static(ctx, 0xCE, 0x16, 0x40, 0x60, 0x78, 0x87, 0x94, 0x9e, 0xab, 0xb8, \
 	0xc4,0xcd, 0xd6, 0xde, 0xe5, 0xec, 0xf3, 0xff, 0x07, 0x0F, 0x04, 0x04, 0x00, 0x04, 0x8C);
 	lcm_dcs_write_seq_static(ctx, 0xEB, 0x07, 0xd0, 0x7d, 0x0e, 0x11, 0x01, 0x08, 0x00);
@@ -518,6 +518,8 @@ static struct mtk_panel_params ext_params = {
 		.vfp = 1205,
 		.pll_clk = 451,
 	},
+	.vendor = "td4160_inx",
+	.manufacture = "INX",
 	//.oplus_teot_ns_multiplier = 90,
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
@@ -547,6 +549,8 @@ static struct mtk_panel_params ext_params_90hz = {
 		.vfp = 260,
 		.pll_clk = 451,
 	},
+        .vendor = "td4160_inx",
+        .manufacture = "INX",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -612,7 +616,7 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 		level = 2047;
 	}
 
-	if(level < 14 && level > 0){
+	if (level < 14 && level > 0) {
 		backlight_gamma = 1;
 		cb(dsi, handle, bl_tb8, ARRAY_SIZE(bl_tb8));
 		cb(dsi, handle, bl_tb4, ARRAY_SIZE(bl_tb4));
@@ -629,7 +633,7 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 		cb(dsi, handle, bl_tb21, ARRAY_SIZE(bl_tb21));
 		cb(dsi, handle, bl_tb22, ARRAY_SIZE(bl_tb22));
 		cb(dsi, handle, bl_tb23, ARRAY_SIZE(bl_tb23));
-	}else if(level > 13 && backlight_gamma == 1){
+	} else if (level > 13 && backlight_gamma == 1) {
 		backlight_gamma = 0;
 		cb(dsi, handle, bl_tb8, ARRAY_SIZE(bl_tb8));
 		cb(dsi, handle, bl_tb5, ARRAY_SIZE(bl_tb5));
@@ -646,9 +650,8 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 		cb(dsi, handle, bl_tb34, ARRAY_SIZE(bl_tb34));
 		cb(dsi, handle, bl_tb35, ARRAY_SIZE(bl_tb35));
 		cb(dsi, handle, bl_tb36, ARRAY_SIZE(bl_tb36));
-	}else if(level == 0){
+	} else if (level == 0) {
 		backlight_gamma = 0;
-
 	}
 
         bl_tb0[1] = level >> 8;
@@ -675,7 +678,7 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 	return 0;
 }
 
-static int oppo_esd_backlight_check(void *dsi, dcs_write_gce cb,
+static int oplus_esd_backlight_check(void *dsi, dcs_write_gce cb,
 		void *handle)
 {
 	char bl_tb0[] = {0x51, 0x07, 0xff};
@@ -715,6 +718,17 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 	int ret = 0;
 	struct drm_display_mode *m = get_mode_by_id(panel, mode);
 	pr_err("%s ,%d\n", __func__,mode);
+
+	if (!m) {
+		pr_err("%s, get mode failed\n", __func__);
+		return 1;
+	}
+
+	if (!ext) {
+		pr_err("%s, find_panel_ext failed\n", __func__);
+		return 1;
+	}
+
 	if (mode == 0)
 		ext->params = &ext_params;
 	else if (mode == 1)
@@ -751,10 +765,9 @@ static void cabc_switch(void *dsi, dcs_write_gce cb,
 	char bl_tb0[] = {0x55, 0x00};
 	char bl_tb3[] = {0x53, 0x24};
 	pr_err("%s cabc = %d\n", __func__, cabc_mode);
-	if(cabc_mode == 3)
-               cabc_mode = 2;
+	if (cabc_mode == 3)
+		cabc_mode = 2;
 	bl_tb0[1] = (u8)cabc_mode;
-    msleep(5);
 	cb(dsi, handle, bl_tb3, ARRAY_SIZE(bl_tb3));//FB 01
 	cb(dsi, handle, bl_tb0, ARRAY_SIZE(bl_tb0));//55 0X
 /* #ifdef OPLUS_BUG_STABILITY */
@@ -777,7 +790,7 @@ static int panel_ext_reset(struct drm_panel *panel, int on)
 static struct mtk_panel_funcs ext_funcs = {
 	.reset = panel_ext_reset,
 	.set_backlight_cmdq = lcm_setbacklight_cmdq,
-	.esd_backlight_recovery = oppo_esd_backlight_check,
+	.esd_backlight_recovery = oplus_esd_backlight_check,
 	.panel_poweron = lcm_panel_poweron,
 	.panel_poweroff = lcm_panel_poweroff,
 	.ext_param_set = mtk_panel_ext_param_set,

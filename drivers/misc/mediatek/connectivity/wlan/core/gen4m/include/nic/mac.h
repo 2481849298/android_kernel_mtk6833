@@ -3017,6 +3017,29 @@ struct WLAN_PUBLIC_VENDOR_ACTION_FRAME {
 	uint8_t ucPubSubType;
 } __KAL_ATTRIB_PACKED__;
 
+/* Vendor Specific Action frame format */
+struct WLAN_VENDOR_SPECIFIC_ACTION_FRAME {
+	/* Action MAC header */
+	uint16_t u2FrameCtrl;	/* Frame Control */
+	uint16_t u2DurationID;	/* Duration */
+	uint8_t aucDestAddr[MAC_ADDR_LEN];	/* DA */
+	uint8_t aucSrcAddr[MAC_ADDR_LEN];	/* SA */
+	uint8_t aucBSSID[MAC_ADDR_LEN];	/* BSSID */
+	uint16_t u2SeqCtrl;	/* Sequence Control */
+	/* Action frame body */
+	uint8_t ucCategory;	/* Category: should be 0x7f */
+	uint8_t ucOUI[3];
+	uint8_t ucActionDetails[1];	/* Action details */
+} __KAL_ATTRIB_PACKED__;
+
+struct WLAN_VENDOR_SPECIFIC_ACTION_FRAME_PROTO_SUBTYPE {
+		/* WLAN_VENDOR_SPECIFIC_ACTION_FRAME header */
+	uint8_t ucProto[3];	/* proto type */
+	uint8_t ucVersion;	/* Version */
+	uint8_t ucReserve[2];	/* Reserve */
+	uint8_t ucActionType;	/* ActionType */
+	uint8_t ucActionBody[1];	/* Action data details */
+}__KAL_ATTRIB_PACKED__;
 
 /* 7.4.1.1 Spectrum Measurement Request frame format */
 struct ACTION_SM_REQ_FRAME {
@@ -4019,8 +4042,8 @@ struct RSNX_INFO_ELEM {
 	} while (FALSE)
 
 #define IE_FOR_EACH(_pucIEsBuf, _u2IEsBufLen, _u2Offset) \
-for ((_u2Offset) = 0;	\
-	((((_u2Offset) + 2) <= (_u2IEsBufLen)) && \
+for ((_u2Offset) = 0U;	\
+	((((_u2Offset) + 2U) <= (_u2IEsBufLen)) && \
 	(((_u2Offset) + IE_SIZE(_pucIEsBuf)) <= (_u2IEsBufLen))); \
 	(_u2Offset) += IE_SIZE(_pucIEsBuf), (_pucIEsBuf) += IE_SIZE(_pucIEsBuf))
 

@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -117,7 +109,7 @@ static int _ccu_config_m4u_port(void)
 	int ret = 0;
 
 #if defined(CONFIG_MTK_M4U)
-	struct M4U_PORT_STRUCT port;
+	struct m4u_port_config_struct port;
 
 	port.ePortID = CCUG_OF_M4U_PORT;
 	port.Virtuality = 1;
@@ -1423,22 +1415,6 @@ int ccu_i2c_ctrl(unsigned char i2c_write_id, int transfer_len)
 	LOG_DBG("-:%s\n", __func__);
 
 	return 0;
-}
-
-int ccu_read_info_reg(int regNo)
-{
-	int *offset;
-
-	if (regNo < 0 || regNo >= 32) {
-		LOG_ERR("invalid regNo");
-		return 0;
-	}
-
-	offset = (int *)(uintptr_t)(ccu_base + 0x60 + regNo * 4);
-
-	LOG_DBG("%s: %x\n", __func__, (unsigned int)(*offset));
-
-	return *offset;
 }
 
 void ccu_set_sensor_info(int32_t sensorType,  struct ccu_sensor_info *info)

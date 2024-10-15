@@ -49,6 +49,9 @@
 #define LOG_INF(format, args...)pr_info(PFX "[%s] " format, __func__, ##args)
 
 static DEFINE_SPINLOCK(imgsensor_drv_lock);
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 #ifndef EVEN_HLT_FRONT_S5K4H7_OTP_ENABLE
 #define EVEN_HLT_FRONT_S5K4H7_OTP_ENABLE
 #endif
@@ -64,10 +67,17 @@ static DEFINE_SPINLOCK(imgsensor_drv_lock);
 #define I2C_BUFFER_LEN 3
 #endif
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 static kal_uint32 pre_frame_length;
 static uint8_t pre_frame_flag = 0;
 static uint8_t litter_first = 0;
+#endif
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define DEVICE_VERSION_EVEN_HLT_FRONT_S5K4H7    "even_hlt_front_s5k4h7"
+static kal_uint32 streaming_control(kal_bool enable);
+static uint8_t deviceInfo_register_value;
+#endif
 
 #ifdef EVEN_HLT_FRONT_S5K4H7_OTP_ENABLE
 #define EVEN_HLT_FRONT_S5K4H7_MODULE_ID 0x09//hlt
@@ -180,7 +190,11 @@ static struct imgsensor_info_struct imgsensor_info = {
 	#ifdef EVEN_HLT_FRONT_S5K4H7_OTP_ENABLE
 	.module_id = EVEN_HLT_FRONT_S5K4H7_MODULE_ID,
 	#endif
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+	.i2c_addr_table = {0x20},
+#else
 	.i2c_addr_table = {0x20, 0xff},
+#endif
 	.i2c_speed = 400,
 };
 
@@ -702,8 +716,10 @@ static kal_uint16 even_hlt_front_s5k4h7_init_setting[] = {
 	0x3026, 0x9A,
 	0x302D, 0x0B,
 	0x302E, 0x09,
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	0x392F, 0x01,
 	0x3930, 0x80,
+#endif
 };
 
 static kal_uint16 even_hlt_front_s5k4h7_preview_setting[] = {
@@ -1113,6 +1129,21 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 		printk("even_hlt_front_s5k4h7 get_umgsensor_id: 0x%x\n",*sensor_id );
 		if (*sensor_id == 0x487D) {
 			*sensor_id = imgsensor_info.sensor_id;
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+			/*
+			 * 2017/10/18 add for register device info
+			 */
+			imgsensor_info.module_id = even_hlt_front_s5k4h7_get_module_id();
+			/*
+			 * 20180126 remove to adapt with mt6771
+			 */
+			if (deviceInfo_register_value == 0x00) {
+				register_imgsensor_deviceinfo("Cam_f",
+					DEVICE_VERSION_EVEN_HLT_FRONT_S5K4H7,
+					imgsensor_info.module_id);
+				deviceInfo_register_value = 0x01;
+			}
+#endif
 			LOG_INF(
 				"i2c write id: 0x%x, sensor id: 0x%x module_id 0x%x\n",
 				imgsensor.i2c_write_id, *sensor_id,
@@ -1179,7 +1210,9 @@ static kal_uint32 open(void)
 
 #if 0
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	bool otp_flag = 0;
+#endif
 
 	LOG_INF("%s imgsensor.enable_secure %d\n",
 		__func__, imgsensor.enable_secure);
@@ -1238,6 +1271,13 @@ static kal_uint32 open(void)
 
 	/* initail sequence write in  */
 	sensor_init();
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+	otp_flag = even_hlt_front_s5k4h7_otp_update();
+	if (otp_flag)
+		LOG_INF("Load otp succeed\n");
+	else
+		LOG_INF("Load otp failed\n");
+#endif
 	spin_lock(&imgsensor_drv_lock);
 
 	imgsensor.autoflicker_en = KAL_FALSE;

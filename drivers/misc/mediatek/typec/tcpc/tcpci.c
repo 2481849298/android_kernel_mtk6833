@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include "inc/tcpci.h"
@@ -115,6 +107,30 @@ int tcpci_check_vsafe0v(
 #endif
 
 	return ret;
+}
+
+int tcpci_get_chip_id(struct tcpc_device *tcpc,uint32_t *chip_id)
+{
+	if (tcpc->ops->get_chip_id == NULL)
+		return -ENOTSUPP;
+
+	return tcpc->ops->get_chip_id(tcpc,chip_id);
+}
+
+int tcpci_get_chip_pid(struct tcpc_device *tcpc,uint32_t *chip_pid)
+{
+	if (tcpc->ops->get_chip_pid == NULL)
+		return -ENOTSUPP;
+
+	return tcpc->ops->get_chip_pid(tcpc,chip_pid);
+}
+
+int tcpci_get_chip_vid(struct tcpc_device *tcpc,uint32_t *chip_vid)
+{
+	if (tcpc->ops->get_chip_vid == NULL)
+		return -ENOTSUPP;
+
+	return tcpc->ops->get_chip_vid(tcpc,chip_vid);;
 }
 
 int tcpci_alert_status_clear(
@@ -329,6 +345,13 @@ int tcpci_set_watchdog(struct tcpc_device *tcpc, bool en)
 {
 	int rv = 0;
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+/********* workaround MO.230913213000256759: sc6607 workaround for pd abnormal start*********/
+	if (tcpc->ops->set_watchdog)
+		rv = tcpc->ops->set_watchdog(tcpc, en);
+	return rv;
+/********* workaround MO.230913213000256759: sc6607 workaround for pd abnormal end*********/
+#endif
 	if (tcpc->tcpc_flags & TCPC_FLAGS_WATCHDOG_EN)
 		if (tcpc->ops->set_watchdog)
 			rv = tcpc->ops->set_watchdog(tcpc, en);
@@ -401,6 +424,29 @@ int tcpci_notify_cable_type(struct tcpc_device *tcpc)
 }
 #endif /* CONFIG_CABLE_TYPE_DETECTION */
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+int tcpci_notify_switch_get_state(struct tcpc_device *tcpc, bool (*pfunc)(int))
+{
+	struct tcp_notify tcp_noti;
+
+	tcp_noti.switch_get_status.pfunc = pfunc;
+	return tcpc_check_notify_time(tcpc, &tcp_noti, TCP_NOTIFY_IDX_MISC,
+				TCP_NOTIFY_SWITCH_GET_STATE);
+}
+EXPORT_SYMBOL(tcpci_notify_switch_get_state);
+
+int tcpci_notify_switch_set_state(struct tcpc_device *tcpc, bool state, bool (*pfunc)(int))
+{
+	struct tcp_notify tcp_noti;
+
+	tcp_noti.switch_set_status.state = state;
+	tcp_noti.switch_set_status.pfunc = pfunc;
+	pr_err("%s state: %d\n", __func__, state);
+	return tcpc_check_notify_time(tcpc, &tcp_noti, TCP_NOTIFY_IDX_MISC,
+			TCP_NOTIFY_SWITCH_SET_STATE);
+}
+EXPORT_SYMBOL(tcpci_notify_switch_set_state);
+#endif
 #ifdef CONFIG_USB_POWER_DELIVERY
 
 int tcpci_set_msg_header(struct tcpc_device *tcpc,
@@ -694,15 +740,6 @@ int tcpci_enable_auto_discharge(struct tcpc_device *tcpc, bool en)
 
 	return ret;
 }
-
-#ifdef OPLUS_FEATURE_CHG_BASIC
-int tcpci_enable_bleed_discharge(struct tcpc_device *tcpc, bool en)
-{
-	if (tcpc->ops->set_bleed_discharge)
-		return tcpc->ops->set_bleed_discharge(tcpc, en);
-	return 0;
-}
-#endif /* OPLUS_FEATURE_CHG_BASIC */
 
 static int __tcpci_enable_force_discharge(
 	struct tcpc_device *tcpc, bool en, int mv)

@@ -373,7 +373,7 @@ u_int8_t glResetTrigger(struct ADAPTER *prAdapter,
 		(uint16_t)(u2FwPeerVersion >> 8),
 		(uint16_t)(u2FwPeerVersion & BITS(0, 7)));
 
-	prAdapter->u4HifDbgFlag |= DEG_HIF_DEFAULT_DUMP;
+	prAdapter->u4HifDbgFlag |= DEG_HIF_ALL;
 	halPrintHifDbgInfo(prAdapter);
 
 #if CFG_WMT_RESET_API_SUPPORT

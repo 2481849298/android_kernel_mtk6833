@@ -2681,6 +2681,8 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 		(imgsensor_info.custom4.linelength - 80))*
 		imgsensor_info.custom4.grabwindow_width;
 		break;
+		default:
+		break;
 		}
 	}
 

@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2021 MediaTek Inc.
+*/
 
 #ifndef __I2C_CHARGER_RT9458_H
 #define __I2C_CHARGER_RT9458_H
@@ -28,7 +20,7 @@ struct rt9458_platform_data {
 };
 
 enum rt9458_chg_stat {
-	RT9458_CHG_STAT_READY = 0,
+	RT9458_CHG_STAT_READY,
 	RT9458_CHG_STAT_PROGRESS,
 	RT9458_CHG_STAT_DONE,
 	RT9458_CHG_STAT_FAULT,

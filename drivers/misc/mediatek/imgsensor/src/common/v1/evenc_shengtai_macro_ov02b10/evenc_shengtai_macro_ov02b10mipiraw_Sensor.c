@@ -22,7 +22,7 @@
 #include <linux/types.h>
 /*#include <linux/hardware_info.h>*/
 #include "evenc_shengtai_macro_ov02b10mipiraw_Sensor.h"
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 
 #ifndef OPLUS_FEATURE_CAMERA_COMMON
 #define OPLUS_FEATURE_CAMERA_COMMON
@@ -196,6 +196,7 @@ static struct SENSOR_WINSIZE_INFO_STRUCT imgsensor_winsize_info[6] = {
     {1600, 1200, 0, 0, 1600, 1200, 1600, 1200, 0000, 0000, 1600, 1200, 0, 0, 1600, 1200}  /* custom 24fps */
 };
 
+// #ifdef VENDOR_EDIT
 //
 // static kal_uint16 read_module_id(void)
 // {

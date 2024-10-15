@@ -353,7 +353,7 @@
 
     vcammainaf-supply = <&mt_pmic_vtp_ldo_reg>;
 
-	cam0_enable_sensor = "hi1336_mipi_raw_blade hi5021sqt_mipi_raw_blade";
+	cam0_enable_sensor = "hi1336_mipi_raw_blade hi5021sqt_mipi_raw_blade s5kjn103_mipi_raw_blade";
 	cam1_enable_sensor = "hi556_mipi_raw_blade sc800cs_mipi_raw_blade";
 	cam2_enable_sensor = "c2599_mipi_mono_blade sc201cs_mipi_raw_blade";
 	cam3_enable_sensor = "bf20a1_mipi_raw_blade gc030a_mipi_raw_blade sc201cs_mipi_mono_blade";

@@ -136,6 +136,7 @@ static const CONNINFRA_DEV_DBG_FUNC conninfra_dev_dbg_func[] = {
 char g_dump_buf[CONNINFRA_DBG_DUMP_BUF_SIZE];
 char *g_dump_buf_ptr;
 int g_dump_buf_len;
+static int g_dump_buf_write_len;
 static OSAL_SLEEPABLE_LOCK g_dump_lock;
 
 #if CONNINFRA_DBG_SUPPORT
@@ -196,6 +197,7 @@ int conninfra_dbg_reg_read(int par1, int par2, int par3)
 				sz : CONNINFRA_DBG_DUMP_BUF_SIZE - g_dump_buf_len;
 		strncpy(g_dump_buf + g_dump_buf_len, buf, sz);
 		g_dump_buf_len += sz;
+		g_dump_buf_write_len = g_dump_buf_len;
 	}
 
 	osal_unlock_sleepable_lock(&g_dump_lock);
@@ -495,7 +497,7 @@ static inline char* conninfra_dbg_spi_subsys_string(enum sys_spi_subsystem subsy
 		"SYS_SPI_MAX"
 	};
 
-	if (subsystem < 0 || subsystem > SYS_SPI_MAX)
+	if (subsystem > SYS_SPI_MAX)
 		return "UNKNOWN";
 
 	return subsys_name[subsystem];
@@ -530,7 +532,7 @@ static int conninfra_dbg_spi_read(int par1, int par2, int par3)
 
 	get_lock_ret = osal_lock_sleepable_lock(&g_dump_lock);
 	if (get_lock_ret) {
-		pr_err("[%] dump lock fail, ret=%d", get_lock_ret);
+		pr_notice("[%s] dump lock fail, ret=%d", __func__, get_lock_ret);
 		return 0;
 	}
 
@@ -540,7 +542,10 @@ static int conninfra_dbg_spi_read(int par1, int par2, int par3)
 			sz : CONNINFRA_DBG_DUMP_BUF_SIZE - g_dump_buf_len - 1;
 		strncpy(g_dump_buf + g_dump_buf_len, buf, sz);
 		g_dump_buf_len += sz;
-		g_dump_buf[g_dump_buf_len] = '\0';
+		if (g_dump_buf_len >= 0) {
+			g_dump_buf[g_dump_buf_len] = '\0';
+			g_dump_buf_write_len = g_dump_buf_len;
+		}
 	}
 	osal_unlock_sleepable_lock(&g_dump_lock);
 
@@ -646,6 +651,7 @@ static int conninfra_dbg_dump_power_state(int par1, int par2, int par3)
 	if (len > 0 && len < CONNINFRA_DBG_DUMP_BUF_SIZE) {
 		g_dump_buf_ptr = g_dump_buf;
 		g_dump_buf_len = len + 1;
+		g_dump_buf_write_len = g_dump_buf_len;
 	}
 
 	osal_unlock_sleepable_lock(&g_dump_lock);
@@ -666,7 +672,8 @@ ssize_t conninfra_dbg_read(struct file *filp, char __user *buf, size_t count, lo
 	if (g_dump_buf_len == 0)
 		goto exit;
 
-	if (*f_pos == 0)
+	/* first read, move ptr to the begin */
+	if (g_dump_buf_write_len == g_dump_buf_len)
 		g_dump_buf_ptr = g_dump_buf;
 
 	dump_len = g_dump_buf_len >= count ? count : g_dump_buf_len;
@@ -680,7 +687,7 @@ ssize_t conninfra_dbg_read(struct file *filp, char __user *buf, size_t count, lo
 	*f_pos += dump_len;
 	g_dump_buf_len -= dump_len;
 	g_dump_buf_ptr += dump_len;
-	pr_info("conninfra_dbg:after read,wmt for dump info buffer len(%d)\n", g_dump_buf_len);
+	pr_info("conninfra_dbg:after read, wmt for dump info buffer len(%d)\n", g_dump_buf_len);
 
 	ret = dump_len;
 exit:

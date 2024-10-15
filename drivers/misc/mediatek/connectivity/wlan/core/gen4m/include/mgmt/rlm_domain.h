@@ -621,6 +621,7 @@
 
 /* Define Tx Power Control Channel Type */
 //#ifndef OPLUS_FEATURE_WIFI_SAR
+//CONNECTIVITY.WIFI.HARDWARE.SAR.1785313 , 2021/09/07
 //Modify for: change Tx Power scenario name length to 32 for framework wifi sar scenario
 //#define MAX_TX_PWR_CTRL_ELEMENT_NAME_SIZE	16
 //#else
@@ -769,6 +770,7 @@ enum ENUM_POWER_ANT_TAG {
 	POWER_ANT_ALL_T = 0,
 	POWER_ANT_MIMO_1T,
 	POWER_ANT_MIMO_2T,
+	POWER_ANT_ALL_T_6G,
 	POWER_ANT_TAG_NUM
 };
 
@@ -780,6 +782,15 @@ enum ENUM_POWER_ANT_BAND {
 	POWER_ANT_5G_BAND4,
 	POWER_ANT_BAND_NUM
 };
+
+enum ENUM_POWER_ANT_6G_BAND {
+	POWER_ANT_6G_BAND1 = 0,
+	POWER_ANT_6G_BAND2,
+	POWER_ANT_6G_BAND3,
+	POWER_ANT_6G_BAND4,
+	POWER_ANT_6G_BAND_NUM
+};
+
 
 enum ENUM_POWER_ANT_PARA {
 	POWER_ANT_WF0 = 0,
@@ -812,6 +823,10 @@ struct TX_PWR_CTRL_ANT_SETTING {
 	int8_t aiPwrAnt5GB2[POWER_ANT_NUM];
 	int8_t aiPwrAnt5GB3[POWER_ANT_NUM];
 	int8_t aiPwrAnt5GB4[POWER_ANT_NUM];
+	int8_t aiPwrAnt6GB1[POWER_ANT_NUM];
+	int8_t aiPwrAnt6GB2[POWER_ANT_NUM];
+	int8_t aiPwrAnt6GB3[POWER_ANT_NUM];
+	int8_t aiPwrAnt6GB4[POWER_ANT_NUM];
 };
 #endif
 
@@ -1059,6 +1074,7 @@ struct COUNTRY_POWER_LIMIT_GROUP_TABLE {
 };
 
 //#ifdef OPLUS_FEATURE_WIFI_CUSTOMER_NVRAM
+//#CONNECTIVITY.WIFI.HARDWARE.FTM.1948379, Add for distinguish country power limit at runtime.
 struct oplus_country_pwr_limit {
     uint32_t project;
     uint16_t tableSize;
@@ -1071,13 +1087,18 @@ struct oplus_country_pwr_limit_he {
     struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION_HE *pwrLimitTableHE;
 };
 
+struct oplus_country_pwr_limit_hebw160 {
+    uint32_t project;
+    uint16_t tableSize;
+    struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION_HE_BW160 *pwrLimitTableHEBW160;
+};
+
 struct oplus_country_pwr_limit_default {
     uint32_t project;
     uint16_t tableSize;
     struct COUNTRY_POWER_LIMIT_TABLE_DEFAULT *pwrLimitTableDefault;
 };
 //#endif
-
 #endif /* CFG_SUPPORT_PWR_LIMIT_COUNTRY */
 
 #if (CFG_SUPPORT_SINGLE_SKU == 1)
@@ -1305,6 +1326,10 @@ int32_t txPwrParseTagMimo2T(
 	char *pStart, char *pEnd, uint8_t cTagParaNum,
 	struct TX_PWR_CTRL_ELEMENT *pRecord);
 int32_t txPwrParseTagAllT(
+	char *pStart, char *pEnd, uint8_t cTagParaNum,
+	struct TX_PWR_CTRL_ELEMENT *pRecord);
+
+int32_t txPwrParseTagAllT6G(
 	char *pStart, char *pEnd, uint8_t cTagParaNum,
 	struct TX_PWR_CTRL_ELEMENT *pRecord);
 #endif

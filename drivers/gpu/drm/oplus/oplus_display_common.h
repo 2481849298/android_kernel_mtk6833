@@ -26,4 +26,5 @@ int oplus_display_panel_set_esd(void *buf);
 int oplus_display_panel_get_esd(void *buf);
 int oplus_display_set_aod_area(void *buf);
 unsigned int oplus_get_ssc_config_data(void);
+int oplus_display_panel_get_panel_bpp(void *buf);
 #endif /*_OPLUS_DISPLAY_COMMON_H_*/

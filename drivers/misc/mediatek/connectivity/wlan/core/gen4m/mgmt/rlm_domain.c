@@ -71,10 +71,12 @@
 #include "precomp.h"
 #include "rlm_txpwr_init.h"
 //#ifdef OPLUS_FEATURE_WIFI_CUSTOMER_NVRAM
+//#CONNECTIVITY.WIFI.HARDWARE.FTM.1948379, Add for distinguish wifi.cfg at runtime.
 #include <soc/oplus/system/oplus_project.h>
 //#endif /* OPLUS_FEATURE_WIFI_CUSTOMER_NVRAM */
 
 //#ifdef OPLUS_BUG_COMPATIBILITY
+//PSW.CN.WiFi.BASIC.HARDWARE.2014076, 2021/08/18
 //Add new region cfg implementation
 #include "oplus_rlm_domain.h"
 //#endif /* OPLUS_BUG_COMPATIBILITY */
@@ -135,13 +137,21 @@ struct TX_PWR_TAG_TABLE {
 		"ALL_T",
 		(POWER_ANT_BAND_NUM * POWER_ANT_NUM),
 		txPwrParseTagAllT
+	},
+	{
+		"ALL_T_6G",
+		(POWER_ANT_6G_BAND_NUM * POWER_ANT_NUM),
+		txPwrParseTagAllT6G
 	}
 };
 #endif
 
 #endif
-
+#if IS_ENABLED(CONFIG_ARM64)
 #define PWR_BUF_LEN 1024
+#else
+#define PWR_BUF_LEN 768
+#endif
 
 /*******************************************************************************
  *                             D A T A   T Y P E S
@@ -183,6 +193,7 @@ char *g_au1TxPwrDefaultSetting[] = {
 static const uint16_t g_u2CountryGroup0[] = { COUNTRY_CODE_JP };
 
 //#ifndef OPLUS_FEATURE_WIFI_CHANNEL
+//CONNECTIVITY.WIFI.HARDWARE.CHANNEL.2929100, 2022/04/07
 //Channel V3.6: GT & CR classified into US group
 /*
 static const uint16_t g_u2CountryGroup1[] = {
@@ -192,7 +203,12 @@ static const uint16_t g_u2CountryGroup1[] = {
 	COUNTRY_CODE_CR, COUNTRY_CODE_GD, COUNTRY_CODE_GT,
 	COUNTRY_CODE_KI, COUNTRY_CODE_LB, COUNTRY_CODE_LR, COUNTRY_CODE_MN,
 	COUNTRY_CODE_AN, COUNTRY_CODE_NI, COUNTRY_CODE_PW, COUNTRY_CODE_WS,
-	COUNTRY_CODE_TT
+	COUNTRY_CODE_LK, COUNTRY_CODE_TT, COUNTRY_CODE_MM, COUNTRY_CODE_LR,
+	COUNTRY_CODE_CK, COUNTRY_CODE_CU, COUNTRY_CODE_TL, COUNTRY_CODE_FO,
+	COUNTRY_CODE_GI, COUNTRY_CODE_GG, COUNTRY_CODE_IR, COUNTRY_CODE_IM,
+	COUNTRY_CODE_JE, COUNTRY_CODE_KP, COUNTRY_CODE_MH, COUNTRY_CODE_NU,
+	COUNTRY_CODE_NF, COUNTRY_CODE_PS, COUNTRY_CODE_PN, COUNTRY_CODE_PM,
+	COUNTRY_CODE_SS, COUNTRY_CODE_SD, COUNTRY_CODE_SY, COUNTRY_CODE_MN
 };
 */
 //#else
@@ -211,6 +227,7 @@ static const uint16_t g_u2CountryGroup2[] = {
 };
 
 //#ifndef OPLUS_FEATURE_WIFI_CHANNEL
+//CONNECTIVITY.WIFI.HARDWARE.CHANNEL.2929100, 2022/04/07
 //Channel V3.6:Added EU country channel configuration;PK open 5G B1/B2/B3, classified into EU group
 /*
 static const uint16_t g_u2CountryGroup3[] = {
@@ -252,6 +269,7 @@ static const uint16_t g_u2CountryGroup3[] = {
 //#endif /* OPLUS_FEATURE_WIFI_CHANNEL */
 
 //#ifndef OPLUS_FEATURE_WIFI_CHANNEL
+//CONNECTIVITY.WIFI.HARDWARE.CHANNEL.2929100, 2022/04/07
 //Channel V3.6:Added EU country channel configuration
 /*
 static const uint16_t g_u2CountryGroup4[] = {
@@ -292,7 +310,7 @@ static const uint16_t g_u2CountryGroup4[] = {
 //#endif /* OPLUS_FEATURE_WIFI_CHANNEL */
 
 static const uint16_t g_u2CountryGroup5[] = {
-	COUNTRY_CODE_AU, COUNTRY_CODE_EC, COUNTRY_CODE_PY,
+	COUNTRY_CODE_AU, COUNTRY_CODE_PY,
 	COUNTRY_CODE_UY
 };
 
@@ -323,12 +341,13 @@ static const uint16_t g_u2CountryGroup12[] = { COUNTRY_CODE_AF };
 static const uint16_t g_u2CountryGroup13[] = { COUNTRY_CODE_NG };
 
 //#ifndef OPLUS_FEATURE_WIFI_CHANNEL
+//CONNECTIVITY.WIFI.HARDWARE.CHANNEL.2929100, 2022/04/07
 //Channel V3.6:PK open 5G B1/B2/B3, classified into EU group
 /*
 static const uint16_t g_u2CountryGroup14[] = {
-	COUNTRY_CODE_BF, COUNTRY_CODE_GY, COUNTRY_CODE_PK,
-	COUNTRY_CODE_HT, COUNTRY_CODE_JM, COUNTRY_CODE_MW,
-	COUNTRY_CODE_RW, COUNTRY_CODE_KN, COUNTRY_CODE_TZ
+	COUNTRY_CODE_PK, COUNTRY_CODE_BF, COUNTRY_CODE_GY, COUNTRY_CODE_HT,
+	COUNTRY_CODE_JM, COUNTRY_CODE_MO, COUNTRY_CODE_MW, COUNTRY_CODE_RW,
+	COUNTRY_CODE_KN, COUNTRY_CODE_TZ, COUNTRY_CODE_BD
 };
 */
 //#else
@@ -343,7 +362,7 @@ static const uint16_t g_u2CountryGroup15[] = { COUNTRY_CODE_ID };
 
 static const uint16_t g_u2CountryGroup16[] = {
 	COUNTRY_CODE_AO, COUNTRY_CODE_BZ, COUNTRY_CODE_BJ, COUNTRY_CODE_BT,
-	COUNTRY_CODE_BO, COUNTRY_CODE_BI, COUNTRY_CODE_CM, COUNTRY_CODE_CF,
+	COUNTRY_CODE_BI, COUNTRY_CODE_CM, COUNTRY_CODE_CF,
 	COUNTRY_CODE_TD, COUNTRY_CODE_KM, COUNTRY_CODE_CD, COUNTRY_CODE_CG,
 	COUNTRY_CODE_CI, COUNTRY_CODE_DJ, COUNTRY_CODE_GQ, COUNTRY_CODE_ER,
 	COUNTRY_CODE_FJ, COUNTRY_CODE_GA, COUNTRY_CODE_GM, COUNTRY_CODE_GN,
@@ -356,6 +375,7 @@ static const uint16_t g_u2CountryGroup16[] = {
 };
 
 //#ifndef OPLUS_FEATURE_WIFI_CHANNEL
+//CONNECTIVITY.WIFI.HARDWARE.CHANNEL.2929100, 2022/04/07
 //Channel V3.6: GT & CR classified into US group
 /*
 static const uint16_t g_u2CountryGroup17[] = {
@@ -364,7 +384,7 @@ static const uint16_t g_u2CountryGroup17[] = {
 */
 //#else
 static const uint16_t g_u2CountryGroup17[] = {
-	COUNTRY_CODE_US, COUNTRY_CODE_CO, COUNTRY_CODE_PA, COUNTRY_CODE_GT, COUNTRY_CODE_CR, COUNTRY_CODE_BR, COUNTRY_CODE_CL, COUNTRY_CODE_PE
+	COUNTRY_CODE_US, COUNTRY_CODE_CO, COUNTRY_CODE_PA, COUNTRY_CODE_GT, COUNTRY_CODE_CR, COUNTRY_CODE_BR, COUNTRY_CODE_CL, COUNTRY_CODE_PE, COUNTRY_CODE_EC
 };
 //#endif /* OPLUS_FEATURE_WIFI_CHANNEL */
 
@@ -392,11 +412,14 @@ static const uint16_t g_u2CountryGroup22[] = {
 	COUNTRY_CODE_TW
 };
 
+//CONNECTIVITY.WIFI.BASIC.HARDWARE.110126, 2020/07/17,
 //Modify for disable channel 12/13 in Mexico
 static const uint16_t g_u2CountryGroup23[] = {
     COUNTRY_CODE_MX, COUNTRY_CODE_CA
 };
 //#endif /* OPLUS_BUG_COMPATIBILITY */
+
+static const uint16_t g_u2CountryGroup24[] = { COUNTRY_CODE_BO };
 
 #if (CFG_SUPPORT_SINGLE_SKU == 1)
 struct mtk_regd_control g_mtk_regd_control = {
@@ -527,8 +550,8 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{121, BAND_5G, CHNL_SPAN_20, 100, 12, TRUE}
 			,			/* CH_SET_UNII_WW_100_144 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
-			,			/* 6G_CH_1_233 */
+			{131, BAND_6G, CHNL_SPAN_20, 1, 24, FALSE}
+			,			/* 6G_CH_1_93 */
 #endif
 			{125, BAND_NULL, 0, 0, 0, FALSE}
 				/* CH_SET_UNII_UPPER_NA */
@@ -540,7 +563,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
@@ -550,7 +572,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -562,7 +584,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
@@ -572,7 +593,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 4, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_161 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -584,7 +605,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
@@ -594,7 +614,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -606,7 +626,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
@@ -616,8 +635,8 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* CH_SET_UNII_UPPER_NA */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
-			,			/* 6G_CH_1_233 */
+			{131, BAND_6G, CHNL_SPAN_20, 1, 24, FALSE}
+			,			/* 6G_CH_1_93 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
 		}
@@ -628,7 +647,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
@@ -641,7 +659,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 						/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
 			,
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 						/* 6G_CH_1_233 */
 #endif
 		}
@@ -652,7 +670,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
@@ -662,7 +679,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -674,7 +691,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
@@ -684,7 +700,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -696,7 +712,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
@@ -706,8 +721,8 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
-			,			/* 6G_CH_1_233 */
+			{131, BAND_6G, CHNL_SPAN_20, 1, 24, FALSE}
+			,			/* 6G_CH_1_93 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
 		}
@@ -718,7 +733,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
@@ -728,7 +742,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 4, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_161 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -740,7 +754,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
@@ -750,7 +763,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* CH_SET_UNII_UPPER_NA */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -762,7 +775,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_NULL, 0, 0, 0, FALSE}
@@ -772,7 +784,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -784,7 +796,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_NULL, 0, 0, 0, FALSE}
@@ -794,7 +805,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* CH_SET_UNII_UPPER_NA */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -806,7 +817,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* CH_SET_UNII_LOW_NA */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
@@ -816,7 +826,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -828,7 +838,6 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
 			,			/* CH_SET_2G4_1_13 */
-
 			{115, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* CH_SET_UNII_LOW_NA */
 			{118, BAND_NULL, 0, 0, 0, FALSE}
@@ -838,7 +847,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -859,7 +868,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 4, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_161 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -880,7 +889,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* CH_SET_UNII_UPPER_NA */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -925,7 +934,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 						/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
 			,
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 						/* 6G_CH_1_233 */
 #endif
 		}
@@ -945,7 +954,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
+			{131, BAND_NULL, 0, 0, 0, FALSE}
 			,			/* 6G_CH_1_233 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -966,14 +975,15 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 #if (CFG_SUPPORT_WIFI_6G == 1)
-			{131, BAND_6G, CHNL_SPAN_20, 1, 59, FALSE}
-			,			/* 6G_CH_1_233 */
+			{131, BAND_6G, CHNL_SPAN_20, 1, 24, FALSE}
+			,			/* 6G_CH_1_93 */
 #endif
 			{0, BAND_NULL, 0, 0, 0, FALSE}
 		}
 	}
 	,
 	//#ifndef OPLUS_BUG_COMPATIBILITY
+    //CONNECTIVITY.WIFI.BASIC.HARDWARE.1067549, 2018/08/8
     //Add for: set WiFi band over the world
 	{
 		 (uint16_t *) g_u2CountryGroup21, sizeof(g_u2CountryGroup21) / 2,
@@ -1012,6 +1022,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		}
 	}
 	,
+	//ONNECTIVITY.WIFI.BASIC.HARDWARE.110126, 2020/07/17,
 	//Modify for disable channel 12/13 in Mexico
 	{
 		(uint16_t *) g_u2CountryGroup23, sizeof(g_u2CountryGroup23) / 2,
@@ -1029,6 +1040,27 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			,			/* CH_SET_UNII_WW_132_140 */
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 				/* CH_SET_UNII_UPPER_149_165 */
+		}
+	}
+	,
+	{
+		(uint16_t *) g_u2CountryGroup24, sizeof(g_u2CountryGroup24) / 2,
+		{
+			{81, BAND_2G4, CHNL_SPAN_5, 1, 11, FALSE}
+			,			/* CH_SET_2G4_1_11 */
+			{115, BAND_NULL, 0, 0, 0, FALSE}
+			,			/* CH_SET_UNII_LOW_NA */
+			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
+			,			/* CH_SET_UNII_MID_52_64 */
+			{121, BAND_NULL, 0, 0, 0, FALSE}
+			,			/* CH_SET_UNII_WW_NA */
+			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
+			,			/* CH_SET_UNII_UPPER_149_165 */
+#if (CFG_SUPPORT_WIFI_6G == 1)
+			{131, BAND_NULL, 0, 0, 0, FALSE}
+			,			/* 6G_CH_1_233 */
+#endif
+			{0, BAND_NULL, 0, 0, 0, FALSE}
 		}
 	}
 	,
@@ -1137,6 +1169,7 @@ struct SUBBAND_CHANNEL g_rRlmSubBand[] = {
 };
 
 //#ifdef OPLUS_FEATURE_WIFI_CUSTOMER_NVRAM
+//CONNECTIVITY.WIFI.HARDWARE.FTM.1948379, Add for distinguish country power limit at runtime.
 struct oplus_country_pwr_limit g_oplusCountryPwrLimit[] = {
     {20761, sizeof(g_rRlmPowerLimitConfiguration_20761)/sizeof(g_rRlmPowerLimitConfiguration_20761[0]), g_rRlmPowerLimitConfiguration_20761},
     {20762, sizeof(g_rRlmPowerLimitConfiguration_20761)/sizeof(g_rRlmPowerLimitConfiguration_20761[0]), g_rRlmPowerLimitConfiguration_20761},
@@ -1192,7 +1225,7 @@ struct oplus_country_pwr_limit g_oplusCountryPwrLimit[] = {
     {21862, sizeof(g_rRlmPowerLimitConfiguration_21862)/sizeof(g_rRlmPowerLimitConfiguration_21862[0]), g_rRlmPowerLimitConfiguration_21862},
     {21863, sizeof(g_rRlmPowerLimitConfiguration_21862)/sizeof(g_rRlmPowerLimitConfiguration_21862[0]), g_rRlmPowerLimitConfiguration_21862},
     {136909, sizeof(g_rRlmPowerLimitConfiguration_21235)/sizeof(g_rRlmPowerLimitConfiguration_21235[0]), g_rRlmPowerLimitConfiguration_21235},
-    {136910, sizeof(g_rRlmPowerLimitConfiguration_21236)/sizeof(g_rRlmPowerLimitConfiguration_21236[0]), g_rRlmPowerLimitConfiguration_21236},
+    {136910, sizeof(g_rRlmPowerLimitConfiguration_216CE)/sizeof(g_rRlmPowerLimitConfiguration_216CE[0]), g_rRlmPowerLimitConfiguration_216CE},
     {21331, sizeof(g_rRlmPowerLimitConfiguration_21331)/sizeof(g_rRlmPowerLimitConfiguration_21331[0]), g_rRlmPowerLimitConfiguration_21331},
     {21332, sizeof(g_rRlmPowerLimitConfiguration_21331)/sizeof(g_rRlmPowerLimitConfiguration_21331[0]), g_rRlmPowerLimitConfiguration_21331},
     {21333, sizeof(g_rRlmPowerLimitConfiguration_21331)/sizeof(g_rRlmPowerLimitConfiguration_21331[0]), g_rRlmPowerLimitConfiguration_21331},
@@ -1206,20 +1239,28 @@ struct oplus_country_pwr_limit g_oplusCountryPwrLimit[] = {
     {22604, sizeof(g_rRlmPowerLimitConfiguration_22603)/sizeof(g_rRlmPowerLimitConfiguration_22603[0]), g_rRlmPowerLimitConfiguration_22603},
     {22609, sizeof(g_rRlmPowerLimitConfiguration_22603)/sizeof(g_rRlmPowerLimitConfiguration_22603[0]), g_rRlmPowerLimitConfiguration_22603},
     {140810, sizeof(g_rRlmPowerLimitConfiguration_22603)/sizeof(g_rRlmPowerLimitConfiguration_22603[0]), g_rRlmPowerLimitConfiguration_22603},//2260A
+    {22631, sizeof(g_rRlmPowerLimitConfiguration_22603)/sizeof(g_rRlmPowerLimitConfiguration_22603[0]), g_rRlmPowerLimitConfiguration_22603},
+    {22632, sizeof(g_rRlmPowerLimitConfiguration_22603)/sizeof(g_rRlmPowerLimitConfiguration_22603[0]), g_rRlmPowerLimitConfiguration_22603},
+    {23602, sizeof(g_rRlmPowerLimitConfiguration_22603)/sizeof(g_rRlmPowerLimitConfiguration_22603[0]), g_rRlmPowerLimitConfiguration_22603},
     {22669, sizeof(g_rRlmPowerLimitConfiguration_22669)/sizeof(g_rRlmPowerLimitConfiguration_22669[0]), g_rRlmPowerLimitConfiguration_22669},
     {140906, sizeof(g_rRlmPowerLimitConfiguration_2266A)/sizeof(g_rRlmPowerLimitConfiguration_2266A[0]), g_rRlmPowerLimitConfiguration_2266A},//2266A
-    {22875, sizeof(g_rRlmPowerLimitConfiguration_22875)/sizeof(g_rRlmPowerLimitConfiguration_22875[0]), g_rRlmPowerLimitConfiguration_22875},
-    {22876, sizeof(g_rRlmPowerLimitConfiguration_22875)/sizeof(g_rRlmPowerLimitConfiguration_22875[0]), g_rRlmPowerLimitConfiguration_22875},
+    {22083, sizeof(g_rRlmPowerLimitConfiguration_22083)/sizeof(g_rRlmPowerLimitConfiguration_22083[0]), g_rRlmPowerLimitConfiguration_22083},
+    {22084, sizeof(g_rRlmPowerLimitConfiguration_22083)/sizeof(g_rRlmPowerLimitConfiguration_22083[0]), g_rRlmPowerLimitConfiguration_22083},
+    {22291, sizeof(g_rRlmPowerLimitConfiguration_22291)/sizeof(g_rRlmPowerLimitConfiguration_22291[0]), g_rRlmPowerLimitConfiguration_22291},
+    {22292, sizeof(g_rRlmPowerLimitConfiguration_22292)/sizeof(g_rRlmPowerLimitConfiguration_22292[0]), g_rRlmPowerLimitConfiguration_22292},
+    {22875, sizeof(g_rRlmPowerLimitConfiguration_21331)/sizeof(g_rRlmPowerLimitConfiguration_21331[0]), g_rRlmPowerLimitConfiguration_22875},
+    {22876, sizeof(g_rRlmPowerLimitConfiguration_21331)/sizeof(g_rRlmPowerLimitConfiguration_21331[0]), g_rRlmPowerLimitConfiguration_22875},
     {21641, sizeof(g_rRlmPowerLimitConfiguration_21641)/sizeof(g_rRlmPowerLimitConfiguration_21641[0]), g_rRlmPowerLimitConfiguration_21641},
     {21642, sizeof(g_rRlmPowerLimitConfiguration_21641)/sizeof(g_rRlmPowerLimitConfiguration_21641[0]), g_rRlmPowerLimitConfiguration_21641},
     {21649, sizeof(g_rRlmPowerLimitConfiguration_21641)/sizeof(g_rRlmPowerLimitConfiguration_21641[0]), g_rRlmPowerLimitConfiguration_21641},
+    {22612, sizeof(g_rRlmPowerLimitConfiguration_22612)/sizeof(g_rRlmPowerLimitConfiguration_22612[0]), g_rRlmPowerLimitConfiguration_22612},//22612
+    {22693, sizeof(g_rRlmPowerLimitConfiguration_22693)/sizeof(g_rRlmPowerLimitConfiguration_22693[0]), g_rRlmPowerLimitConfiguration_22693},
+    {22694, sizeof(g_rRlmPowerLimitConfiguration_22694)/sizeof(g_rRlmPowerLimitConfiguration_22694[0]), g_rRlmPowerLimitConfiguration_22694},
+    {140977, sizeof(g_rRlmPowerLimitConfiguration_22694)/sizeof(g_rRlmPowerLimitConfiguration_22694[0]), g_rRlmPowerLimitConfiguration_22694},
     {136894, sizeof(g_rRlmPowerLimitConfiguration_216BE)/sizeof(g_rRlmPowerLimitConfiguration_216BE[0]), g_rRlmPowerLimitConfiguration_216BE},
     {136895, sizeof(g_rRlmPowerLimitConfiguration_216BF)/sizeof(g_rRlmPowerLimitConfiguration_216BF[0]), g_rRlmPowerLimitConfiguration_216BF},
     {136933, sizeof(g_rRlmPowerLimitConfiguration_216BE)/sizeof(g_rRlmPowerLimitConfiguration_216BE[0]), g_rRlmPowerLimitConfiguration_216BE},
     {136934, sizeof(g_rRlmPowerLimitConfiguration_216BF)/sizeof(g_rRlmPowerLimitConfiguration_216BF[0]), g_rRlmPowerLimitConfiguration_216BF},
-    {21747, sizeof(g_rRlmPowerLimitConfiguration_21747)/sizeof(g_rRlmPowerLimitConfiguration_21747[0]), g_rRlmPowerLimitConfiguration_21747},//21747
-    {21748, sizeof(g_rRlmPowerLimitConfiguration_21747)/sizeof(g_rRlmPowerLimitConfiguration_21747[0]), g_rRlmPowerLimitConfiguration_21747},//21748
-    {21749, sizeof(g_rRlmPowerLimitConfiguration_21747)/sizeof(g_rRlmPowerLimitConfiguration_21747[0]), g_rRlmPowerLimitConfiguration_21747},//21749
     {20375, sizeof(g_rRlmPowerLimitConfiguration_20375)/sizeof(g_rRlmPowerLimitConfiguration_20375[0]), g_rRlmPowerLimitConfiguration_20375},
     {20376, sizeof(g_rRlmPowerLimitConfiguration_20376)/sizeof(g_rRlmPowerLimitConfiguration_20376[0]), g_rRlmPowerLimitConfiguration_20376},
     {20377, sizeof(g_rRlmPowerLimitConfiguration_20376)/sizeof(g_rRlmPowerLimitConfiguration_20376[0]), g_rRlmPowerLimitConfiguration_20376},
@@ -1229,6 +1270,95 @@ struct oplus_country_pwr_limit g_oplusCountryPwrLimit[] = {
     {21251, sizeof(g_rRlmPowerLimitConfiguration_21251)/sizeof(g_rRlmPowerLimitConfiguration_21251[0]), g_rRlmPowerLimitConfiguration_21251},
     {21253, sizeof(g_rRlmPowerLimitConfiguration_21251)/sizeof(g_rRlmPowerLimitConfiguration_21251[0]), g_rRlmPowerLimitConfiguration_21251},
     {21254, sizeof(g_rRlmPowerLimitConfiguration_21251)/sizeof(g_rRlmPowerLimitConfiguration_21251[0]), g_rRlmPowerLimitConfiguration_21251},
+    {21747, sizeof(g_rRlmPowerLimitConfiguration_21747)/sizeof(g_rRlmPowerLimitConfiguration_21747[0]), g_rRlmPowerLimitConfiguration_21747},//21747
+    {21748, sizeof(g_rRlmPowerLimitConfiguration_21747)/sizeof(g_rRlmPowerLimitConfiguration_21747[0]), g_rRlmPowerLimitConfiguration_21747},//21748
+    {21749, sizeof(g_rRlmPowerLimitConfiguration_21747)/sizeof(g_rRlmPowerLimitConfiguration_21747[0]), g_rRlmPowerLimitConfiguration_21747},//21749
+    {22261, sizeof(g_rRlmPowerLimitConfiguration_22261)/sizeof(g_rRlmPowerLimitConfiguration_22261[0]), g_rRlmPowerLimitConfiguration_22261},
+    {22262, sizeof(g_rRlmPowerLimitConfiguration_22261)/sizeof(g_rRlmPowerLimitConfiguration_22261[0]), g_rRlmPowerLimitConfiguration_22261},
+    {22263, sizeof(g_rRlmPowerLimitConfiguration_22261)/sizeof(g_rRlmPowerLimitConfiguration_22261[0]), g_rRlmPowerLimitConfiguration_22261},
+    {22264, sizeof(g_rRlmPowerLimitConfiguration_22261)/sizeof(g_rRlmPowerLimitConfiguration_22261[0]), g_rRlmPowerLimitConfiguration_22261},
+    {22265, sizeof(g_rRlmPowerLimitConfiguration_22261)/sizeof(g_rRlmPowerLimitConfiguration_22261[0]), g_rRlmPowerLimitConfiguration_22261},
+    {22266, sizeof(g_rRlmPowerLimitConfiguration_22261)/sizeof(g_rRlmPowerLimitConfiguration_22261[0]), g_rRlmPowerLimitConfiguration_22261},
+    {140956, sizeof(g_rRlmPowerLimitConfiguration_2269C)/sizeof(g_rRlmPowerLimitConfiguration_2269C[0]), g_rRlmPowerLimitConfiguration_2269C},
+    {140957, sizeof(g_rRlmPowerLimitConfiguration_2269C)/sizeof(g_rRlmPowerLimitConfiguration_2269C[0]), g_rRlmPowerLimitConfiguration_2269C},
+    {140958, sizeof(g_rRlmPowerLimitConfiguration_2269C)/sizeof(g_rRlmPowerLimitConfiguration_2269C[0]), g_rRlmPowerLimitConfiguration_2269C},
+    {22687, sizeof(g_rRlmPowerLimitConfiguration_2269C)/sizeof(g_rRlmPowerLimitConfiguration_2269C[0]), g_rRlmPowerLimitConfiguration_2269C},
+    {22688, sizeof(g_rRlmPowerLimitConfiguration_2269C)/sizeof(g_rRlmPowerLimitConfiguration_2269C[0]), g_rRlmPowerLimitConfiguration_2269C},
+    {22689, sizeof(g_rRlmPowerLimitConfiguration_2269C)/sizeof(g_rRlmPowerLimitConfiguration_2269C[0]), g_rRlmPowerLimitConfiguration_2269C},
+    {22221, sizeof(g_rRlmPowerLimitConfiguration_22221)/sizeof(g_rRlmPowerLimitConfiguration_22221[0]), g_rRlmPowerLimitConfiguration_22221},
+    {22021, sizeof(g_rRlmPowerLimitConfiguration_22021)/sizeof(g_rRlmPowerLimitConfiguration_22021[0]), g_rRlmPowerLimitConfiguration_22021},
+    {20255, sizeof(g_rRlmPowerLimitConfiguration_20255)/sizeof(g_rRlmPowerLimitConfiguration_20255[0]), g_rRlmPowerLimitConfiguration_20255},
+    {20257, sizeof(g_rRlmPowerLimitConfiguration_20255)/sizeof(g_rRlmPowerLimitConfiguration_20255[0]), g_rRlmPowerLimitConfiguration_20255},
+    {20301, sizeof(g_rRlmPowerLimitConfiguration_20301)/sizeof(g_rRlmPowerLimitConfiguration_20301[0]), g_rRlmPowerLimitConfiguration_20301},
+    {20302, sizeof(g_rRlmPowerLimitConfiguration_20301)/sizeof(g_rRlmPowerLimitConfiguration_20301[0]), g_rRlmPowerLimitConfiguration_20301},
+    {20391, sizeof(g_rRlmPowerLimitConfiguration_20391)/sizeof(g_rRlmPowerLimitConfiguration_20391[0]), g_rRlmPowerLimitConfiguration_20391},
+    {20392, sizeof(g_rRlmPowerLimitConfiguration_20391)/sizeof(g_rRlmPowerLimitConfiguration_20391[0]), g_rRlmPowerLimitConfiguration_20391},
+    {22301, sizeof(g_rRlmPowerLimitConfiguration_21331)/sizeof(g_rRlmPowerLimitConfiguration_21331[0]), g_rRlmPowerLimitConfiguration_21331},
+    {22302, sizeof(g_rRlmPowerLimitConfiguration_21331)/sizeof(g_rRlmPowerLimitConfiguration_21331[0]), g_rRlmPowerLimitConfiguration_21331},
+    {22303, sizeof(g_rRlmPowerLimitConfiguration_21331)/sizeof(g_rRlmPowerLimitConfiguration_21331[0]), g_rRlmPowerLimitConfiguration_21331},
+    {22304, sizeof(g_rRlmPowerLimitConfiguration_21331)/sizeof(g_rRlmPowerLimitConfiguration_21331[0]), g_rRlmPowerLimitConfiguration_21331},
+    {22309, sizeof(g_rRlmPowerLimitConfiguration_21331)/sizeof(g_rRlmPowerLimitConfiguration_21331[0]), g_rRlmPowerLimitConfiguration_21331},
+    {22282, sizeof(g_rRlmPowerLimitConfiguration_22282)/sizeof(g_rRlmPowerLimitConfiguration_22282[0]), g_rRlmPowerLimitConfiguration_22282},
+    {22283, sizeof(g_rRlmPowerLimitConfiguration_22282)/sizeof(g_rRlmPowerLimitConfiguration_22282[0]), g_rRlmPowerLimitConfiguration_22282},
+    {21871, sizeof(g_rRlmPowerLimitConfiguration_21871)/sizeof(g_rRlmPowerLimitConfiguration_21871[0]), g_rRlmPowerLimitConfiguration_21871},
+    {22823, sizeof(g_rRlmPowerLimitConfiguration_22823)/sizeof(g_rRlmPowerLimitConfiguration_22823[0]), g_rRlmPowerLimitConfiguration_22823},
+    {22921, sizeof(g_rRlmPowerLimitConfiguration_22921)/sizeof(g_rRlmPowerLimitConfiguration_22921[0]), g_rRlmPowerLimitConfiguration_22921},
+    {22971, sizeof(g_rRlmPowerLimitConfiguration_22921)/sizeof(g_rRlmPowerLimitConfiguration_22921[0]), g_rRlmPowerLimitConfiguration_22921},
+    {22972, sizeof(g_rRlmPowerLimitConfiguration_22921)/sizeof(g_rRlmPowerLimitConfiguration_22921[0]), g_rRlmPowerLimitConfiguration_22921},
+    {140973, sizeof(g_rRlmPowerLimitConfiguration_226AF)/sizeof(g_rRlmPowerLimitConfiguration_226AF[0]), g_rRlmPowerLimitConfiguration_226AF},
+    {140974, sizeof(g_rRlmPowerLimitConfiguration_226AF)/sizeof(g_rRlmPowerLimitConfiguration_226AF[0]), g_rRlmPowerLimitConfiguration_226AF},
+    {140975, sizeof(g_rRlmPowerLimitConfiguration_226AF)/sizeof(g_rRlmPowerLimitConfiguration_226AF[0]), g_rRlmPowerLimitConfiguration_226AF},
+    {140976, sizeof(g_rRlmPowerLimitConfiguration_226AF)/sizeof(g_rRlmPowerLimitConfiguration_226AF[0]), g_rRlmPowerLimitConfiguration_226AF},
+    {22351, sizeof(g_rRlmPowerLimitConfiguration_22351)/sizeof(g_rRlmPowerLimitConfiguration_22351[0]), g_rRlmPowerLimitConfiguration_22351},
+    {22352, sizeof(g_rRlmPowerLimitConfiguration_22351)/sizeof(g_rRlmPowerLimitConfiguration_22351[0]), g_rRlmPowerLimitConfiguration_22351},
+    {22353, sizeof(g_rRlmPowerLimitConfiguration_22351)/sizeof(g_rRlmPowerLimitConfiguration_22351[0]), g_rRlmPowerLimitConfiguration_22351},
+    {22361, sizeof(g_rRlmPowerLimitConfiguration_22361)/sizeof(g_rRlmPowerLimitConfiguration_22361[0]), g_rRlmPowerLimitConfiguration_22361},
+    {22362, sizeof(g_rRlmPowerLimitConfiguration_22361)/sizeof(g_rRlmPowerLimitConfiguration_22361[0]), g_rRlmPowerLimitConfiguration_22361},
+    {22363, sizeof(g_rRlmPowerLimitConfiguration_22361)/sizeof(g_rRlmPowerLimitConfiguration_22361[0]), g_rRlmPowerLimitConfiguration_22361},
+    {22364, sizeof(g_rRlmPowerLimitConfiguration_22361)/sizeof(g_rRlmPowerLimitConfiguration_22361[0]), g_rRlmPowerLimitConfiguration_22361},
+    {22365, sizeof(g_rRlmPowerLimitConfiguration_22361)/sizeof(g_rRlmPowerLimitConfiguration_22361[0]), g_rRlmPowerLimitConfiguration_22361},
+    {22366, sizeof(g_rRlmPowerLimitConfiguration_22361)/sizeof(g_rRlmPowerLimitConfiguration_22361[0]), g_rRlmPowerLimitConfiguration_22361},
+    {22367, sizeof(g_rRlmPowerLimitConfiguration_22361)/sizeof(g_rRlmPowerLimitConfiguration_22361[0]), g_rRlmPowerLimitConfiguration_22361},
+    {22368, sizeof(g_rRlmPowerLimitConfiguration_22361)/sizeof(g_rRlmPowerLimitConfiguration_22361[0]), g_rRlmPowerLimitConfiguration_22361},
+    {22610, sizeof(g_rRlmPowerLimitConfiguration_22610)/sizeof(g_rRlmPowerLimitConfiguration_22610[0]), g_rRlmPowerLimitConfiguration_22610},
+    {22705, sizeof(g_rRlmPowerLimitConfiguration_22705)/sizeof(g_rRlmPowerLimitConfiguration_22705[0]), g_rRlmPowerLimitConfiguration_22705},
+    {22706, sizeof(g_rRlmPowerLimitConfiguration_22706)/sizeof(g_rRlmPowerLimitConfiguration_22706[0]), g_rRlmPowerLimitConfiguration_22706},
+    {22629, sizeof(g_rRlmPowerLimitConfiguration_22629)/sizeof(g_rRlmPowerLimitConfiguration_22629[0]), g_rRlmPowerLimitConfiguration_22629},
+    {22633, sizeof(g_rRlmPowerLimitConfiguration_22629)/sizeof(g_rRlmPowerLimitConfiguration_22629[0]), g_rRlmPowerLimitConfiguration_22629},
+    {22710, sizeof(g_rRlmPowerLimitConfiguration_22710)/sizeof(g_rRlmPowerLimitConfiguration_22710[0]), g_rRlmPowerLimitConfiguration_22710},
+    {22712, sizeof(g_rRlmPowerLimitConfiguration_22710)/sizeof(g_rRlmPowerLimitConfiguration_22710[0]), g_rRlmPowerLimitConfiguration_22710},
+    {22277, sizeof(g_rRlmPowerLimitConfiguration_22277)/sizeof(g_rRlmPowerLimitConfiguration_22277[0]), g_rRlmPowerLimitConfiguration_22277},
+    {22711, sizeof(g_rRlmPowerLimitConfiguration_22711)/sizeof(g_rRlmPowerLimitConfiguration_22711[0]), g_rRlmPowerLimitConfiguration_22711},
+    {22713, sizeof(g_rRlmPowerLimitConfiguration_22711)/sizeof(g_rRlmPowerLimitConfiguration_22711[0]), g_rRlmPowerLimitConfiguration_22711},
+    {23613, sizeof(g_rRlmPowerLimitConfiguration_23687)/sizeof(g_rRlmPowerLimitConfiguration_23687[0]), g_rRlmPowerLimitConfiguration_23687},
+    {23686, sizeof(g_rRlmPowerLimitConfiguration_23687)/sizeof(g_rRlmPowerLimitConfiguration_23687[0]), g_rRlmPowerLimitConfiguration_23687},
+    {23689, sizeof(g_rRlmPowerLimitConfiguration_23689)/sizeof(g_rRlmPowerLimitConfiguration_23689[0]), g_rRlmPowerLimitConfiguration_23689},
+    {23707, sizeof(g_rRlmPowerLimitConfiguration_23687)/sizeof(g_rRlmPowerLimitConfiguration_23687[0]), g_rRlmPowerLimitConfiguration_23687},
+    {23709, sizeof(g_rRlmPowerLimitConfiguration_23687)/sizeof(g_rRlmPowerLimitConfiguration_23687[0]), g_rRlmPowerLimitConfiguration_23687},
+    {23687, sizeof(g_rRlmPowerLimitConfiguration_23687)/sizeof(g_rRlmPowerLimitConfiguration_23687[0]), g_rRlmPowerLimitConfiguration_23687},
+    {23676, sizeof(g_rRlmPowerLimitConfiguration_23676)/sizeof(g_rRlmPowerLimitConfiguration_23676[0]), g_rRlmPowerLimitConfiguration_23676},
+    {23662, sizeof(g_rRlmPowerLimitConfiguration_23662)/sizeof(g_rRlmPowerLimitConfiguration_23662[0]), g_rRlmPowerLimitConfiguration_23662},
+    {23664, sizeof(g_rRlmPowerLimitConfiguration_23664)/sizeof(g_rRlmPowerLimitConfiguration_23664[0]), g_rRlmPowerLimitConfiguration_23664},
+    {23922, sizeof(g_rRlmPowerLimitConfiguration_23922)/sizeof(g_rRlmPowerLimitConfiguration_23922[0]), g_rRlmPowerLimitConfiguration_23922},
+    {23971, sizeof(g_rRlmPowerLimitConfiguration_23971)/sizeof(g_rRlmPowerLimitConfiguration_23971[0]), g_rRlmPowerLimitConfiguration_23971},
+    {23972, sizeof(g_rRlmPowerLimitConfiguration_23972)/sizeof(g_rRlmPowerLimitConfiguration_23972[0]), g_rRlmPowerLimitConfiguration_23972},
+    {23973, sizeof(g_rRlmPowerLimitConfiguration_23973)/sizeof(g_rRlmPowerLimitConfiguration_23973[0]), g_rRlmPowerLimitConfiguration_23973},
+    {23974, sizeof(g_rRlmPowerLimitConfiguration_23974)/sizeof(g_rRlmPowerLimitConfiguration_23974[0]), g_rRlmPowerLimitConfiguration_23974},
+    {23031, sizeof(g_rRlmPowerLimitConfiguration_23031)/sizeof(g_rRlmPowerLimitConfiguration_23031[0]), g_rRlmPowerLimitConfiguration_23031},
+    {22331, sizeof(g_rRlmPowerLimitConfiguration_22087)/sizeof(g_rRlmPowerLimitConfiguration_22087[0]), g_rRlmPowerLimitConfiguration_22087},
+    {22333, sizeof(g_rRlmPowerLimitConfiguration_22334)/sizeof(g_rRlmPowerLimitConfiguration_22334[0]), g_rRlmPowerLimitConfiguration_22334},
+    {22334, sizeof(g_rRlmPowerLimitConfiguration_22334)/sizeof(g_rRlmPowerLimitConfiguration_22334[0]), g_rRlmPowerLimitConfiguration_22334},
+    {22087, sizeof(g_rRlmPowerLimitConfiguration_22087)/sizeof(g_rRlmPowerLimitConfiguration_22087[0]), g_rRlmPowerLimitConfiguration_22087},
+    {22869, sizeof(g_rRlmPowerLimitConfiguration_22334)/sizeof(g_rRlmPowerLimitConfiguration_22334[0]), g_rRlmPowerLimitConfiguration_22334},
+    {23021, sizeof(g_rRlmPowerLimitConfiguration_23021)/sizeof(g_rRlmPowerLimitConfiguration_23021[0]), g_rRlmPowerLimitConfiguration_23021},
+    {23251, sizeof(g_rRlmPowerLimitConfiguration_23251)/sizeof(g_rRlmPowerLimitConfiguration_23251[0]), g_rRlmPowerLimitConfiguration_23251},
+    {23231, sizeof(g_rRlmPowerLimitConfiguration_23231)/sizeof(g_rRlmPowerLimitConfiguration_23231[0]), g_rRlmPowerLimitConfiguration_23231},
+    {23051, sizeof(g_rRlmPowerLimitConfiguration_23051)/sizeof(g_rRlmPowerLimitConfiguration_23051[0]), g_rRlmPowerLimitConfiguration_23051},
+    {23241, sizeof(g_rRlmPowerLimitConfiguration_23051)/sizeof(g_rRlmPowerLimitConfiguration_23051[0]), g_rRlmPowerLimitConfiguration_23051},
+    {23243, sizeof(g_rRlmPowerLimitConfiguration_23051)/sizeof(g_rRlmPowerLimitConfiguration_23051[0]), g_rRlmPowerLimitConfiguration_23051},
+    {23053, sizeof(g_rRlmPowerLimitConfiguration_23053)/sizeof(g_rRlmPowerLimitConfiguration_23053[0]), g_rRlmPowerLimitConfiguration_23053},
+    {23054, sizeof(g_rRlmPowerLimitConfiguration_23053)/sizeof(g_rRlmPowerLimitConfiguration_23053[0]), g_rRlmPowerLimitConfiguration_23053},
+    {23253, sizeof(g_rRlmPowerLimitConfiguration_23253)/sizeof(g_rRlmPowerLimitConfiguration_23253[0]), g_rRlmPowerLimitConfiguration_23253},
 };
 
 struct oplus_country_pwr_limit_he g_oplusCountryPwrLimitHe[] = {
@@ -1239,7 +1369,7 @@ struct oplus_country_pwr_limit_he g_oplusCountryPwrLimitHe[] = {
     {21881, sizeof(g_rRlmPowerLimitConfigurationHE_21881)/sizeof(g_rRlmPowerLimitConfigurationHE_21881[0]), g_rRlmPowerLimitConfigurationHE_21881},
     {21882, sizeof(g_rRlmPowerLimitConfigurationHE_21881)/sizeof(g_rRlmPowerLimitConfigurationHE_21881[0]), g_rRlmPowerLimitConfigurationHE_21881},
     {21711, sizeof(g_rRlmPowerLimitConfigurationHE_21711)/sizeof(g_rRlmPowerLimitConfigurationHE_21711[0]), g_rRlmPowerLimitConfigurationHE_21711},
-    {21712, sizeof(g_rRlmPowerLimitConfigurationHE_2169F)/sizeof(g_rRlmPowerLimitConfigurationHE_2169F[0]), g_rRlmPowerLimitConfigurationHE_2169F},
+    {21712, sizeof(g_rRlmPowerLimitConfigurationHE_21712)/sizeof(g_rRlmPowerLimitConfigurationHE_21712[0]), g_rRlmPowerLimitConfigurationHE_21712},
     {136906, sizeof(g_rRlmPowerLimitConfigurationHE_2169E)/sizeof(g_rRlmPowerLimitConfigurationHE_2169E[0]), g_rRlmPowerLimitConfigurationHE_2169E},
     {136905, sizeof(g_rRlmPowerLimitConfigurationHE_2169F)/sizeof(g_rRlmPowerLimitConfigurationHE_2169F[0]), g_rRlmPowerLimitConfigurationHE_2169F},
     {135841, sizeof(g_rRlmPowerLimitConfigurationHE_135841)/sizeof(g_rRlmPowerLimitConfigurationHE_135841[0]), g_rRlmPowerLimitConfigurationHE_135841},
@@ -1262,10 +1392,46 @@ struct oplus_country_pwr_limit_he g_oplusCountryPwrLimitHe[] = {
     {21641, sizeof(g_rRlmPowerLimitConfigurationHE_21641)/sizeof(g_rRlmPowerLimitConfigurationHE_21641[0]), g_rRlmPowerLimitConfigurationHE_21641},
     {21642, sizeof(g_rRlmPowerLimitConfigurationHE_21641)/sizeof(g_rRlmPowerLimitConfigurationHE_21641[0]), g_rRlmPowerLimitConfigurationHE_21641},
     {21649, sizeof(g_rRlmPowerLimitConfigurationHE_21641)/sizeof(g_rRlmPowerLimitConfigurationHE_21641[0]), g_rRlmPowerLimitConfigurationHE_21641},
+    {22612, sizeof(g_rRlmPowerLimitConfigurationHE_22612)/sizeof(g_rRlmPowerLimitConfigurationHE_22612[0]), g_rRlmPowerLimitConfigurationHE_22612},
+    {22693, sizeof(g_rRlmPowerLimitConfigurationHE_22693)/sizeof(g_rRlmPowerLimitConfigurationHE_22693[0]), g_rRlmPowerLimitConfigurationHE_22693},
+    {22694, sizeof(g_rRlmPowerLimitConfigurationHE_22694)/sizeof(g_rRlmPowerLimitConfigurationHE_22694[0]), g_rRlmPowerLimitConfigurationHE_22694},
+    {140977, sizeof(g_rRlmPowerLimitConfigurationHE_22694)/sizeof(g_rRlmPowerLimitConfigurationHE_22694[0]), g_rRlmPowerLimitConfigurationHE_22694},
     {136894, sizeof(g_rRlmPowerLimitConfigurationHE_216BE)/sizeof(g_rRlmPowerLimitConfigurationHE_216BE[0]), g_rRlmPowerLimitConfigurationHE_216BE},
     {136895, sizeof(g_rRlmPowerLimitConfigurationHE_216BF)/sizeof(g_rRlmPowerLimitConfigurationHE_216BF[0]), g_rRlmPowerLimitConfigurationHE_216BF},
     {136933, sizeof(g_rRlmPowerLimitConfigurationHE_216BE)/sizeof(g_rRlmPowerLimitConfigurationHE_216BE[0]), g_rRlmPowerLimitConfigurationHE_216BE},
     {136934, sizeof(g_rRlmPowerLimitConfigurationHE_216BF)/sizeof(g_rRlmPowerLimitConfigurationHE_216BF[0]), g_rRlmPowerLimitConfigurationHE_216BF},
+    {20255, sizeof(g_rRlmPowerLimitConfigurationHE_20255)/sizeof(g_rRlmPowerLimitConfigurationHE_20255[0]), g_rRlmPowerLimitConfigurationHE_20255},
+    {20257, sizeof(g_rRlmPowerLimitConfigurationHE_20255)/sizeof(g_rRlmPowerLimitConfigurationHE_20255[0]), g_rRlmPowerLimitConfigurationHE_20255},
+    {22629, sizeof(g_rRlmPowerLimitConfigurationHE_22629)/sizeof(g_rRlmPowerLimitConfigurationHE_22629[0]), g_rRlmPowerLimitConfigurationHE_22629},
+    {22633, sizeof(g_rRlmPowerLimitConfigurationHE_22629)/sizeof(g_rRlmPowerLimitConfigurationHE_22629[0]), g_rRlmPowerLimitConfigurationHE_22629},
+    {22710, sizeof(g_rRlmPowerLimitConfigurationHE_22710)/sizeof(g_rRlmPowerLimitConfigurationHE_22710[0]), g_rRlmPowerLimitConfigurationHE_22710},
+    {22712, sizeof(g_rRlmPowerLimitConfigurationHE_22710)/sizeof(g_rRlmPowerLimitConfigurationHE_22710[0]), g_rRlmPowerLimitConfigurationHE_22710},
+    {22277, sizeof(g_rRlmPowerLimitConfigurationHE_22277)/sizeof(g_rRlmPowerLimitConfigurationHE_22277[0]), g_rRlmPowerLimitConfigurationHE_22277},
+    {22711, sizeof(g_rRlmPowerLimitConfigurationHE_22711)/sizeof(g_rRlmPowerLimitConfigurationHE_22711[0]), g_rRlmPowerLimitConfigurationHE_22711},
+    {22713, sizeof(g_rRlmPowerLimitConfigurationHE_22711)/sizeof(g_rRlmPowerLimitConfigurationHE_22711[0]), g_rRlmPowerLimitConfigurationHE_22711},
+    {23613, sizeof(g_rRlmPowerLimitConfigurationHE_23687)/sizeof(g_rRlmPowerLimitConfigurationHE_23687[0]), g_rRlmPowerLimitConfigurationHE_23687},
+    {23686, sizeof(g_rRlmPowerLimitConfigurationHE_23687)/sizeof(g_rRlmPowerLimitConfigurationHE_23687[0]), g_rRlmPowerLimitConfigurationHE_23687},
+    {23689, sizeof(g_rRlmPowerLimitConfigurationHE_23689)/sizeof(g_rRlmPowerLimitConfigurationHE_23689[0]), g_rRlmPowerLimitConfigurationHE_23689},
+    {23707, sizeof(g_rRlmPowerLimitConfigurationHE_23687)/sizeof(g_rRlmPowerLimitConfigurationHE_23687[0]), g_rRlmPowerLimitConfigurationHE_23687},
+    {23709, sizeof(g_rRlmPowerLimitConfigurationHE_23687)/sizeof(g_rRlmPowerLimitConfigurationHE_23687[0]), g_rRlmPowerLimitConfigurationHE_23687},
+    {23687, sizeof(g_rRlmPowerLimitConfigurationHE_23687)/sizeof(g_rRlmPowerLimitConfigurationHE_23687[0]), g_rRlmPowerLimitConfigurationHE_23687},
+    {23031, sizeof(g_rRlmPowerLimitConfigurationHE_23031)/sizeof(g_rRlmPowerLimitConfigurationHE_23031[0]), g_rRlmPowerLimitConfigurationHE_23031},
+    {23231, sizeof(g_rRlmPowerLimitConfigurationHE_23231)/sizeof(g_rRlmPowerLimitConfigurationHE_23231[0]), g_rRlmPowerLimitConfigurationHE_23231},
+    {23051, sizeof(g_rRlmPowerLimitConfigurationHE_23051)/sizeof(g_rRlmPowerLimitConfigurationHE_23051[0]), g_rRlmPowerLimitConfigurationHE_23051},
+    {23241, sizeof(g_rRlmPowerLimitConfigurationHE_23051)/sizeof(g_rRlmPowerLimitConfigurationHE_23051[0]), g_rRlmPowerLimitConfigurationHE_23051},
+    {23243, sizeof(g_rRlmPowerLimitConfigurationHE_23051)/sizeof(g_rRlmPowerLimitConfigurationHE_23051[0]), g_rRlmPowerLimitConfigurationHE_23051},
+    {23021, sizeof(g_rRlmPowerLimitConfigurationHE_23021)/sizeof(g_rRlmPowerLimitConfigurationHE_23021[0]), g_rRlmPowerLimitConfigurationHE_23021},
+    {23251, sizeof(g_rRlmPowerLimitConfigurationHE_23251)/sizeof(g_rRlmPowerLimitConfigurationHE_23251[0]), g_rRlmPowerLimitConfigurationHE_23251},
+};
+
+struct oplus_country_pwr_limit_hebw160 g_oplusCountryPwrLimitHeBw160[] = {
+    {22021, sizeof(g_rRlmPowerLimitConfigurationHEBW160_22021)/sizeof(g_rRlmPowerLimitConfigurationHEBW160_22021[0]), g_rRlmPowerLimitConfigurationHEBW160_22021},
+    {22221, sizeof(g_rRlmPowerLimitConfigurationHEBW160_22221)/sizeof(g_rRlmPowerLimitConfigurationHEBW160_22221[0]), g_rRlmPowerLimitConfigurationHEBW160_22221},
+    {21871, sizeof(g_rRlmPowerLimitConfigurationHEBW160_21871)/sizeof(g_rRlmPowerLimitConfigurationHEBW160_21871[0]), g_rRlmPowerLimitConfigurationHEBW160_21871},
+    {22823, sizeof(g_rRlmPowerLimitConfigurationHEBW160_22823)/sizeof(g_rRlmPowerLimitConfigurationHEBW160_22823[0]), g_rRlmPowerLimitConfigurationHEBW160_22823},
+    {22921, sizeof(g_rRlmPowerLimitConfigurationHEBW160_22921)/sizeof(g_rRlmPowerLimitConfigurationHEBW160_22921[0]), g_rRlmPowerLimitConfigurationHEBW160_22921},
+    {22971, sizeof(g_rRlmPowerLimitConfigurationHEBW160_22921)/sizeof(g_rRlmPowerLimitConfigurationHEBW160_22921[0]), g_rRlmPowerLimitConfigurationHEBW160_22921},
+    {22972, sizeof(g_rRlmPowerLimitConfigurationHEBW160_22921)/sizeof(g_rRlmPowerLimitConfigurationHEBW160_22921[0]), g_rRlmPowerLimitConfigurationHEBW160_22921},
 };
 
 struct COUNTRY_POWER_LIMIT_TABLE_DEFAULT *g_prOplusCountryPwrLimitDefault = g_rRlmPowerLimitDefault;
@@ -1298,17 +1464,90 @@ struct oplus_country_pwr_limit_default g_oplusCountryPwrLimitDefault[] = {
     {20827, sizeof(g_rRlmPowerLimitDefault_20817)/sizeof(g_rRlmPowerLimitDefault_20817[0]), g_rRlmPowerLimitDefault_20817},
     {20831, sizeof(g_rRlmPowerLimitDefault_20817)/sizeof(g_rRlmPowerLimitDefault_20817[0]), g_rRlmPowerLimitDefault_20817},
     {20682, sizeof(g_rRlmPowerLimitDefault_20682)/sizeof(g_rRlmPowerLimitDefault_20682[0]), g_rRlmPowerLimitDefault_20682},
+    {22694, sizeof(g_rRlmPowerLimitDefault_22694)/sizeof(g_rRlmPowerLimitDefault_22694[0]), g_rRlmPowerLimitDefault_22694},
+    {140977, sizeof(g_rRlmPowerLimitDefault_22694)/sizeof(g_rRlmPowerLimitDefault_22694[0]), g_rRlmPowerLimitDefault_22694},
     {136894, sizeof(g_rRlmPowerLimitDefault_216BE)/sizeof(g_rRlmPowerLimitDefault_216BE[0]), g_rRlmPowerLimitDefault_216BE},
     {136895, sizeof(g_rRlmPowerLimitDefault_216BF)/sizeof(g_rRlmPowerLimitDefault_216BF[0]), g_rRlmPowerLimitDefault_216BF},
     {136933, sizeof(g_rRlmPowerLimitDefault_216BE)/sizeof(g_rRlmPowerLimitDefault_216BE[0]), g_rRlmPowerLimitDefault_216BE},
     {136934, sizeof(g_rRlmPowerLimitDefault_216BF)/sizeof(g_rRlmPowerLimitDefault_216BF[0]), g_rRlmPowerLimitDefault_216BF},
     {21748, sizeof(g_rRlmPowerLimitDefault_20795)/sizeof(g_rRlmPowerLimitDefault_20795[0]), g_rRlmPowerLimitDefault_20795},
     {21749, sizeof(g_rRlmPowerLimitDefault_20795)/sizeof(g_rRlmPowerLimitDefault_20795[0]), g_rRlmPowerLimitDefault_20795},
+    {22261, sizeof(g_rRlmPowerLimitDefault_22261)/sizeof(g_rRlmPowerLimitDefault_22261[0]), g_rRlmPowerLimitDefault_22261},
+    {22262, sizeof(g_rRlmPowerLimitDefault_22261)/sizeof(g_rRlmPowerLimitDefault_22261[0]), g_rRlmPowerLimitDefault_22261},
+    {22263, sizeof(g_rRlmPowerLimitDefault_22261)/sizeof(g_rRlmPowerLimitDefault_22261[0]), g_rRlmPowerLimitDefault_22261},
+    {22264, sizeof(g_rRlmPowerLimitDefault_22261)/sizeof(g_rRlmPowerLimitDefault_22261[0]), g_rRlmPowerLimitDefault_22261},
+    {22265, sizeof(g_rRlmPowerLimitDefault_22261)/sizeof(g_rRlmPowerLimitDefault_22261[0]), g_rRlmPowerLimitDefault_22261},
+    {22266, sizeof(g_rRlmPowerLimitDefault_22261)/sizeof(g_rRlmPowerLimitDefault_22261[0]), g_rRlmPowerLimitDefault_22261},
+    {140956, sizeof(g_rRlmPowerLimitDefault_2269C)/sizeof(g_rRlmPowerLimitDefault_2269C[0]), g_rRlmPowerLimitDefault_2269C},
+    {140957, sizeof(g_rRlmPowerLimitDefault_2269C)/sizeof(g_rRlmPowerLimitDefault_2269C[0]), g_rRlmPowerLimitDefault_2269C},
+    {140958, sizeof(g_rRlmPowerLimitDefault_2269C)/sizeof(g_rRlmPowerLimitDefault_2269C[0]), g_rRlmPowerLimitDefault_2269C},
+    {22687, sizeof(g_rRlmPowerLimitDefault_2269C)/sizeof(g_rRlmPowerLimitDefault_2269C[0]), g_rRlmPowerLimitDefault_2269C},
+    {22688, sizeof(g_rRlmPowerLimitDefault_2269C)/sizeof(g_rRlmPowerLimitDefault_2269C[0]), g_rRlmPowerLimitDefault_2269C},
+    {22689, sizeof(g_rRlmPowerLimitDefault_2269C)/sizeof(g_rRlmPowerLimitDefault_2269C[0]), g_rRlmPowerLimitDefault_2269C},
+    {22221, sizeof(g_rRlmPowerLimitDefault_22221)/sizeof(g_rRlmPowerLimitDefault_22221[0]), g_rRlmPowerLimitDefault_22221},
+    {22021, sizeof(g_rRlmPowerLimitDefault_22021)/sizeof(g_rRlmPowerLimitDefault_22021[0]), g_rRlmPowerLimitDefault_22021},
+    {20255, sizeof(g_rRlmPowerLimitDefault_20255)/sizeof(g_rRlmPowerLimitDefault_20255[0]), g_rRlmPowerLimitDefault_20255},
+    {20257, sizeof(g_rRlmPowerLimitDefault_20255)/sizeof(g_rRlmPowerLimitDefault_20255[0]), g_rRlmPowerLimitDefault_20255},
+    {20301, sizeof(g_rRlmPowerLimitDefault_20301)/sizeof(g_rRlmPowerLimitDefault_20301[0]), g_rRlmPowerLimitDefault_20301},
+    {20302, sizeof(g_rRlmPowerLimitDefault_20301)/sizeof(g_rRlmPowerLimitDefault_20301[0]), g_rRlmPowerLimitDefault_20301},
+    {20391, sizeof(g_rRlmPowerLimitDefault_20391)/sizeof(g_rRlmPowerLimitDefault_20391[0]), g_rRlmPowerLimitDefault_20391},
+    {20392, sizeof(g_rRlmPowerLimitDefault_20391)/sizeof(g_rRlmPowerLimitDefault_20391[0]), g_rRlmPowerLimitDefault_20391},
+    {22282, sizeof(g_rRlmPowerLimitDefault_22282)/sizeof(g_rRlmPowerLimitDefault_22282[0]), g_rRlmPowerLimitDefault_22282},
+    {22283, sizeof(g_rRlmPowerLimitDefault_22282)/sizeof(g_rRlmPowerLimitDefault_22282[0]), g_rRlmPowerLimitDefault_22282},
+    {22017, sizeof(g_rRlmPowerLimitDefault_22017)/sizeof(g_rRlmPowerLimitDefault_22017[0]), g_rRlmPowerLimitDefault_22017},
+    {22047, sizeof(g_rRlmPowerLimitDefault_22047)/sizeof(g_rRlmPowerLimitDefault_22047[0]), g_rRlmPowerLimitDefault_22047},
+    {21871, sizeof(g_rRlmPowerLimitDefault_21871)/sizeof(g_rRlmPowerLimitDefault_21871[0]), g_rRlmPowerLimitDefault_21871},
+    {22823, sizeof(g_rRlmPowerLimitDefault_22823)/sizeof(g_rRlmPowerLimitDefault_22823[0]), g_rRlmPowerLimitDefault_22823},
+    {22921, sizeof(g_rRlmPowerLimitDefault_22921)/sizeof(g_rRlmPowerLimitDefault_22921[0]), g_rRlmPowerLimitDefault_22921},
+    {22971, sizeof(g_rRlmPowerLimitDefault_22921)/sizeof(g_rRlmPowerLimitDefault_22921[0]), g_rRlmPowerLimitDefault_22921},
+    {22972, sizeof(g_rRlmPowerLimitDefault_22921)/sizeof(g_rRlmPowerLimitDefault_22921[0]), g_rRlmPowerLimitDefault_22921},
+    {140973, sizeof(g_rRlmPowerLimitDefault_226AF)/sizeof(g_rRlmPowerLimitDefault_226AF[0]), g_rRlmPowerLimitDefault_226AF},
+    {140974, sizeof(g_rRlmPowerLimitDefault_226AF)/sizeof(g_rRlmPowerLimitDefault_226AF[0]), g_rRlmPowerLimitDefault_226AF},
+    {140975, sizeof(g_rRlmPowerLimitDefault_226AF)/sizeof(g_rRlmPowerLimitDefault_226AF[0]), g_rRlmPowerLimitDefault_226AF},
+    {140976, sizeof(g_rRlmPowerLimitDefault_226AF)/sizeof(g_rRlmPowerLimitDefault_226AF[0]), g_rRlmPowerLimitDefault_226AF},
+    {22629, sizeof(g_rRlmPowerLimitDefault_22629)/sizeof(g_rRlmPowerLimitDefault_22629[0]), g_rRlmPowerLimitDefault_22629},
+    {22633, sizeof(g_rRlmPowerLimitDefault_22629)/sizeof(g_rRlmPowerLimitDefault_22629[0]), g_rRlmPowerLimitDefault_22629},
+    {22277, sizeof(g_rRlmPowerLimitDefault_22277)/sizeof(g_rRlmPowerLimitDefault_22277[0]), g_rRlmPowerLimitDefault_22277},
+    {22711, sizeof(g_rRlmPowerLimitDefault_22711)/sizeof(g_rRlmPowerLimitDefault_22711[0]), g_rRlmPowerLimitDefault_22711},
+    {22713, sizeof(g_rRlmPowerLimitDefault_22711)/sizeof(g_rRlmPowerLimitDefault_22711[0]), g_rRlmPowerLimitDefault_22711},
+    {23687, sizeof(g_rRlmPowerLimitDefault_23687)/sizeof(g_rRlmPowerLimitDefault_23687[0]), g_rRlmPowerLimitDefault_23687},
+    {22351, sizeof(g_rRlmPowerLimitDefault_22351)/sizeof(g_rRlmPowerLimitDefault_22351[0]), g_rRlmPowerLimitDefault_22351},
+    {22352, sizeof(g_rRlmPowerLimitDefault_22351)/sizeof(g_rRlmPowerLimitDefault_22351[0]), g_rRlmPowerLimitDefault_22351},
+    {22353, sizeof(g_rRlmPowerLimitDefault_22351)/sizeof(g_rRlmPowerLimitDefault_22351[0]), g_rRlmPowerLimitDefault_22351},
+    {22361, sizeof(g_rRlmPowerLimitDefault_22361)/sizeof(g_rRlmPowerLimitDefault_22361[0]), g_rRlmPowerLimitDefault_22361},
+    {22362, sizeof(g_rRlmPowerLimitDefault_22361)/sizeof(g_rRlmPowerLimitDefault_22361[0]), g_rRlmPowerLimitDefault_22361},
+    {22363, sizeof(g_rRlmPowerLimitDefault_22361)/sizeof(g_rRlmPowerLimitDefault_22361[0]), g_rRlmPowerLimitDefault_22361},
+    {22364, sizeof(g_rRlmPowerLimitDefault_22361)/sizeof(g_rRlmPowerLimitDefault_22361[0]), g_rRlmPowerLimitDefault_22361},
+    {22365, sizeof(g_rRlmPowerLimitDefault_22361)/sizeof(g_rRlmPowerLimitDefault_22361[0]), g_rRlmPowerLimitDefault_22361},
+    {22366, sizeof(g_rRlmPowerLimitDefault_22361)/sizeof(g_rRlmPowerLimitDefault_22361[0]), g_rRlmPowerLimitDefault_22361},
+    {22367, sizeof(g_rRlmPowerLimitDefault_22361)/sizeof(g_rRlmPowerLimitDefault_22361[0]), g_rRlmPowerLimitDefault_22361},
+    {22368, sizeof(g_rRlmPowerLimitDefault_22361)/sizeof(g_rRlmPowerLimitDefault_22361[0]), g_rRlmPowerLimitDefault_22361},
+    {23676, sizeof(g_rRlmPowerLimitDefault_23676)/sizeof(g_rRlmPowerLimitDefault_23676[0]), g_rRlmPowerLimitDefault_23676},
+    {23662, sizeof(g_rRlmPowerLimitDefault_23662)/sizeof(g_rRlmPowerLimitDefault_23662[0]), g_rRlmPowerLimitDefault_23662},
+    {23664, sizeof(g_rRlmPowerLimitDefault_23664)/sizeof(g_rRlmPowerLimitDefault_23664[0]), g_rRlmPowerLimitDefault_23664},
+    {23922, sizeof(g_rRlmPowerLimitDefault_23922)/sizeof(g_rRlmPowerLimitDefault_23922[0]), g_rRlmPowerLimitDefault_23922},
+    {23971, sizeof(g_rRlmPowerLimitDefault_23971)/sizeof(g_rRlmPowerLimitDefault_23971[0]), g_rRlmPowerLimitDefault_23971},
+    {23972, sizeof(g_rRlmPowerLimitDefault_23972)/sizeof(g_rRlmPowerLimitDefault_23972[0]), g_rRlmPowerLimitDefault_23972},
+    {23973, sizeof(g_rRlmPowerLimitDefault_23973)/sizeof(g_rRlmPowerLimitDefault_23973[0]), g_rRlmPowerLimitDefault_23973},
+    {23974, sizeof(g_rRlmPowerLimitDefault_23974)/sizeof(g_rRlmPowerLimitDefault_23974[0]), g_rRlmPowerLimitDefault_23974},
+    {23031, sizeof(g_rRlmPowerLimitDefault_23031)/sizeof(g_rRlmPowerLimitDefault_23031[0]), g_rRlmPowerLimitDefault_23031},
+    {22331, sizeof(g_rRlmPowerLimitDefault_22087)/sizeof(g_rRlmPowerLimitDefault_22087[0]), g_rRlmPowerLimitDefault_22087},
+    {22333, sizeof(g_rRlmPowerLimitDefault_22334)/sizeof(g_rRlmPowerLimitDefault_22334[0]), g_rRlmPowerLimitDefault_22334},
+    {22334, sizeof(g_rRlmPowerLimitDefault_22334)/sizeof(g_rRlmPowerLimitDefault_22334[0]), g_rRlmPowerLimitDefault_22334},
+    {22087, sizeof(g_rRlmPowerLimitDefault_22087)/sizeof(g_rRlmPowerLimitDefault_22087[0]), g_rRlmPowerLimitDefault_22087},
+    {22869, sizeof(g_rRlmPowerLimitDefault_22334)/sizeof(g_rRlmPowerLimitDefault_22334[0]), g_rRlmPowerLimitDefault_22334},
+    {23231, sizeof(g_rRlmPowerLimitDefault_23231)/sizeof(g_rRlmPowerLimitDefault_23231[0]), g_rRlmPowerLimitDefault_23231},
+    {23051, sizeof(g_rRlmPowerLimitDefault_23051)/sizeof(g_rRlmPowerLimitDefault_23051[0]), g_rRlmPowerLimitDefault_23051},
+    {23241, sizeof(g_rRlmPowerLimitDefault_23051)/sizeof(g_rRlmPowerLimitDefault_23051[0]), g_rRlmPowerLimitDefault_23051},
+    {23243, sizeof(g_rRlmPowerLimitDefault_23051)/sizeof(g_rRlmPowerLimitDefault_23051[0]), g_rRlmPowerLimitDefault_23051},
+    {23021, sizeof(g_rRlmPowerLimitDefault_23021)/sizeof(g_rRlmPowerLimitDefault_23021[0]), g_rRlmPowerLimitDefault_23021},
+    {23251, sizeof(g_rRlmPowerLimitDefault_23251)/sizeof(g_rRlmPowerLimitDefault_23251[0]), g_rRlmPowerLimitDefault_23251},
 };
 //#endif
 #endif
 
 //#ifdef OPLUS_BUG_COMPATIBILITY
+//PSW.CN.WiFi.BASIC.HARDWARE.2014076, 2021/08/18
 //Add new region cfg implementation
 struct DOMAIN_INFO_ENTRY *oplusGetActiveDomainInfo(struct ADAPTER *prAdapter)
 {
@@ -1491,6 +1730,7 @@ struct DOMAIN_INFO_ENTRY *rlmDomainGetDomainInfo(struct ADAPTER *prAdapter)
 	if (prAdapter->prDomainInfo)
 		return prAdapter->prDomainInfo;
     //#ifdef OPLUS_BUG_COMPATIBILITY
+    //PSW.CN.WiFi.BASIC.HARDWARE.2014076, 2021/08/18
     //Add new region cfg implementation
     #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
     prDomainInfo = oplusGetActiveDomainInfo(prAdapter);
@@ -1845,6 +2085,7 @@ void rlmDomainGetDfsChnls(struct ADAPTER *prAdapter,
 u_int8_t rlmDomainIsDfsChnls(struct ADAPTER *prAdapter, uint8_t ucChannel)
 {
 	uint8_t ucNumOfChannel = 0;
+#if IS_ENABLED(CONFIG_ARM64)
 	struct RF_CHANNEL_INFO aucChannelList[64] = {};
 	uint8_t ucCount = 0;
 
@@ -1853,7 +2094,31 @@ u_int8_t rlmDomainIsDfsChnls(struct ADAPTER *prAdapter, uint8_t ucChannel)
 		if (ucChannel == aucChannelList[ucCount].ucChannelNum)
 			return TRUE;
 	}
+#else
+	struct RF_CHANNEL_INFO *aucChannelList = NULL;
+	u32 ucRchannelInfoSize = sizeof(struct RF_CHANNEL_INFO) * 64;
+	uint8_t ucCount = 0;
 
+	aucChannelList = (struct RF_CHANNEL_INFO *)
+		kalMemAlloc(ucRchannelInfoSize, VIR_MEM_TYPE);
+	if (!aucChannelList)
+		return FALSE;
+
+	kalMemZero(aucChannelList, ucRchannelInfoSize);
+	rlmDomainGetDfsChnls(prAdapter, 64, &ucNumOfChannel, aucChannelList);
+
+	for (; ucCount < ucNumOfChannel; ucCount++) {
+		if (ucChannel == aucChannelList[ucCount].ucChannelNum) {
+			kalMemFree(aucChannelList,
+				VIR_MEM_TYPE, ucRchannelInfoSize);
+			return TRUE;
+		}
+	}
+
+	if (aucChannelList)
+		kalMemFree(aucChannelList,
+				VIR_MEM_TYPE, ucRchannelInfoSize);
+#endif
 	return FALSE;
 }
 
@@ -2079,6 +2344,7 @@ void rlmDomainSendPassiveScanInfoCmd(struct ADAPTER *prAdapter)
 
 	u2TargetCountryCode = prAdapter->rWifiVar.u2CountryCode;
     //#ifdef OPLUS_BUG_COMPATIBILITY
+    //PSW.CN.WiFi.BASIC.HARDWARE.2014076, 2021/08/18
     //Add new region cfg implementation
     #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
     if(oplusSendPassiveDomainInfo(prAdapter)){
@@ -3284,6 +3550,7 @@ void rlmDomainCheckCountryPowerLimitTable(struct ADAPTER *prAdapter)
             sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION));
 
     //#ifdef OPLUS_FEATURE_WIFI_CUSTOMER_NVRAM
+	//CONNECTIVITY.WIFI.HARDWARE.FTM.1948379, Add for distinguish country power limit at runtime.
     int u4PrjName = get_project();
 
     for (i = 0; i < sizeof(g_oplusCountryPwrLimit)/sizeof(g_oplusCountryPwrLimit[0]); i++) {
@@ -3418,13 +3685,12 @@ void rlmDomainCheckCountryPowerLimitTable(struct ADAPTER *prAdapter)
 uint16_t rlmDomainPwrLimitDefaultTableDecision(struct ADAPTER *prAdapter,
 					       uint16_t u2CountryCode)
 {
-
 	uint16_t i, j;
 	uint16_t u2CountryCodeTable = COUNTRY_CODE_NULL;
 	uint16_t u2TableIndex = POWER_LIMIT_TABLE_NULL;	/* No Table Match */
 	struct COUNTRY_POWER_LIMIT_GROUP_TABLE *prCountryGrpInfo;
-
 	//#ifndef OPLUS_FEATURE_WIFI_CHANNEL
+	//CONNECTIVITY.WIFI.HARDWARE.CHANNEL.3267976, 2018/08/8
 	//Modify for: set WiFi band over the world
 	for (i = 0; i < g_ucOplusCountryPwrLimitDefaultSize; i++) {
 
@@ -3450,7 +3716,6 @@ uint16_t rlmDomainPwrLimitDefaultTableDecision(struct ADAPTER *prAdapter,
 			WLAN_GET_FIELD_BE16(
 				&prCountryGrpInfo->prGroup[j].aucCountryCode[0],
 				&u2CountryCodeTable);
-
 			if (u2CountryCodeTable == u2CountryCode){
 				WLAN_GET_FIELD_BE16(
 					&prCountryGrpInfo->aucGroupCode[0],
@@ -3529,7 +3794,8 @@ rlmDomainBuildCmdByDefaultTable(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT
 				eType == PWR_LIMIT_TYPE_COMP_6E_3)
 		prPwrLmt6E = &prCmd->u.rChPwrLimt6E[0];
 #endif
-	else
+	else if (eType == PWR_LIMIT_TYPE_COMP_11AC ||
+					eType == PWR_LIMIT_TYPE_COMP_11AC_V2)
 		prPwrLimit = &prCmd->u.rChannelPowerLimit[0];
 
 	startIndex = POWER_LIMIT_2G4;
@@ -3549,18 +3815,21 @@ rlmDomainBuildCmdByDefaultTable(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT
 	/*Build power limit cmd by default table information */
 
 	for (i = startIndex; i <= endIndex; i++) {
-		cLmtBand = prPwrLimitSubBand->aucPwrLimitSubBand[i];
-
-		if (prPwrLimitSubBand->aucPwrLimitSubBand[i] > MAX_TX_POWER) {
-			DBGLOG(RLM, WARN, "SubBand[%d] Pwr(%d) > Max (%d)",
-				prPwrLimitSubBand->aucPwrLimitSubBand[i],
-				MAX_TX_POWER);
-			cLmtBand = MAX_TX_POWER;
-		}
 
 		for (k = g_rRlmSubBand[i].ucStartCh;
 		     k <= g_rRlmSubBand[i].ucEndCh;
 		     k += g_rRlmSubBand[i].ucInterval) {
+
+			/* cLmtBand need reset by each channel */
+			cLmtBand = prPwrLimitSubBand->aucPwrLimitSubBand[i];
+			if (prPwrLimitSubBand->aucPwrLimitSubBand[i]
+				> MAX_TX_POWER) {
+				DBGLOG(RLM, WARN,
+				"SubBand[%d] Pwr(%d) > Max (%d)",
+				prPwrLimitSubBand->aucPwrLimitSubBand[i],
+				MAX_TX_POWER);
+				cLmtBand = MAX_TX_POWER;
+			}
 
 			if (eType == PWR_LIMIT_TYPE_COMP_11AX)
 				prPwrLmtHE->ucCentralCh = k;
@@ -3572,7 +3841,8 @@ rlmDomainBuildCmdByDefaultTable(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT
 					eType == PWR_LIMIT_TYPE_COMP_6E_3)
 				prPwrLmt6E->ucCentralCh = k;
 #endif
-			else
+			else if (eType == PWR_LIMIT_TYPE_COMP_11AC ||
+					eType == PWR_LIMIT_TYPE_COMP_11AC_V2)
 				prPwrLimit->ucCentralCh = k;
 
 			if ((prPwrLimitSubBand->ucPwrUnit
@@ -3596,7 +3866,8 @@ rlmDomainBuildCmdByDefaultTable(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT
 						cLmtBand,
 						PWR_LIMIT_6E_NUM);
 #endif
-				else
+				else if (eType == PWR_LIMIT_TYPE_COMP_11AC ||
+					eType == PWR_LIMIT_TYPE_COMP_11AC_V2)
 #if (CFG_SUPPORT_DYNA_TX_PWR_CTRL_11AC_V2_SETTING == 1)
 					kalMemSet(&prPwrLimit->cPwrLimitCCK_L,
 #else
@@ -3682,7 +3953,8 @@ rlmDomainBuildCmdByDefaultTable(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT
 					prPwrLmt6E->cPwrLimitRU242U = cLmtBand;
 				}
 #endif
-				else {
+				else if (eType == PWR_LIMIT_TYPE_COMP_11AC ||
+					eType == PWR_LIMIT_TYPE_COMP_11AC_V2) {
 					/* BW20 */
 #if (CFG_SUPPORT_DYNA_TX_PWR_CTRL_11AC_V2_SETTING == 1)
 					prPwrLimit->cPwrLimitCCK_L = cLmtBand;
@@ -3724,7 +3996,8 @@ rlmDomainBuildCmdByDefaultTable(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT
 					prPwrLmt6E->cPwrLimitRU484U = cLmtBand;
 				}
 #endif
-				else {
+				else if (eType == PWR_LIMIT_TYPE_COMP_11AC ||
+					eType == PWR_LIMIT_TYPE_COMP_11AC_V2) {
 					prPwrLimit->cPwrLimit40L = cLmtBand;
 					prPwrLimit->cPwrLimit40H = cLmtBand;
 				}
@@ -3756,7 +4029,8 @@ rlmDomainBuildCmdByDefaultTable(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT
 					prPwrLmt6E->cPwrLimitRU996U = cLmtBand;
 				}
 #endif
-				else {
+				else if (eType == PWR_LIMIT_TYPE_COMP_11AC ||
+					eType == PWR_LIMIT_TYPE_COMP_11AC_V2) {
 					prPwrLimit->cPwrLimit80L = cLmtBand;
 					prPwrLimit->cPwrLimit80H = cLmtBand;
 				}
@@ -3783,10 +4057,8 @@ rlmDomainBuildCmdByDefaultTable(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT
 					prPwrLmt6E->cPwrLimitRU1992U = cLmtBand;
 				}
 #endif
-				else if (eType == PWR_LIMIT_TYPE_COMP_11AX) {
-					/* prPwrLmtHE do nothing */
-				}
-				else {
+				else if (eType == PWR_LIMIT_TYPE_COMP_11AC ||
+					eType == PWR_LIMIT_TYPE_COMP_11AC_V2) {
 					prPwrLimit->cPwrLimit160L = cLmtBand;
 					prPwrLimit->cPwrLimit160H = cLmtBand;
 				}
@@ -3804,7 +4076,8 @@ rlmDomainBuildCmdByDefaultTable(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT
 					eType == PWR_LIMIT_TYPE_COMP_6E_3)
 				prPwrLmt6E++;
 #endif
-			else
+			else if (eType == PWR_LIMIT_TYPE_COMP_11AC ||
+					eType == PWR_LIMIT_TYPE_COMP_11AC_V2)
 				prPwrLimit++;
 
 			prCmd->ucNum++;
@@ -3852,7 +4125,7 @@ static void PwrLmtTblArbitrator(int8_t *target,
 	uint8_t i = 0;
 
 	/* Choose min value from target & compare */
-	for (i = 0; i < size; i++){
+	for (i = 0; i < size; i++) {
 		if (target[i] > compare[i])
 			target[i] = compare[i];
 
@@ -3917,7 +4190,11 @@ static void rlmDomainCompareFromConfigTable(int8_t *prPwrLmt,
 void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 			struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT *prCmd)
 {
+//#ifndef OPLUS_FEATURE_WIFI_CUSTOMER_NVRAM
+/*
 #define PwrLmtConfHEBW160 g_rRlmPowerLimitConfigurationHEBW160
+*/
+//#endif
 #if (CFG_SUPPORT_WIFI_6G == 1)
 #define PwrLmtConf6E g_rRlmPowerLimitConfiguration6E
 #endif
@@ -3938,12 +4215,16 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 		sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION_HE);
     struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION *PwrLmtConf = g_rRlmPowerLimitConfiguration;
     struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION_HE *PwrLmtConfHE = g_rRlmPowerLimitConfigurationHE;
+    //#ifndef OPLUS_FEATURE_WIFI_CUSTOMER_NVRAM
+    struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION_HE_BW160 *PwrLmtConfHEBW160 = g_rRlmPowerLimitConfigurationHEBW160;
+    //#endif
 #if (CFG_SUPPORT_WIFI_6G == 1)
 	uint8_t ucPwrLmitConfSize6E = sizeof(PwrLmtConf6E) /
 		sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION_6E);
 #endif
 
     //#ifdef OPLUS_FEATURE_WIFI_CUSTOMER_NVRAM
+	//#CONNECTIVITY.WIFI.HARDWARE.FTM.1948379, Add for distinguish country power limit at runtime.
     int u4PrjName = get_project();
 
     for (i = 0; i < sizeof(g_oplusCountryPwrLimit)/sizeof(g_oplusCountryPwrLimit[0]); i++) {
@@ -3959,6 +4240,15 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
         if (u4PrjName == g_oplusCountryPwrLimitHe[i].project) {
             PwrLmtConfHE = g_oplusCountryPwrLimitHe[i].pwrLimitTableHE;
             ucPwrLmitConfSizeHE = g_oplusCountryPwrLimitHe[i].tableSize;
+
+            break;
+        }
+    }
+
+    for (i = 0; i < sizeof(g_oplusCountryPwrLimitHeBw160)/sizeof(g_oplusCountryPwrLimitHeBw160[0]); i++) {
+        if (u4PrjName == g_oplusCountryPwrLimitHeBw160[i].project) {
+            PwrLmtConfHEBW160 = g_oplusCountryPwrLimitHeBw160[i].pwrLimitTableHEBW160;
+            ucPwrLmitConfSizeHE = g_oplusCountryPwrLimitHeBw160[i].tableSize;
 
             break;
         }
@@ -4002,7 +4292,8 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 					!= PwrLmtConfHE[i].ucCentralCh)
 					continue;
 
-				/* Choose MINIMUN value from Default table & Conf table
+				/* Choose MINIMUN value from
+				 * Default table & Conf table
 				 * Cmd setting (Default table
 				 * information) and Conf table
 				 * has repetition channel entry,
@@ -4013,9 +4304,9 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 				 *      22 dBm) --> ch 1 = 22 dBm
 				 * Conf table (ex: ch2, limit =
 				 *      18 dBm) --> ch 2 = 18 dBm
- 				 * Cmd final setting --> ch1 =
+				 * Cmd final setting --> ch1 =
 				 *      20dBm, ch2 = 18dBm ch3~14 = 20dBm
- 				 */
+				 */
 				rlmDomainCompareFromConfigTable(
 					&prCmdPwrLimtHE->cPwrLimitRU26L,
 					&PwrLmtConfHE[i].aucPwrLimit[0],
@@ -4048,20 +4339,25 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 					!= PwrLmtConfHEBW160[i].ucCentralCh)
 					continue;
 
-				/* Cmd setting (Default table
+				/* Choose MINIMUN value from
+				 * Default table & Conf table
+				 * Cmd setting (Default table
 				 * information) and Conf table
 				 * has repetition channel entry,
 				 * ex : Default table (ex: 2.4G,
 				 *      limit = 20dBm) -->
 				 *      ch1~14 limit =20dBm,
 				 * Conf table (ex: ch1, limit =
-				 *      22dBm) --> ch 1 = 22 dBm
+				 *      22 dBm) --> ch 1 = 22 dBm
+				 * Conf table (ex: ch2, limit =
+				 *      18 dBm) --> ch 2 = 18 dBm
 				 * Cmd final setting --> ch1 =
-				 *      22dBm, ch2~14 = 20dBm
+				 *      20dBm, ch2 = 18dBm ch3~14 = 20dBm
 				 */
-				kalMemCopy(&prCmdPwrLimtHEBW160->cPwrLimitRU26L,
-					   &PwrLmtConfHEBW160[i].aucPwrLimit,
-					   PWR_LIMIT_HE_BW160_NUM);
+				rlmDomainCompareFromConfigTable(
+					&prCmdPwrLimtHEBW160->cPwrLimitRU26L,
+					&PwrLmtConfHEBW160[i].aucPwrLimit[0],
+					eType);
 			}
 		}
 #if (CFG_SUPPORT_WIFI_6G == 1)
@@ -4070,7 +4366,6 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 					eType == PWR_LIMIT_TYPE_COMP_6E_3) {
 			prCmdPwrLimt6E = &prCmd->u.rChPwrLimt6E[k];
 			ucCentCh = prCmdPwrLimt6E->ucCentralCh;
-
 			for (i = 0; i < ucPwrLmitConfSize6E ; i++) {
 
 				WLAN_GET_FIELD_BE16(
@@ -4093,7 +4388,8 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 					!= PwrLmtConf6E[i].ucCentralCh)
 					continue;
 
-				/* Choose MINIMUN value from Default table & Conf table
+				/* Choose MINIMUN value from
+				 * Default table & Conf table
 				 * Cmd setting (Default table
 				 * information) and Conf table
 				 * has repetition channel entry,
@@ -4140,7 +4436,8 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 				else if (ucCentCh != PwrLmtConf[i].ucCentralCh)
 					continue;
 
-				/* Choose MINIMUN value from Default table & Conf table
+				/* Choose MINIMUN value from
+				 * Default table & Conf table
 				 * Cmd setting (Default table
 				 * information) and Conf table
 				 * has repetition channel entry,
@@ -4169,6 +4466,9 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 			}
 		}
 	}
+
+#undef PwrLmtConf
+#undef PwrLmtConfHE
 #undef PwrLmtConfHEBW160
 #if (CFG_SUPPORT_WIFI_6G == 1)
 #undef PwrLmtConf6E
@@ -4995,6 +5295,108 @@ int32_t txPwrParseTagAllT(
 		cTagParaNum, pRecord, POWER_ANT_ALL_T);
 }
 
+int32_t txPwrParseTagAllT6G(
+	char *pStart, char *pEnd, uint8_t cTagParaNum,
+	struct TX_PWR_CTRL_ELEMENT *pRecord){
+
+	char *pCurent = NULL, *pContent = NULL;
+	uint8_t i = 0, j = 0;
+	uint8_t ucBandIdx = 0, ucAntIdx = 0;
+	uint8_t op = 0, value = 0;
+	int8_t backoff = 0;
+	enum ENUM_POWER_ANT_TAG eTag = POWER_ANT_ALL_T_6G;
+
+	if (!pStart || !pEnd || !pRecord)
+		return -1;
+
+	if (cTagParaNum != (POWER_ANT_6G_BAND_NUM * POWER_ANT_NUM))
+		return -1;
+
+	DBGLOG(RLM, TRACE, "pase tag Para (%s) to aiPwrAnt[%u]",
+		pStart, eTag);
+
+	pCurent = pStart;
+
+	for (i = 0; i < cTagParaNum; i++) {
+
+		if (!pCurent || pCurent >= pEnd)
+			break;
+
+		pContent = txPwrGetString(&pCurent, ",");
+
+		if (!pContent) {
+			DBGLOG(RLM, TRACE, "tag parameter format error: %s\n",
+			       pStart);
+			break;
+		}
+
+		if (txPwrParseNumber(&pContent, ",", &op, &value)) {
+			DBGLOG(RLM, TRACE, "parse parameter error: %s\n",
+			       pContent);
+			break;
+		}
+
+		backoff = (op == 1) ? value : (0 - value);
+		if (backoff < PWR_CFG_BACKOFF_MIN)
+			backoff = PWR_CFG_BACKOFF_MIN;
+
+		if (backoff > PWR_CFG_BACKOFF_MAX)
+			backoff = PWR_CFG_BACKOFF_MAX;
+
+		ucBandIdx = i%POWER_ANT_6G_BAND_NUM;
+		ucAntIdx = i/POWER_ANT_6G_BAND_NUM;
+		switch (ucBandIdx) {
+		case POWER_ANT_6G_BAND1:
+			pRecord->aiPwrAnt[eTag].aiPwrAnt6GB1[ucAntIdx]
+				= backoff;
+			break;
+		case POWER_ANT_6G_BAND2:
+			pRecord->aiPwrAnt[eTag].aiPwrAnt6GB2[ucAntIdx]
+				= backoff;
+			break;
+		case POWER_ANT_6G_BAND3:
+			pRecord->aiPwrAnt[eTag].aiPwrAnt6GB3[ucAntIdx]
+				= backoff;
+			break;
+		case POWER_ANT_6G_BAND4:
+			pRecord->aiPwrAnt[eTag].aiPwrAnt6GB4[ucAntIdx]
+				= backoff;
+			break;
+		default:
+			DBGLOG(RLM, INFO, "Never happen: %s\n",
+				pStart);
+			return -1;
+		}
+
+		if (pCurent >= pEnd)
+			break;
+
+	}
+
+	if (i != cTagParaNum) {
+		DBGLOG(RLM, INFO, "parameter number error: %s\n",
+			       pStart);
+		for (j = 0; j < POWER_ANT_NUM; j++) {
+			pRecord->aiPwrAnt[eTag].aiPwrAnt6GB1[j] = 0;
+			pRecord->aiPwrAnt[eTag].aiPwrAnt6GB2[j] = 0;
+			pRecord->aiPwrAnt[eTag].aiPwrAnt6GB3[j] = 0;
+			pRecord->aiPwrAnt[eTag].aiPwrAnt6GB4[j] = 0;
+		}
+		return -1;
+	}
+
+	DBGLOG(RLM, TRACE, "[Success] Dump aiPwrAnt[%u] para: ", eTag);
+	for (j = 0; j < POWER_ANT_NUM; j++)
+		DBGLOG(RLM, TRACE, "[%d][%d][%d][%d]",
+			       pRecord->aiPwrAnt[eTag].aiPwrAnt6GB1[j],
+			       pRecord->aiPwrAnt[eTag].aiPwrAnt6GB2[j],
+			       pRecord->aiPwrAnt[eTag].aiPwrAnt6GB3[j],
+			       pRecord->aiPwrAnt[eTag].aiPwrAnt6GB4[j]);
+	DBGLOG(RLM, TRACE, "\n");
+
+	return 0;
+}
+
 int32_t txPwrParseTag(char *pTagStart, char *pTagEnd,
 	struct TX_PWR_CTRL_ELEMENT *pRecord) {
 	uint8_t i = 0;
@@ -5178,35 +5580,36 @@ uint32_t txPwrArbitrator(enum ENUM_TX_POWER_CTRL_TYPE eCtrlType,
 	struct CMD_CHANNEL_POWER_LIMIT *prPwrLimit;
 	struct CMD_CHANNEL_POWER_LIMIT_HE *prPwrLimitHE;
 	struct CMD_CHANNEL_POWER_LIMIT_HE_BW160 *prPwrLimitHEBW160;
-	uint8_t rateIdxHe, rateIdx;
 #if (CFG_SUPPORT_WIFI_6G == 1)
 	struct CMD_CHANNEL_POWER_LIMIT_6E *prPwrLimit6E;
 #endif
 	int8_t *prRateOfs;
 
 	if (eType == PWR_LIMIT_TYPE_COMP_11AX) {
+		enum ENUM_POWER_LIMIT_HE rateIdx;
 		prPwrLimitHE = (struct CMD_CHANNEL_POWER_LIMIT_HE *) pvBuf;
 		prRateOfs = &prPwrLimitHE->cPwrLimitRU26L;
 
-		for (rateIdxHe = PWR_LIMIT_RU26_L;
-			rateIdxHe < PWR_LIMIT_HE_NUM ; rateIdxHe++) {
-			if (prChlSetting->opHE[rateIdxHe]
+		for (rateIdx = PWR_LIMIT_RU26_L;
+			rateIdx < PWR_LIMIT_HE_NUM ; rateIdx++) {
+			if (prChlSetting->opHE[rateIdx]
 				!= PWR_CTRL_TYPE_NO_ACTION) {
-				txPwrOperate(eCtrlType, prRateOfs + rateIdxHe,
-				&prChlSetting->i8PwrLimitHE[rateIdxHe]);
+				txPwrOperate(eCtrlType, prRateOfs + rateIdx,
+				&prChlSetting->i8PwrLimitHE[rateIdx]);
 			}
 		}
 	} else if (eType == PWR_LIMIT_TYPE_COMP_11AX_BW160) {
+		enum ENUM_POWER_LIMIT_HE rateIdx;
 		prPwrLimitHEBW160 =
 			(struct CMD_CHANNEL_POWER_LIMIT_HE_BW160 *) pvBuf;
 		prRateOfs = &prPwrLimitHEBW160->cPwrLimitRU26L;
 
-		for (rateIdxHe = PWR_LIMIT_RU26_L;
-			rateIdxHe < PWR_LIMIT_HE_BW160_NUM ; rateIdxHe++) {
-			if (prChlSetting->opHE[rateIdxHe]
+		for (rateIdx = PWR_LIMIT_RU26_L;
+			rateIdx < PWR_LIMIT_HE_BW160_NUM ; rateIdx++) {
+			if (prChlSetting->opHE[rateIdx]
 				!= PWR_CTRL_TYPE_NO_ACTION) {
-				txPwrOperate(eCtrlType, prRateOfs + rateIdxHe,
-				&prChlSetting->i8PwrLimitHE[rateIdxHe]);
+				txPwrOperate(eCtrlType, prRateOfs + rateIdx,
+				&prChlSetting->i8PwrLimitHE[rateIdx]);
 			}
 		}
 	}
@@ -5214,6 +5617,7 @@ uint32_t txPwrArbitrator(enum ENUM_TX_POWER_CTRL_TYPE eCtrlType,
 	else if (eType == PWR_LIMIT_TYPE_COMP_6E_1 ||
 				eType == PWR_LIMIT_TYPE_COMP_6E_2 ||
 				eType == PWR_LIMIT_TYPE_COMP_6E_3) {
+		enum ENUM_POWER_LIMIT_HE rateIdx;
 		prPwrLimit6E = (struct CMD_CHANNEL_POWER_LIMIT_6E *) pvBuf;
 		prRateOfs = &prPwrLimit6E->cPwrLimitRU26L;
 		for (rateIdx = PWR_LIMIT_RU26_L;
@@ -5227,6 +5631,7 @@ uint32_t txPwrArbitrator(enum ENUM_TX_POWER_CTRL_TYPE eCtrlType,
 	}
 #endif
 	else {
+		enum ENUM_POWER_LIMIT rateIdx;
 		prPwrLimit = (struct CMD_CHANNEL_POWER_LIMIT *) pvBuf;
 #if (CFG_SUPPORT_DYNA_TX_PWR_CTRL_11AC_V2_SETTING == 1)
 		prRateOfs = &prPwrLimit->cPwrLimitCCK_L;
@@ -5268,6 +5673,14 @@ uint8_t txPwrIsAntTagSet(
 			return 1;
 		if (prCurElement->aiPwrAnt[tag].aiPwrAnt5GB4[i] != 0)
 			return 1;
+		if (prCurElement->aiPwrAnt[tag].aiPwrAnt6GB1[i] != 0)
+			return 1;
+		if (prCurElement->aiPwrAnt[tag].aiPwrAnt6GB2[i] != 0)
+			return 1;
+		if (prCurElement->aiPwrAnt[tag].aiPwrAnt6GB3[i] != 0)
+			return 1;
+		if (prCurElement->aiPwrAnt[tag].aiPwrAnt6GB4[i] != 0)
+			return 1;
 	}
 	return 0;
 }
@@ -5283,7 +5696,7 @@ uint8_t txPwrIsAntTagNeedApply(
 	fg1TSet = txPwrIsAntTagSet(prCurElement, POWER_ANT_MIMO_1T);
 	fg2TSet = txPwrIsAntTagSet(prCurElement, POWER_ANT_MIMO_2T);
 
-	if ((fgAllTSet && !fg1TSet && !fg2TSet)/* only ALL_T */
+	if ((fgAllTSet && !fg1TSet && !fg2TSet)
 		|| (!fgAllTSet && (fg1TSet || fg2TSet)))
 		/* only MIMO_1T or MIMO_2T */
 		return 1;
@@ -5294,14 +5707,108 @@ uint8_t txPwrIsAntTagNeedApply(
 	return 0;
 }
 
+uint32_t txPwrCheckPwrAntNum(
+	enum ENUM_POWER_ANT_TAG tag, uint8_t u1Num)
+{
+	if (u1Num >= POWER_LIMIT_ANT_CONFIG_NUM) {
+		DBGLOG(RLM, ERROR,
+			"PwrLimit ant element idx invalid,tag(%d)num(%d)\n",
+			tag, u1Num);
+		return WLAN_STATUS_INVALID_DATA;
+	}
+
+	return WLAN_STATUS_SUCCESS;
+}
+
+uint32_t txPwrApplyPwrAnt(
+	uint8_t u1Idx,
+	enum ENUM_POWER_ANT_TAG tag,
+	uint8_t u1BandNum,
+	uint8_t u1AntNum,
+	struct CMD_CHANNEL_POWER_LIMIT_ANT *prCmdPwrAnt,
+	struct TX_PWR_CTRL_ELEMENT *prCurElem)
+{
+	uint8_t u1BandIdx = 0, u1AntIdx = 0;
+
+	if ((txPwrCheckPwrAntNum(tag, u1Idx) != WLAN_STATUS_SUCCESS)
+		|| (tag >= POWER_ANT_TAG_NUM) || (tag < 0))
+		return u1Idx;
+
+	for (u1BandIdx = 0; u1BandIdx < u1BandNum; u1BandIdx++) {
+		for (u1AntIdx = 0; u1AntIdx < u1AntNum; u1AntIdx++) {
+			prCmdPwrAnt[u1Idx].cTagIdx = tag;
+			prCmdPwrAnt[u1Idx].cBandIdx = u1BandIdx;
+			prCmdPwrAnt[u1Idx].cAntIdx = u1AntIdx;
+
+			if (u1BandIdx == POWER_ANT_2G4_BAND) {
+				prCmdPwrAnt[u1Idx].cValue =
+				prCurElem->aiPwrAnt[tag].aiPwrAnt2G4[u1AntIdx];
+			} else if (u1BandIdx == POWER_ANT_5G_BAND1) {
+				prCmdPwrAnt[u1Idx].cValue =
+				prCurElem->aiPwrAnt[tag].aiPwrAnt5GB1[u1AntIdx];
+			} else if (u1BandIdx == POWER_ANT_5G_BAND2) {
+				prCmdPwrAnt[u1Idx].cValue =
+				prCurElem->aiPwrAnt[tag].aiPwrAnt5GB2[u1AntIdx];
+			} else if (u1BandIdx == POWER_ANT_5G_BAND3) {
+				prCmdPwrAnt[u1Idx].cValue =
+				prCurElem->aiPwrAnt[tag].aiPwrAnt5GB3[u1AntIdx];
+			} else if (u1BandIdx == POWER_ANT_5G_BAND4) {
+				prCmdPwrAnt[u1Idx].cValue =
+				prCurElem->aiPwrAnt[tag].aiPwrAnt5GB4[u1AntIdx];
+			}
+			u1Idx++;
+		}
+	}
+	return u1Idx;
+}
+
+uint32_t txPwrApplyPwrAnt6G(
+	uint8_t u1Idx,
+	enum ENUM_POWER_ANT_TAG tag,
+	uint8_t u1BandNum,
+	uint8_t u1AntNum,
+	struct CMD_CHANNEL_POWER_LIMIT_ANT *prCmdPwrAnt,
+	struct TX_PWR_CTRL_ELEMENT *prCurElem)
+{
+	uint8_t u1BandIdx = 0, u1AntIdx = 0;
+
+	if ((txPwrCheckPwrAntNum(tag, u1Idx) != WLAN_STATUS_SUCCESS)
+		|| (tag >= POWER_ANT_TAG_NUM) || (tag < 0))
+		return u1Idx;
+
+	for (u1BandIdx = 0; u1BandIdx < u1BandNum; u1BandIdx++) {
+		for (u1AntIdx = 0; u1AntIdx < u1AntNum; u1AntIdx++) {
+			prCmdPwrAnt[u1Idx].cTagIdx = tag;
+			prCmdPwrAnt[u1Idx].cBandIdx = u1BandIdx;
+			prCmdPwrAnt[u1Idx].cAntIdx = u1AntIdx;
+
+			if (u1BandIdx == POWER_ANT_6G_BAND1) {
+				prCmdPwrAnt[u1Idx].cValue =
+				prCurElem->aiPwrAnt[tag].aiPwrAnt6GB1[u1AntIdx];
+			} else if (u1BandIdx == POWER_ANT_6G_BAND2) {
+				prCmdPwrAnt[u1Idx].cValue =
+				prCurElem->aiPwrAnt[tag].aiPwrAnt6GB2[u1AntIdx];
+			} else if (u1BandIdx == POWER_ANT_6G_BAND3) {
+				prCmdPwrAnt[u1Idx].cValue =
+				prCurElem->aiPwrAnt[tag].aiPwrAnt6GB3[u1AntIdx];
+			} else if (u1BandIdx == POWER_ANT_6G_BAND4) {
+				prCmdPwrAnt[u1Idx].cValue =
+				prCurElem->aiPwrAnt[tag].aiPwrAnt6GB4[u1AntIdx];
+			}
+			u1Idx++;
+		}
+	}
+	return u1Idx;
+}
+
 uint32_t txPwrApplyOneSettingPwrAnt(
 	struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT *prCmd,
-	struct TX_PWR_CTRL_ELEMENT *prCurElement) {
-
+	struct TX_PWR_CTRL_ELEMENT *prCurElement)
+{
 	struct CMD_CHANNEL_POWER_LIMIT_ANT *prCmdPwrAnt = NULL;
-	uint8_t i = 0, j = 0, k = 0;
+	uint8_t u1NextIdx = 0;
 	uint8_t fgAllTSet = 0, fg1TSet = 0, fg2TSet = 0;
-	uint8_t tagIdx = 0;
+	uint8_t fgAllT6GSet = 0;
 
 	enum ENUM_PWR_LIMIT_TYPE eType;
 
@@ -5318,214 +5825,48 @@ uint32_t txPwrApplyOneSettingPwrAnt(
 	fgAllTSet = txPwrIsAntTagSet(prCurElement, POWER_ANT_ALL_T);
 	fg1TSet = txPwrIsAntTagSet(prCurElement, POWER_ANT_MIMO_1T);
 	fg2TSet = txPwrIsAntTagSet(prCurElement, POWER_ANT_MIMO_2T);
+	fgAllT6GSet = txPwrIsAntTagSet(prCurElement, POWER_ANT_ALL_T_6G);
 
 	/* check scenario reasonable */
-	if (!((fgAllTSet && !fg1TSet && !fg2TSet)/* only ALL_T */
-		|| (!fgAllTSet && (fg1TSet || fg2TSet)))) {
+	if (!(((fgAllTSet || fgAllT6GSet) && !fg1TSet && !fg2TSet)
+		|| (!(fgAllTSet || fgAllT6GSet) && (fg1TSet || fg2TSet)))) {
 		return 0;
 	}
 	/* TODO : refactory when fg1TSet/fg2TSet online */
 	prCmd->ucNum = 0;
 
 	if (fgAllTSet) {
-		tagIdx = POWER_ANT_ALL_T;
-		for (j = 0; j < POWER_ANT_BAND_NUM; j++) {
-			for (k = 0; k < POWER_ANT_NUM; k++) {
-				prCmdPwrAnt[i].cTagIdx = tagIdx;
-				prCmdPwrAnt[i].cBandIdx = j;
-				prCmdPwrAnt[i].cAntIdx = k;
-
-				if (j == POWER_ANT_2G4_BAND) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_ALL_T]
-						.aiPwrAnt2G4[k]) {
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_ALL_T]
-							.aiPwrAnt2G4[k];
-					}
-				} else if (j == POWER_ANT_5G_BAND1) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_ALL_T]
-						.aiPwrAnt5GB1[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_ALL_T]
-							.aiPwrAnt5GB1[k];
-				} else if (j == POWER_ANT_5G_BAND2) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_ALL_T]
-						.aiPwrAnt5GB2[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_ALL_T]
-							.aiPwrAnt5GB2[k];
-				} else if (j == POWER_ANT_5G_BAND3) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_ALL_T]
-						.aiPwrAnt5GB3[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_ALL_T]
-							.aiPwrAnt5GB3[k];
-				} else if (j == POWER_ANT_5G_BAND4) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_ALL_T]
-						.aiPwrAnt5GB4[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_ALL_T]
-							.aiPwrAnt5GB4[k];
-				}
-				i++;
-			}
-		}
+		u1NextIdx = txPwrApplyPwrAnt(
+			u1NextIdx, POWER_ANT_ALL_T,
+			POWER_ANT_BAND_NUM, POWER_ANT_NUM,
+			prCmdPwrAnt, prCurElement);
 	}
 
 	if (fg1TSet) {
-		tagIdx = POWER_ANT_MIMO_1T;
-		for (j = 0; j < POWER_ANT_BAND_NUM; j++) {
-			for (k = 0; k < POWER_ANT_NUM; k++) {
-				prCmdPwrAnt[i].cTagIdx = tagIdx;
-				prCmdPwrAnt[i].cBandIdx = j;
-				prCmdPwrAnt[i].cAntIdx = k;
-
-				if (j == POWER_ANT_2G4_BAND) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_MIMO_1T]
-						.aiPwrAnt2G4[k]) {
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_MIMO_1T]
-							.aiPwrAnt2G4[k];
-					}
-				} else if (j == POWER_ANT_5G_BAND1) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_MIMO_1T]
-						.aiPwrAnt5GB1[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_MIMO_1T]
-							.aiPwrAnt5GB1[k];
-				} else if (j == POWER_ANT_5G_BAND2) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_MIMO_1T]
-						.aiPwrAnt5GB2[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_MIMO_1T]
-							.aiPwrAnt5GB2[k];
-				} else if (j == POWER_ANT_5G_BAND3) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_MIMO_1T]
-						.aiPwrAnt5GB3[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_MIMO_1T]
-							.aiPwrAnt5GB3[k];
-				} else if (j == POWER_ANT_5G_BAND4) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_MIMO_1T]
-						.aiPwrAnt5GB4[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_MIMO_1T]
-							.aiPwrAnt5GB4[k];
-				}
-				i++;
-			}
-		}
+		u1NextIdx = txPwrApplyPwrAnt(
+			u1NextIdx, POWER_ANT_MIMO_1T,
+			POWER_ANT_BAND_NUM, POWER_ANT_NUM,
+			prCmdPwrAnt, prCurElement);
 	}
 
 	if (fg2TSet) {
-		tagIdx = POWER_ANT_MIMO_2T;
-		for (j = 0; j < POWER_ANT_BAND_NUM; j++) {
-			for (k = 0; k < POWER_ANT_NUM; k++) {
-				prCmdPwrAnt[i].cTagIdx = tagIdx;
-				prCmdPwrAnt[i].cBandIdx = j;
-				prCmdPwrAnt[i].cAntIdx = k;
-
-				if (j == POWER_ANT_2G4_BAND) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_MIMO_2T]
-						.aiPwrAnt2G4[k]) {
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_MIMO_2T]
-							.aiPwrAnt2G4[k];
-					}
-				} else if (j == POWER_ANT_5G_BAND1) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_MIMO_2T]
-						.aiPwrAnt5GB1[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_MIMO_2T]
-							.aiPwrAnt5GB1[k];
-				} else if (j == POWER_ANT_5G_BAND2) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_MIMO_2T]
-						.aiPwrAnt5GB2[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_MIMO_2T]
-							.aiPwrAnt5GB2[k];
-				} else if (j == POWER_ANT_5G_BAND3) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_MIMO_2T]
-						.aiPwrAnt5GB3[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_MIMO_2T]
-							.aiPwrAnt5GB3[k];
-				} else if (j == POWER_ANT_5G_BAND4) {
-					if (prCmdPwrAnt[i].cValue >
-						prCurElement->
-						aiPwrAnt[POWER_ANT_MIMO_2T]
-						.aiPwrAnt5GB4[k])
-						prCmdPwrAnt[i].cValue =
-							prCurElement->
-							aiPwrAnt
-							[POWER_ANT_MIMO_2T]
-							.aiPwrAnt5GB4[k];
-				}
-				i++;
-			}
-		}
+		u1NextIdx = txPwrApplyPwrAnt(
+			u1NextIdx, POWER_ANT_MIMO_2T,
+			POWER_ANT_BAND_NUM, POWER_ANT_NUM,
+			prCmdPwrAnt, prCurElement);
 	}
 
-	prCmd->ucNum = i;
+	if (fgAllT6GSet) {
+		u1NextIdx = txPwrApplyPwrAnt6G(
+			u1NextIdx, POWER_ANT_ALL_T_6G,
+			POWER_ANT_6G_BAND_NUM, POWER_ANT_NUM,
+			prCmdPwrAnt, prCurElement);
+	}
+
+	prCmd->ucNum = u1NextIdx;
 	return 0;
 }
-#endif
+#endif /* CFG_SUPPORT_DYNAMIC_PWR_LIMIT_ANT_TAG */
 uint32_t txPwrApplyOneSetting(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT *prCmd,
 			      struct TX_PWR_CTRL_ELEMENT *prCurElement,
 			      uint8_t *bandedgeParam)
@@ -5876,7 +6217,7 @@ struct TX_PWR_CTRL_ELEMENT *txPwrCtrlStringToStruct(char *pcContent,
 		       pcContOld);
 		return NULL;
 	}
-	if ((op != 1) || (value < 0)) {
+	if (op != 1) {
 		DBGLOG(RLM, ERROR,
 		       "parse scenario sub index error: op=%u, val=%d\n",
 		       op, value);
@@ -6186,7 +6527,7 @@ skipLabel:
 							value : (0 - value);
 			}
 
-			for (j = 0; j < PWR_CFG_PRAM_NUM_AX; j++) {
+			for (j = 0; j < PWR_LIMIT_HE_BW160_NUM; j++) {
 				prTmpSetting->opHE[j] = op;
 				prTmpSetting->i8PwrLimitHE[j] = (op != 2) ?
 							value : (0 - value);
@@ -7760,6 +8101,29 @@ bool rlmDomainIsEfuseUsed(void)
 	return g_mtk_regd_control.isEfuseCountryCodeUsed;
 }
 
+static const uint16_t g_u2SpecifyCountryGroup[] = {
+    COUNTRY_CODE_ET, COUNTRY_CODE_DZ, COUNTRY_CODE_MA,COUNTRY_CODE_EG,
+    COUNTRY_CODE_TN, COUNTRY_CODE_NG, COUNTRY_CODE_AU,COUNTRY_CODE_CA,
+    COUNTRY_CODE_MX, COUNTRY_CODE_MY, COUNTRY_CODE_RU,COUNTRY_CODE_ID
+};
+
+bool rlmDomainGetSpecifyCountry(struct ADAPTER *prAdapter)
+{
+	uint16_t u2CountryCode = prAdapter->rWifiVar.u2CountryCode;
+	uint16_t ucSpecifyCountryGroupSize = (uint16_t)(sizeof(g_u2SpecifyCountryGroup) / sizeof(g_u2SpecifyCountryGroup[0]));
+	uint16_t i = 0;
+
+	for (i = 0; i < ucSpecifyCountryGroupSize; i++) {
+		if (g_u2SpecifyCountryGroup[i] == u2CountryCode) {
+			DBGLOG(RLM, TRACE,"i:%u Need check rlmDomainGetSpecifyCountry: %d\n",
+					i, prAdapter->rWifiVar.u2CountryCode);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 uint8_t rlmDomainGetChannelBwForCountry(
 			struct ADAPTER *prAdapter,
 			enum ENUM_BAND eBand,
@@ -7772,6 +8136,14 @@ uint8_t rlmDomainGetChannelBwForCountry(
 	uint8_t ucCornerChannel, targetChannel;
 	struct DOMAIN_SUBBAND_INFO *prSubband;
 	struct DOMAIN_INFO_ENTRY *prDomainInfo;
+
+	if (maxChannelBw >= MAX_BW_160MHZ && eBand == BAND_5G && prAdapter->fgEnable5GBand && rlmDomainGetSpecifyCountry(prAdapter)) {
+		channelBw = MAX_BW_80MHZ;
+		DBGLOG(RLM, TRACE,
+			"Cannot find channel: %d! Modify current BW from %d to %d\n",
+			channelNum, maxChannelBw, channelBw);
+		maxChannelBw = channelBw;
+	}
 
 	/* Corner case 1: for countries that support CH132-CH140
 	 * but don't support CH144
@@ -7819,6 +8191,9 @@ uint8_t rlmDomainGetChannelBwForCountry(
 				targetChannel =
 					prSubband->ucFirstChannelNum +
 					j * prSubband->ucChannelSpan;
+					DBGLOG(RLM, TRACE,
+						"ucFirstChannelNum %d ucChannelSpan %d targetChannel %d ucCornerChannel %d  maxChannelBw %d\n",
+						prSubband->ucFirstChannelNum, j * prSubband->ucChannelSpan, targetChannel, ucCornerChannel, maxChannelBw);
 				if (targetChannel == ucCornerChannel) {
 					DBGLOG(RLM, TRACE,
 						"Find corner channel: %d! Thus, no need to modify current BW\n",
@@ -7833,8 +8208,12 @@ uint8_t rlmDomainGetChannelBwForCountry(
 
 	/* Corner case 1 handling */
 	if (maxChannelBw >= MAX_BW_80MHZ && ucCornerChannel == 144) {
-		if (channelNum == 132 || channelNum == 136)
-			channelBw = MAX_BW_40MHZ;
+		if (channelNum == 132 || channelNum == 136){
+			if(channelNum == 132 && (prAdapter->rWifiVar.u2CountryCode == COUNTRY_CODE_DZ))
+				channelBw = MAX_BW_20MHZ;
+			else
+				channelBw = MAX_BW_40MHZ;
+		}
 		else if (channelNum == 140)
 			channelBw = MAX_BW_20MHZ;
 		DBGLOG(RLM, INFO,
@@ -7952,6 +8331,7 @@ void rlmDomainSendInfoToFirmware(IN struct ADAPTER *prAdapter)
 	struct regulatory_request request;
 	struct regulatory_request *prReq = NULL;
 
+	kalMemZero(&request, sizeof(request));
 	if (!regd_is_single_sku_en())
 		return; /*not support single sku*/
 

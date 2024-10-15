@@ -1,54 +1,9 @@
-/******************************************************************************
- *
- * This file is provided under a dual license.  When you use or
- * distribute this software, you may choose to be licensed under
- * version 2 of the GNU General Public License ("GPLv2 License")
- * or BSD License.
- *
- * GPLv2 License
- *
- * Copyright(C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of version 2 of the GNU General Public License as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- *
- * BSD LICENSE
- *
- * Copyright(C) 2016 MediaTek Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *  * Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- *****************************************************************************/
+/* SPDX-License-Identifier: GPL-2.0 */
+
+/*
+ * Copyright (c) 2022 MediaTek Inc.
+ */
+
 /*! \file   "radiotap.h"
  *    \brief  The declaration of the radiotap functions
  *
@@ -167,8 +122,8 @@
 
 /* For IEEE80211_RADIOTAP_TX_FLAGS */
 #define IEEE80211_RADIOTAP_F_TX_FAIL    0x0001
-#define IEEE80211_RADIOTAP_F_TX_CTS     0x0002	/* used cts 'protection' */
-#define IEEE80211_RADIOTAP_F_TX_RTS     0x0004	/* used rts/cts handshake */
+#define IEEE80211_RADIOTAP_F_TX_C_TS     0x0002	/* used c_ts 'protection' */
+#define IEEE80211_RADIOTAP_F_TX_RTS     0x0004	/* used rts/c_ts handshake */
 
 /* For IEEE80211_RADIOTAP_AMPDU_STATUS */
 #define IEEE80211_RADIOTAP_AMPDU_REPORT_ZEROLEN     0x0001
@@ -240,16 +195,17 @@
 #define IEEE80211_RADIOTAP_HE_KNOWN_BW_RU_ALLOC     0x4000
 #define IEEE80211_RADIOTAP_HE_KNOWN_DOPPLER         0x8000
 
-#define IEEE80211_RADIOTAP_HE_KNOWN_DATA1   (IEEE80211_RADIOTAP_HE_KNOWN_BSS_COLOR | \
-			IEEE80211_RADIOTAP_HE_KNOWN_BEAM_CHANGE | \
-			IEEE80211_RADIOTAP_HE_KNOWN_UL_DL | \
-			IEEE80211_RADIOTAP_HE_KNOWN_DATA_MCS | \
-			IEEE80211_RADIOTAP_HE_KNOWN_DCM | \
-			IEEE80211_RADIOTAP_HE_KNOWN_CODING | \
-			IEEE80211_RADIOTAP_HE_KNOWN_LDPC_EXTRA | \
-			IEEE80211_RADIOTAP_HE_KNOWN_STBC | \
-			IEEE80211_RADIOTAP_HE_KNOWN_BW_RU_ALLOC | \
-			IEEE80211_RADIOTAP_HE_KNOWN_DOPPLER)
+#define IEEE80211_RADIOTAP_HE_KNOWN_DATA1 \
+	(IEEE80211_RADIOTAP_HE_KNOWN_BSS_COLOR | \
+	IEEE80211_RADIOTAP_HE_KNOWN_BEAM_CHANGE | \
+	IEEE80211_RADIOTAP_HE_KNOWN_UL_DL | \
+	IEEE80211_RADIOTAP_HE_KNOWN_DATA_MCS | \
+	IEEE80211_RADIOTAP_HE_KNOWN_DCM | \
+	IEEE80211_RADIOTAP_HE_KNOWN_CODING | \
+	IEEE80211_RADIOTAP_HE_KNOWN_LDPC_EXTRA | \
+	IEEE80211_RADIOTAP_HE_KNOWN_STBC | \
+	IEEE80211_RADIOTAP_HE_KNOWN_BW_RU_ALLOC | \
+	IEEE80211_RADIOTAP_HE_KNOWN_DOPPLER)
 
 #define IEEE80211_RADIOTAP_HE_KNOWN_PRI_SEC         0x0001
 #define IEEE80211_RADIOTAP_HE_KNOWN_GI              0x0002

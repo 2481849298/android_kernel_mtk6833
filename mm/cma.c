@@ -35,6 +35,7 @@
 #include <linux/cma.h>
 #include <linux/highmem.h>
 #include <linux/io.h>
+#include <linux/kmemleak.h>
 #include <trace/events/cma.h>
 
 #include "cma.h"
@@ -42,45 +43,27 @@
 struct cma cma_areas[MAX_CMA_AREAS];
 unsigned cma_area_count;
 static DEFINE_MUTEX(cma_mutex);
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+DEFINE_SPINLOCK(cont_pte_cma_spinlock);
+#endif
 
 phys_addr_t cma_get_base(const struct cma *cma)
 {
 	return PFN_PHYS(cma->base_pfn);
 }
+EXPORT_SYMBOL(cma_get_base);
 
 unsigned long cma_get_size(const struct cma *cma)
 {
 	return cma->count << PAGE_SHIFT;
 }
+EXPORT_SYMBOL(cma_get_size);
 
 const char *cma_get_name(const struct cma *cma)
 {
 	return cma->name ? cma->name : "(undefined)";
 }
-
-/* Get all cma range */
-void cma_get_range(phys_addr_t *base, phys_addr_t *size)
-{
-	int i;
-	unsigned long base_pfn = ULONG_MAX, max_pfn = 0;
-
-	for (i = 0; i < cma_area_count; i++) {
-		struct cma *cma = &cma_areas[i];
-
-		if (cma->base_pfn < base_pfn)
-			base_pfn = cma->base_pfn;
-
-		if (cma->base_pfn + cma->count > max_pfn)
-			max_pfn = cma->base_pfn + cma->count;
-	}
-
-	if (max_pfn) {
-		*base = PFN_PHYS(base_pfn);
-		*size = PFN_PHYS(max_pfn) - PFN_PHYS(base_pfn);
-	} else {
-		*base = *size = 0;
-	}
-}
+EXPORT_SYMBOL_GPL(cma_get_name);
 
 static unsigned long cma_bitmap_aligned_mask(const struct cma *cma,
 					     unsigned int align_order)
@@ -111,12 +94,26 @@ static void cma_clear_bitmap(struct cma *cma, unsigned long pfn,
 			     unsigned int count)
 {
 	unsigned long bitmap_no, bitmap_count;
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+	unsigned long flags;
+	bool spinlock = is_cont_pte_cma(cma);
+#endif
 
 	bitmap_no = (pfn - cma->base_pfn) >> cma->order_per_bit;
 	bitmap_count = cma_bitmap_pages_to_bits(cma, count);
 
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+	if (spinlock)
+		spin_lock_irqsave(&cont_pte_cma_spinlock, flags);
+	else
+#endif
 	mutex_lock(&cma->lock);
 	bitmap_clear(cma->bitmap, bitmap_no, bitmap_count);
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+	if (spinlock)
+		spin_unlock_irqrestore(&cont_pte_cma_spinlock, flags);
+	else
+#endif
 	mutex_unlock(&cma->lock);
 }
 
@@ -126,6 +123,9 @@ static int __init cma_activate_area(struct cma *cma)
 	unsigned long base_pfn = cma->base_pfn, pfn = base_pfn;
 	unsigned i = cma->count >> pageblock_order;
 	struct zone *zone;
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+	bool spinlock = is_cont_pte_cma(cma);
+#endif
 
 	cma->bitmap = kzalloc(bitmap_size, GFP_KERNEL);
 
@@ -155,6 +155,11 @@ static int __init cma_activate_area(struct cma *cma)
 		init_cma_reserved_pageblock(pfn_to_page(base_pfn));
 	} while (--i);
 
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+	if (spinlock)
+		spin_lock_init(&cont_pte_cma_spinlock);
+	else
+#endif
 	mutex_init(&cma->lock);
 
 #ifdef CONFIG_CMA_DEBUGFS
@@ -170,27 +175,6 @@ not_in_zone:
 	cma->count = 0;
 	return -EINVAL;
 }
-
-#ifdef CONFIG_ZONE_MOVABLE_CMA
-int cma_alloc_range_ok(struct cma *cma, int count, int align)
-{
-	unsigned long mask, offset;
-	unsigned long bitmap_maxno, bitmap_no, bitmap_count;
-
-	mask = cma_bitmap_aligned_mask(cma, align);
-	offset = cma_bitmap_aligned_offset(cma, align);
-	bitmap_maxno = cma_bitmap_maxno(cma);
-	bitmap_count = cma_bitmap_pages_to_bits(cma, count);
-
-	bitmap_no = bitmap_find_next_zero_area_off(cma->bitmap,
-			bitmap_maxno, 0, bitmap_count, mask,
-			offset);
-
-	if (bitmap_no >= bitmap_maxno)
-		return false;
-	return true;
-}
-#endif
 
 static int __init cma_init_reserved_areas(void)
 {
@@ -212,6 +196,9 @@ core_initcall(cma_init_reserved_areas);
  * @base: Base address of the reserved area
  * @size: Size of the reserved area (in bytes),
  * @order_per_bit: Order of pages represented by one bit on bitmap.
+ * @name: The name of the area. If this parameter is NULL, the name of
+ *        the area will be set to "cmaN", where N is a running counter of
+ *        used areas.
  * @res_cma: Pointer to store the created cma region.
  *
  * This function creates custom contiguous area from already reserved memory.
@@ -274,6 +261,7 @@ int __init cma_init_reserved_mem(phys_addr_t base, phys_addr_t size,
  * @alignment: Alignment for the CMA area, should be power of 2 or zero
  * @order_per_bit: Order of pages represented by one bit on bitmap.
  * @fixed: hint about where to place the reserved area
+ * @name: The name of the area. See function cma_init_reserved_mem()
  * @res_cma: Pointer to store the created cma region.
  *
  * This function reserves memory from early allocator. It should be
@@ -429,6 +417,12 @@ static void cma_debug_show_areas(struct cma *cma)
 	unsigned long nr_part, nr_total = 0;
 	unsigned long nbits = cma_bitmap_maxno(cma);
 
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+	bool spinlock = is_cont_pte_cma(cma);
+	if (spinlock)
+		spin_lock_irq(&cont_pte_cma_spinlock);
+	else
+#endif
 	mutex_lock(&cma->lock);
 	pr_info("number of available pages: ");
 	for (;;) {
@@ -444,6 +438,11 @@ static void cma_debug_show_areas(struct cma *cma)
 		start = next_zero_bit + nr_zero;
 	}
 	pr_cont("=> %lu free of %lu total pages\n", nr_total, cma->count);
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+	if (spinlock)
+		spin_unlock_irq(&cont_pte_cma_spinlock);
+	else
+#endif
 	mutex_unlock(&cma->lock);
 }
 #else
@@ -455,12 +454,13 @@ static inline void cma_debug_show_areas(struct cma *cma) { }
  * @cma:   Contiguous memory region for which the allocation is performed.
  * @count: Requested number of pages.
  * @align: Requested alignment of pages (in PAGE_SIZE order).
+ * @no_warn: Avoid printing message about failed allocation
  *
  * This function allocates part of contiguous memory on specific
  * contiguous memory area.
  */
 struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align,
-		       gfp_t gfp_mask)
+		       bool no_warn)
 {
 	unsigned long mask, offset;
 	unsigned long pfn = -1;
@@ -469,6 +469,10 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align,
 	size_t i;
 	struct page *page = NULL;
 	int ret = -ENOMEM;
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+	bool lock = (cma == cont_pte_cma);
+	bool spinlock = is_cont_pte_cma(cma);
+#endif
 
 	if (!cma || !cma->count)
 		return NULL;
@@ -488,11 +492,21 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align,
 		return NULL;
 
 	for (;;) {
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+		if (spinlock)
+			spin_lock_irq(&cont_pte_cma_spinlock);
+		else
+#endif
 		mutex_lock(&cma->lock);
 		bitmap_no = bitmap_find_next_zero_area_off(cma->bitmap,
 				bitmap_maxno, start, bitmap_count, mask,
 				offset);
 		if (bitmap_no >= bitmap_maxno) {
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+			if (spinlock)
+				spin_unlock_irq(&cont_pte_cma_spinlock);
+			else
+#endif
 			mutex_unlock(&cma->lock);
 			break;
 		}
@@ -502,12 +516,17 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align,
 		 * our exclusive use. If the migration fails we will take the
 		 * lock again and unmark it.
 		 */
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+		if (spinlock)
+			spin_unlock_irq(&cont_pte_cma_spinlock);
+		else
+#endif
 		mutex_unlock(&cma->lock);
 
 		pfn = cma->base_pfn + (bitmap_no << cma->order_per_bit);
 		mutex_lock(&cma_mutex);
 		ret = alloc_contig_range(pfn, pfn + count, MIGRATE_CMA,
-					 gfp_mask);
+				     GFP_KERNEL | (no_warn ? __GFP_NOWARN : 0));
 		mutex_unlock(&cma_mutex);
 		if (ret == 0) {
 			page = pfn_to_page(pfn);
@@ -536,8 +555,8 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align,
 			page_kasan_tag_reset(page + i);
 	}
 
-	if (ret && !(gfp_mask & __GFP_NOWARN)) {
-		pr_info("%s: alloc failed, req-size: %zu pages, ret: %d\n",
+	if (ret && !no_warn) {
+		pr_err("%s: alloc failed, req-size: %zu pages, ret: %d\n",
 			__func__, count, ret);
 		cma_debug_show_areas(cma);
 	}
@@ -545,6 +564,7 @@ struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align,
 	pr_debug("%s(): returned %p\n", __func__, page);
 	return page;
 }
+EXPORT_SYMBOL_GPL(cma_alloc);
 
 /**
  * cma_release() - release allocated pages
@@ -573,11 +593,22 @@ bool cma_release(struct cma *cma, const struct page *pages, unsigned int count)
 	VM_BUG_ON(pfn + count > cma->base_pfn + cma->count);
 
 	free_contig_range(pfn, count);
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+	if (PageContRefill(pages)) {
+		CHP_BUG_ON(!IS_ALIGNED(pfn, HPAGE_CONT_PTE_NR));
+		CHP_BUG_ON(count != HPAGE_CONT_PTE_NR);
+		if(TestClearPageContExtAlloc((struct page*)pages))
+			count_vm_chp_event(CHP_REFILL_EXTALLOC);
+		cont_pte_pool_add((struct page*)pages);
+		return true;
+	}
+#endif
 	cma_clear_bitmap(cma, pfn, count);
 	trace_cma_release(pfn, pages, count);
 
 	return true;
 }
+EXPORT_SYMBOL_GPL(cma_release);
 
 int cma_for_each_area(int (*it)(struct cma *cma, void *data), void *data)
 {
@@ -592,3 +623,4 @@ int cma_for_each_area(int (*it)(struct cma *cma, void *data), void *data)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(cma_for_each_area);

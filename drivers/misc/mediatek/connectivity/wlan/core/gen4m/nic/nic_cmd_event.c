@@ -380,9 +380,6 @@ void nicCmdEventPfmuTagRead(IN struct ADAPTER *prAdapter,
 	g_rPfmuTag1 = prPfumTagRead->ru4TxBfPFMUTag1;
 	g_rPfmuTag2 = prPfumTagRead->ru4TxBfPFMUTag2;
 
-	kalOidComplete(prGlueInfo, prCmdInfo,
-		       u4QueryInfoLen, WLAN_STATUS_SUCCESS);
-
 	DBGLOG(INIT, INFO,
 	       "========================== (R)Tag1 info ==========================\n");
 
@@ -942,8 +939,8 @@ void nicCmdEventQueryLinkSpeedEx(IN struct ADAPTER *prAdapter,
 
 			/*Fill Rx Rate in unit of 100bps*/
 			if (IS_BSS_INDEX_AIS(prAdapter, i) &&
-				wlanGetRxRate(prGlueInfo, i, &u4CurRxRate,
-					&u4MaxRxRate, &rRateInfo) == 0) {
+			    wlanGetRxRate(prGlueInfo, i, &u4CurRxRate,
+				    &u4MaxRxRate, &rRateInfo) == 0) {
 				pu4LinkSpeed->rLq[i].u2RxLinkSpeed =
 					u4CurRxRate * 1000;
 				pu4LinkSpeed->rLq[i].u4RxBw = rRateInfo.u4Bw;
@@ -4145,7 +4142,7 @@ void nicEventStaAgingTimeout(IN struct ADAPTER *prAdapter,
 
 		if (prAdapter->fgIsP2PRegistered) {
 			p2pFuncDisconnect(prAdapter, prBssInfo, prStaRec, FALSE,
-					  REASON_CODE_DISASSOC_INACTIVITY);
+				REASON_CODE_DISASSOC_INACTIVITY, TRUE);
 		}
 
 	}
@@ -4496,7 +4493,7 @@ void nicEventRddSendPulse(IN struct ADAPTER *prAdapter,
 void nicEventUpdateCoexPhyrate(IN struct ADAPTER *prAdapter,
 			       IN struct WIFI_EVENT *prEvent)
 {
-	uint8_t i;
+	uint8_t i, j;
 	struct EVENT_UPDATE_COEX_PHYRATE *prEventUpdateCoexPhyrate;
 
 	ASSERT(prAdapter);
@@ -4506,11 +4503,19 @@ void nicEventUpdateCoexPhyrate(IN struct ADAPTER *prAdapter,
 	prEventUpdateCoexPhyrate = (struct EVENT_UPDATE_COEX_PHYRATE
 				    *)(prEvent->aucBuffer);
 
+	/* This event indicate HW BSS, need to covert to SW BSS */
 	for (i = 0; i < (prAdapter->ucHwBssIdNum + 1); i++) {
-		prAdapter->aprBssInfo[i]->u4CoexPhyRateLimit =
-			prEventUpdateCoexPhyrate->au4PhyRateLimit[i];
-		DBGLOG_LIMITED(NIC, TRACE, "Coex:BSS[%d]R:%d\n", i,
-		       prAdapter->aprBssInfo[i]->u4CoexPhyRateLimit);
+		for (j = 0; j < (MAX_BSSID_NUM + 1); j++) {
+			if (prAdapter->aprBssInfo[j]->ucOwnMacIndex == i) {
+				prAdapter->aprBssInfo[j]->u4CoexPhyRateLimit =
+				  prEventUpdateCoexPhyrate->au4PhyRateLimit[i];
+
+				DBGLOG_LIMITED(NIC, INFO,
+				  "Coex:BSS[%d]R:%d, OwnMacID:%d\n", j,
+				  prAdapter->aprBssInfo[j]->u4CoexPhyRateLimit,
+				  prAdapter->aprBssInfo[j]->ucOwnMacIndex);
+			}
+		}
 	}
 
 	prAdapter->ucSmarGearSupportSisoOnly =
@@ -4530,7 +4535,7 @@ void nicEventUpdateCoexStatus(IN struct ADAPTER *prAdapter,
 	struct STA_RECORD *prStaRec;
 	struct BSS_DESC *prBssDesc;
 	struct BSS_INFO *prBssInfo;
-	struct CMD_ADDBA_REJECT rAddBaReject;
+	struct CMD_ADDBA_REJECT rAddBaReject = {0};
 
 	enum ENUM_COEX_MODE eCoexMode = COEX_NONE_BT;
 	uint32_t rStatus = WLAN_STATUS_SUCCESS;
@@ -4717,8 +4722,7 @@ void nicCmdEventSetAddKey(IN struct ADAPTER *prAdapter,
 			return;
 
 		/* AIS only */
-		if (!prCmdKey->ucKeyType &&
-			prCmdKey->ucKeyId >= 0 && prCmdKey->ucKeyId < 4) {
+		if (!prCmdKey->ucKeyType && prCmdKey->ucKeyId < 4) {
 			/* Only save data broadcast key info.
 			*  ucKeyType == 1 means unicast key
 			*  ucKeyId == 4 or ucKeyId == 5 means it is a PMF key
@@ -4876,6 +4880,10 @@ uint32_t nicDumpTlv(IN void *prCmdBuffer)
 	     u2ElementNum++) {
 		prTlvElement =
 			nicGetTargetTlvElement(u2ElementNum, prCmdBuffer);
+		if (!prTlvElement) {
+			DBGLOG(TX, ERROR, "prTlvElementis null\n");
+			return WLAN_STATUS_FAILURE;
+		}
 		DBGLOG(TX, INFO, "TLV(%d) start address:%p\n", u2ElementNum,
 		       prTlvElement);
 		DBGLOG(TX, INFO, "TLV(%d) tag_type:%d\n", u2ElementNum,
@@ -5164,7 +5172,7 @@ void nicNanNdlFlowCtrlEvt(IN struct ADAPTER *prAdapter, IN uint8_t *pcuEvtBuf)
 			continue;
 
 		rExpiryTime -= NAN_SEND_PKT_TIME_GUARD_TIME;
-		for (u4Idx = 0; u4Idx < NAN_MAX_SUPPORT_NDP_NUM; u4Idx++) {
+		for (u4Idx = 0; u4Idx < NAN_MAX_SUPPORT_NDP_CXT_NUM; u4Idx++) {
 			ucSTAIdx = nanSchedQueryStaRecIdx(prAdapter, u2SchId,
 							  u4Idx);
 			if (ucSTAIdx == STA_REC_INDEX_NOT_FOUND)
@@ -5190,6 +5198,12 @@ void nicNanEventDispatcher(IN struct ADAPTER *prAdapter,
 {
 	ASSERT(prAdapter);
 	ASSERT(prEvent);
+
+	if (prAdapter->fgIsNANRegistered == FALSE) {
+		DBGLOG(NAN, ERROR,
+			"Unable to handle nan event\n");
+		return;
+	}
 
 	DBGLOG(INIT, WARN, "nicNanEventDispatcher\n");
 
@@ -5309,11 +5323,21 @@ void nicNanTestQueryInfoDone(IN struct ADAPTER *prAdapter,
 		prGlueInfo = prAdapter->prGlueInfo;
 		prTlvCommon = (struct _CMD_EVENT_TLV_COMMOM_T *)pucEventBuf;
 		prTlvElement = nicGetTargetTlvElement(1, prTlvCommon);
+		if (!prTlvElement) {
+			DBGLOG(REQ, ERROR,
+				"prTlvElement is null\n");
+			return;
+		}
 		prEventContent =
 			(struct _TXM_CMD_EVENT_TEST_T *)prTlvElement->aucbody;
 		prQueryInfoContent =
 			(struct _TXM_CMD_EVENT_TEST_T *)
 				prCmdInfo->pvInformationBuffer;
+		if (!prEventContent || !prQueryInfoContent) {
+			DBGLOG(REQ, ERROR,
+				"prEventContent or prQueryInfoContent is null\n");
+			return;
+		}
 		prQueryInfoContent->u4TestValue0 = prEventContent->u4TestValue0;
 		prQueryInfoContent->u4TestValue1 = prEventContent->u4TestValue1;
 		prQueryInfoContent->ucTestValue2 = prEventContent->ucTestValue2;

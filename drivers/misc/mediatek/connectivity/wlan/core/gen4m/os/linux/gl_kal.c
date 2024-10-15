@@ -134,6 +134,9 @@
 #define RESTORE_VOLT 3650
 #endif
 
+/* Consistent order with enum ENUM_AVERAGE_TX_DELAY_TYPE */
+static const char delayTypeChar[] = {'D', 'C', 'M', 'A', 'F'};
+
 /*******************************************************************************
  *                             D A T A   T Y P E S
  *******************************************************************************
@@ -280,7 +283,11 @@ static uint8_t *apucCr4FwName[] = {
 /*----------------------------------------------------------------------------*/
 void tracing_mark_write(const char *fmt, ...)
 {
+#if IS_ENABLED(CONFIG_ARM64)
 #define __BUFFER_SIZE 1024
+#else
+#define __BUFFER_SIZE 768
+#endif
 	va_list ap;
 	char buf[__BUFFER_SIZE];
 
@@ -1014,7 +1021,6 @@ void *kalPacketAllocWithHeadroom(IN struct GLUE_INFO
  * \param[in] pvPacket       Pointer of the packet descriptor
  * \param[in] pucPacketStart The starting address of the buffer of Rx packet.
  * \param[in] u4PacketLen    The packet length.
- * \param[in] pfgIsRetain    Is the packet to be retained.
  * \param[in] aerCSUM        The result of TCP/ IP checksum offload.
  *
  * \retval WLAN_STATUS_SUCCESS.
@@ -1026,8 +1032,7 @@ uint32_t
 kalProcessRxPacket(IN struct GLUE_INFO *prGlueInfo,
 		   IN void *pvPacket, IN uint8_t *pucPacketStart,
 		   IN uint32_t u4PacketLen,
-		   /* IN PBOOLEAN           pfgIsRetain, */
-		   IN u_int8_t fgIsRetain, IN enum ENUM_CSUM_RESULT aerCSUM[])
+		   IN enum ENUM_CSUM_RESULT aerCSUM[])
 {
 	uint32_t rStatus = WLAN_STATUS_SUCCESS;
 	struct sk_buff *skb = (struct sk_buff *)pvPacket;
@@ -1098,13 +1103,13 @@ uint32_t kalRxIndicatePkts(IN struct GLUE_INFO *prGlueInfo,
 }
 
 #if CFG_SUPPORT_RX_GRO
-#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
+#if KERNEL_VERSION(4, 15, 0) <= CFG80211_VERSION_CODE
 void kalGROTimerFunc(struct timer_list *timer)
 #else
 void kalGROTimerFunc(unsigned long data)
 #endif
 {
-#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
+#if KERNEL_VERSION(4, 15, 0) <= CFG80211_VERSION_CODE
 	struct ADAPTER *prAdapter =
 		from_timer(prAdapter, timer, rRxGROTimer);
 	struct GLUE_INFO *prGlueInfo = prAdapter->prGlueInfo;
@@ -1129,7 +1134,8 @@ static inline void kalGROTimerStop(struct ADAPTER *prAdapter)
 
 void kalGROTimerInit(struct ADAPTER *prAdapter)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
+
+#if KERNEL_VERSION(4, 15, 0) <= CFG80211_VERSION_CODE
 	timer_setup(&prAdapter->rRxGROTimer,
 			kalGROTimerFunc,
 			0);
@@ -2338,22 +2344,47 @@ void kalUpdateReAssocRspInfo(IN struct GLUE_INFO
 		6;	/* cap_info, status_code & assoc_id */
 	uint32_t u4IELength = u4FrameBodyLen - u4IEOffset;
 	struct CONNECTION_SETTINGS *prConnSettings = NULL;
+	struct BSS_INFO *bss =
+		GET_BSS_INFO_BY_INDEX(prGlueInfo->prAdapter, ucBssIndex);
 
 	ASSERT(prGlueInfo);
 
-	prConnSettings = aisGetConnSettings(
-		prGlueInfo->prAdapter,
-		ucBssIndex);
-
-	/* reset */
-	prConnSettings->u4RspIeLength = 0;
-
-	if (u4IELength <= CFG_CFG80211_IE_BUF_LEN) {
-		prConnSettings->u4RspIeLength = u4IELength;
-		kalMemCopy(prConnSettings->aucRspIe, pucFrameBody + u4IEOffset,
-			   u4IELength);
+	if (!bss) {
+		DBGLOG(SAA, INFO, "bss is null\n");
+		return;
 	}
 
+	if (u4IELength > CFG_CFG80211_IE_BUF_LEN) {
+		DBGLOG(INIT, WARN, "Assoc Resp IE truncated %d to %d",
+			u4IELength, CFG_CFG80211_IE_BUF_LEN);
+		u4IELength = CFG_CFG80211_IE_BUF_LEN;
+	}
+
+	if (IS_BSS_AIS(bss)) {
+		prConnSettings = aisGetConnSettings(
+			prGlueInfo->prAdapter,
+			ucBssIndex);
+		prConnSettings->u4RspIeLength = u4IELength;
+		kalMemCopy(prConnSettings->aucRspIe,
+			pucFrameBody + u4IEOffset,
+			u4IELength);
+	} else if (!IS_BSS_APGO(bss)) {
+		struct P2P_ROLE_FSM_INFO *fsm =
+			P2P_ROLE_INDEX_2_ROLE_FSM_INFO(
+				prGlueInfo->prAdapter,
+				bss->u4PrivateData);
+		struct P2P_JOIN_INFO *prJoinInfo =
+			(struct P2P_JOIN_INFO *) NULL;
+
+		if (!fsm)
+			return;
+
+		prJoinInfo = &(fsm->rJoinInfo);
+		prJoinInfo->u4BufLength = u4IELength;
+		kalMemCopy(prJoinInfo->aucIEBuf,
+			pucFrameBody + u4IEOffset,
+			u4IELength);
+	}
 }				/* kalUpdateReAssocRspInfo */
 
 void kalResetPacket(IN struct GLUE_INFO *prGlueInfo,
@@ -2439,6 +2470,7 @@ kalHardStartXmit(struct sk_buff *prOrgSkb,
 	struct mt66xx_chip_info *prChipInfo;
 	uint32_t u4TxHeadRoomSize = 0;
 	struct ADAPTER *prAdapter = NULL;
+	struct BSS_INFO *prBssInfo = NULL;
 
 	ASSERT(prOrgSkb);
 	ASSERT(prGlueInfo);
@@ -2452,6 +2484,12 @@ kalHardStartXmit(struct sk_buff *prOrgSkb,
 		DBGLOG(INIT, INFO, "GLUE_FLAG_HALT skip tx\n");
 		dev_kfree_skb(prOrgSkb);
 		return WLAN_STATUS_ADAPTER_NOT_READY;
+	}
+
+	if (unlikely(ucBssIndex >= MAX_BSSID_NUM)) {
+		DBGLOG(INIT, INFO, "Invalid ucBssIndex:%u\n", ucBssIndex);
+		dev_kfree_skb(prOrgSkb);
+		return WLAN_STATUS_NOT_ACCEPTED;
 	}
 
 	if (prGlueInfo->prAdapter->fgIsEnableLpdvt) {
@@ -2552,6 +2590,14 @@ kalHardStartXmit(struct sk_buff *prOrgSkb,
 		return WLAN_STATUS_INVALID_PACKET;
 	}
 
+	prBssInfo = GET_BSS_INFO_BY_INDEX(prAdapter, ucBssIndex);
+	if (!prBssInfo) {
+		DBGLOG(INIT, INFO, "prBssInfo NULL for ucBssIndex:%u\n",
+			ucBssIndex);
+		dev_kfree_skb(prSkb);
+		return WLAN_STATUS_INVALID_PACKET;
+	}
+
 #if CFG_SUPPORT_TPENHANCE_MODE
 	if (!wlanTpeProcess(prGlueInfo,
 			prSkb,
@@ -2575,8 +2621,7 @@ kalHardStartXmit(struct sk_buff *prOrgSkb,
 		[u2QueueIdx]);
 
 	if (GLUE_GET_REF_CNT(prGlueInfo->ai4TxPendingFrameNumPerQueue
-	    [ucBssIndex][u2QueueIdx]) >=
-	    prGlueInfo->prAdapter->rWifiVar.u4NetifStopTh) {
+	    [ucBssIndex][u2QueueIdx]) >= prBssInfo->u4NetifStopTh) {
 		netif_stop_subqueue(prDev, u2QueueIdx);
 
 		DBGLOG(TX, INFO,
@@ -2661,6 +2706,7 @@ void kalSendCompleteAndAwakeQueue(IN struct GLUE_INFO
 	uint16_t u2QueueIdx = 0;
 	uint8_t ucBssIndex = 0;
 	u_int8_t fgIsValidDevice = TRUE;
+	struct BSS_INFO *prBssInfo;
 
 	GLUE_SPIN_LOCK_DECLARATION();
 
@@ -2672,32 +2718,6 @@ void kalSendCompleteAndAwakeQueue(IN struct GLUE_INFO
 	ASSERT(u2QueueIdx < CFG_MAX_TXQ_NUM);
 
 	ucBssIndex = GLUE_GET_PKT_BSS_IDX(pvPacket);
-
-#if 0
-	if ((GLUE_GET_REF_CNT(prGlueInfo->i4TxPendingFrameNum) <=
-	     0)) {
-		uint8_t ucBssIdx;
-		uint16_t u2QIdx;
-
-		DBGLOG(INIT, INFO, "TxPendingFrameNum[%u] CurFrameId[%u]\n",
-		       prGlueInfo->i4TxPendingFrameNum,
-		       GLUE_GET_PKT_ARRIVAL_TIME(pvPacket));
-
-		for (ucBssIdx = 0; ucBssIdx < prAdapter->ucHwBssIdNum;
-		     ucBssIdx++) {
-			for (u2QIdx = 0; u2QIdx < CFG_MAX_TXQ_NUM; u2QIdx++) {
-				DBGLOG(INIT, INFO,
-					"BSS[%u] Q[%u] TxPendingFrameNum[%u]\n",
-					ucBssIdx, u2QIdx,
-					prGlueInfo->ai4TxPendingFrameNumPerQueue
-					[ucBssIdx][u2QIdx]);
-			}
-		}
-	}
-
-	ASSERT((GLUE_GET_REF_CNT(prGlueInfo->i4TxPendingFrameNum) >
-		0));
-#endif
 
 	GLUE_DEC_REF_CNT(prGlueInfo->i4TxPendingFrameNum);
 	GLUE_DEC_REF_CNT(
@@ -2719,9 +2739,9 @@ void kalSendCompleteAndAwakeQueue(IN struct GLUE_INFO
 #if CFG_ENABLE_WIFI_DIRECT
 	GLUE_ACQUIRE_SPIN_LOCK(prGlueInfo, SPIN_LOCK_NET_DEV);
 
+	prBssInfo = GET_BSS_INFO_BY_INDEX(prGlueInfo->prAdapter, ucBssIndex);
+
 	{
-		struct BSS_INFO *prBssInfo = GET_BSS_INFO_BY_INDEX(
-					     prGlueInfo->prAdapter, ucBssIndex);
 		struct GL_P2P_INFO *prGlueP2pInfo = (struct GL_P2P_INFO *)
 						    NULL;
 		struct net_device *prNetdevice = NULL;
@@ -2756,12 +2776,9 @@ void kalSendCompleteAndAwakeQueue(IN struct GLUE_INFO
 #endif
 
 	if (fgIsValidDevice == TRUE) {
-		uint32_t u4StartTh =
-			prGlueInfo->prAdapter->rWifiVar.u4NetifStartTh;
-
 		if (netif_subqueue_stopped(prDev, prSkb) &&
 		    prGlueInfo->ai4TxPendingFrameNumPerQueue[ucBssIndex]
-		    [u2QueueIdx] <= u4StartTh) {
+		    [u2QueueIdx] <= prBssInfo->u4NetifStartTh) {
 			netif_wake_subqueue(prDev, u2QueueIdx);
 			DBGLOG(TX, INFO,
 				"WakeUp Queue BSS[%u] QIDX[%u] PKT_LEN[%u] TOT_CNT[%d] PER-Q_CNT[%d]\n",
@@ -2970,6 +2987,7 @@ kalIPv6FrameClassifier(IN struct GLUE_INFO *prGlueInfo,
 	uint8_t ucIpv6Proto;
 	uint8_t *pucL3Hdr;
 	struct ADAPTER *prAdapter = NULL;
+	uint8_t ucSeqNo;
 
 	prAdapter = prGlueInfo->prAdapter;
 	ucIpv6Proto = pucIpv6Hdr[IPV6_HDR_IP_PROTOCOL_OFFSET];
@@ -2998,6 +3016,10 @@ kalIPv6FrameClassifier(IN struct GLUE_INFO *prGlueInfo,
 		}
 #endif /* CFG_TCP_IP_CHKSUM_OFFLOAD */
 #endif /* Automation */
+	} else if (ucIpv6Proto == IPV6_PROTOCOL_ICMPV6) { /* ICMPV6 */
+		ucSeqNo = nicIncreaseTxSeqNum(prGlueInfo->prAdapter);
+		GLUE_SET_PKT_SEQ_NO(prPacket, ucSeqNo);
+		prTxPktInfo->u2Flag |= BIT(ENUM_PKT_ICMPV6);
 	}
 
 	return TRUE;
@@ -3186,12 +3208,8 @@ kalQoSFrameClassifierAndPacketInfo(IN struct GLUE_INFO *prGlueInfo,
 		break;
 
 	case ETH_P_IPV6:
-#if CFG_SUPPORT_WIFI_SYSDVT
-#if (CFG_TCP_IP_CHKSUM_OFFLOAD)
 		kalIPv6FrameClassifier(prGlueInfo, prPacket,
 				       pucNextProtocol, prTxPktInfo);
-#endif
-#endif
 
 #if DSCP_SUPPORT
 		if (GLUE_GET_PKT_BSS_IDX(prSkb) != P2P_DEV_BSS_INDEX) {
@@ -3979,7 +3997,8 @@ void kalClearMgmtFramesByBssIdx(IN struct GLUE_INFO
  * \retval none
  */
 /*----------------------------------------------------------------------------*/
-void kalClearCommandQueue(IN struct GLUE_INFO *prGlueInfo)
+void kalClearCommandQueue(IN struct GLUE_INFO *prGlueInfo,
+			IN u_int8_t fgIsNeedHandler)
 {
 	struct QUE *prCmdQue;
 	struct QUE rTempCmdQue;
@@ -4009,8 +4028,9 @@ void kalClearCommandQueue(IN struct GLUE_INFO *prGlueInfo)
 			prCmdInfo->pfCmdTimeoutHandler(prGlueInfo->prAdapter,
 						       prCmdInfo);
 		else
-			wlanReleaseCommand(prGlueInfo->prAdapter, prCmdInfo,
-					   TX_RESULT_QUEUE_CLEARANCE);
+			wlanReleaseCommandEx(prGlueInfo->prAdapter, prCmdInfo,
+					   TX_RESULT_QUEUE_CLEARANCE,
+					   fgIsNeedHandler);
 
 		cmdBufFreeCmdInfo(prGlueInfo->prAdapter, prCmdInfo);
 		GLUE_DEC_REF_CNT(prGlueInfo->i4TxPendingCmdNum);
@@ -7233,6 +7253,8 @@ u_int8_t kalSendUevent(const char *src)
 	envp[0] = event_string;
 	envp[1] = NULL;
 
+	DBGLOG(INIT, INFO, "Send UEvent = %s", src);
+
 	/*send uevent*/
 	strlcpy(event_string, src, sizeof(event_string));
 	if (event_string[0] == '\0') { /*string is null*/
@@ -7835,6 +7857,7 @@ void kalPerfIndReset(IN struct ADAPTER *prAdapter)
 		prAdapter->prGlueInfo->PerfIndCache.ucCurRxRCPI1[i] = 0;
 		prAdapter->prGlueInfo->PerfIndCache.ucCurRxNss[i] = 0;
 		prAdapter->prGlueInfo->PerfIndCache.ucCurRxNss2[i] = 0;
+		prAdapter->prGlueInfo->PerfIndCache.ucCurRxMcs0[i] = 0;
 	}
 } /* kalPerfIndReset */
 
@@ -7877,6 +7900,8 @@ void kalSetPerfReport(IN struct ADAPTER *prAdapter)
 			prAdapter->prGlueInfo->PerfIndCache.ucCurRxNss[i];
 		prCmdPerfReport->ucCurRxNss2[i] =
 			prAdapter->prGlueInfo->PerfIndCache.ucCurRxNss2[i];
+		prCmdPerfReport->ucCurRxMcs0[i] =
+			prAdapter->prGlueInfo->PerfIndCache.ucCurRxMcs0[i];
 		u4CurrentTp += (prCmdPerfReport->ulCurTxBytes[i] +
 			prCmdPerfReport->ulCurRxBytes[i]);
 	}
@@ -8257,6 +8282,7 @@ static uint32_t kalPerMonUpdate(IN struct ADAPTER *prAdapter)
 #define TEMP_LOG_TEMPLATE \
 	"<%dms> Tput: %llu(%llu.%03llumbps) %s Pending:%d/%d %s Used:" \
 	"%u/%d/%d %s LQ[%llu:%llu:%llu] lv:%u th:%u fg:0x%lx" \
+	" Mo:[%u:%lu:%lu:%lu]" \
 	" TxDp[ST:BS:FO:QM:DP]:%u:%u:%u:%u:%u\n"
 
 	DBGLOG(SW4, INFO, TEMP_LOG_TEMPLATE,
@@ -8273,6 +8299,11 @@ static uint32_t kalPerMonUpdate(IN struct ADAPTER *prAdapter)
 		perf->u4CurrPerfLevel,
 		prAdapter->rWifiVar.u4BoostCpuTh,
 		perf->ulPerfMonFlag,
+		glue->fgIsEnableMon,
+		RX_GET_CNT(&prAdapter->rRxCtrl, RX_SNIFFER_LOG_COUNT),
+		RX_GET_CNT(&prAdapter->rRxCtrl, RX_PDMA_SCATTER_DATA_COUNT),
+		RX_GET_CNT(&prAdapter->rRxCtrl,
+			RX_PDMA_SCATTER_INDICATION_COUNT),
 		TX_GET_CNT(&prAdapter->rTxCtrl, TX_INACTIVE_STA_DROP),
 		TX_GET_CNT(&prAdapter->rTxCtrl, TX_INACTIVE_BSS_DROP),
 		TX_GET_CNT(&prAdapter->rTxCtrl, TX_FORWARD_OVERFLOW_DROP),
@@ -8281,14 +8312,13 @@ static uint32_t kalPerMonUpdate(IN struct ADAPTER *prAdapter)
 		);
 #undef TEMP_LOG_TEMPLATE
 #define TEMP_LOG_TEMPLATE \
-	"ndevdrp:%s drv[RM,IL,SL,RI,RT,RM,RW,RA,RB,DT,NS,IB,HS,LS,DD,ME,BD,NI," \
-	"DR,TE,CE,DN,FE,DE,IE,TME,SC,SI]:%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu," \
-	"%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu.\n"
-	DBGLOG(SW4, TRACE, TEMP_LOG_TEMPLATE,
+	"ndevdrp:%s drv[RM,IL,RI,RT,RM,RW,RA,RB,DT,NS,IB,HS,LS,DD,ME,BD,NI," \
+	"DR,TE,CE,DN,FE,DE,IE,TME]:%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu," \
+	"%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu.\n"
+	DBGLOG(SW4, INFO, TEMP_LOG_TEMPLATE,
 		head4,
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_MPDU_TOTAL_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_ICS_LOG_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_SNIFFER_LOG_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_DATA_INDICATION_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl,	RX_DATA_REORDER_TOTAL_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl,	RX_DATA_REORDER_MISS_COUNT),
@@ -8311,9 +8341,7 @@ static uint32_t kalPerMonUpdate(IN struct ADAPTER *prAdapter)
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_FCS_ERR_DROP_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_DAF_ERR_DROP_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_ICV_ERR_DROP_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_TKIP_MIC_ERROR_DROP_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_PDMA_SCATTER_DATA_COUNT),
-		RX_GET_CNT(&prAdapter->rRxCtrl, RX_PDMA_SCATTER_INDICATION_COUNT)
+		RX_GET_CNT(&prAdapter->rRxCtrl, RX_TKIP_MIC_ERROR_DROP_COUNT)
 		);
 #undef TEMP_LOG_TEMPLATE
 
@@ -9467,6 +9495,24 @@ static inline void diffTxDelayCounter(const size_t num, uint32_t *diff,
 		*diff++ = *value++ - *remove++;
 }
 
+/* diffTxAccDelayCounter - Counting diff from two 64-bit uint64_t array
+ * @num: Number of items to count the diff
+ * @diff: Returning the result
+ * @value: Original value to be subtract
+ * @remove: Subtract value to subtract
+ *
+ * Since accumulated TX delay could increase quickly, the values are
+ * tracked with uint64_t. Use this function to subtract two arrays.
+ */
+static inline void diffTxAccDelayCounter(const size_t num, uint64_t *diff,
+		const uint64_t *value, const uint64_t *remove)
+{
+	int i;
+
+	for (i = 0; i < num; i++)
+		*diff++ = *value++ - *remove++;
+}
+
 /**
  * composeTxDelayLog - Fill output log string to buffer
  * @buf: Base pointer of the buffer to be filled with
@@ -9475,6 +9521,9 @@ static inline void diffTxDelayCounter(const size_t num, uint32_t *diff,
  * @delayType: D/C/M/F for Dirver/Connsys/Mac/FailTx
  * @delayMax: Deliminators of TX delay latency
  * @delayValue: Counter of the measured delay MSDUs in each slot
+ * @au4Average: average TX delay of @delayType, in [BSSID_NUM + 1]
+ *		The last element store the average of all BSSes.
+ * @bss_num: number of report BSS groups, 1 or BSSID_NUM
  *
  * The buffer will be filled in the format like "D:[1:5:10:20]=[47:10:6:0:0]"
  * The former array is the value of max values for the statistics;
@@ -9483,31 +9532,169 @@ static inline void diffTxDelayCounter(const size_t num, uint32_t *diff,
  * Return: The number of newly printed characters.
  */
 static inline uint32_t composeTxDelayLog(char *buf, uint32_t pos,
-		uint32_t u4BufferSize, const char *delayType,
-		const uint32_t *delayMax, const uint32_t *delayValue)
+		uint32_t u4BufferSize,
+		enum ENUM_AVERAGE_TX_DELAY_TYPE delayType,
+		const uint32_t *delayMax, const uint32_t *delayValue,
+		uint32_t *au4Average, uint8_t bss_num)
 {
 	const uint32_t *delay;
+	uint32_t delay_sum[LATENCY_STATS_MAX_SLOTS] = {0};
+	char avg[8];
 	int i;
+	int b;
 
 	u4BufferSize -= pos;
 	buf += pos;
 	pos = 0;
 
-	pos += kalSnprintf(buf + pos, u4BufferSize - pos, "%s", delayType);
+	/* D: (or C, M, A, F) */
+	pos += kalSnprintf(buf + pos, u4BufferSize - pos, "%c:",
+			delayTypeChar[delayType]);
 
 	delay = delayMax;
+	/* [th1:th2:th3:th4]= */
 	for (i = 0; i < LATENCY_STATS_MAX_SLOTS-1; i++)
 		pos += kalSnprintf(buf + pos, u4BufferSize - pos, "%s%u%s",
-			i == 0 ? ":[" : ":", *delay++,
+			i == 0 ? "[" : ":", *delay++,
 			i != LATENCY_STATS_MAX_SLOTS-2 ? "" : "]=");
 
-	delay = delayValue;
-	for (i = 0; i < LATENCY_STATS_MAX_SLOTS; i++)
-		pos += kalSnprintf(buf + pos, u4BufferSize - pos, "%s%u%s",
-			i == 0 ? "[" : ":", *delay++,
-			i != LATENCY_STATS_MAX_SLOTS-1 ? "" : "] ");
+	if (bss_num == 1) {
+		delay = delayValue;
+		for (b = 0; b < BSSID_NUM; b++) {
+			for (i = 0; i < LATENCY_STATS_MAX_SLOTS; i++)
+				delay_sum[i] += *delay++;
+		}
+	}
+
+	delay = bss_num == BSSID_NUM ? delayValue : delay_sum;
+	/**
+	 * bss_num == 1
+	 * [t1:t2:t3:t4:t5#a]
+	 *
+	 * bss_num == BSSID_NUM
+	 * [t1:t2:t3:t4:t5#a,t1:t2:t3:t4:t5#a,t1:t2:t3:t4:t5#a,t1:t2:t3:t4:t5#a]
+	 */
+	for (b = 0; b < bss_num; b++) {
+		for (i = 0; i < LATENCY_STATS_MAX_SLOTS; i++) {
+			if (i == LATENCY_STATS_MAX_SLOTS - 1) {
+				kalSnprintf(avg, sizeof(avg), "#%d",
+					bss_num == BSSID_NUM ?
+					au4Average[b] : au4Average[BSSID_NUM]);
+			}
+			pos += kalSnprintf(buf + pos, u4BufferSize - pos,
+				"%s%u%s%s",
+				b + i == 0 ? "[" : i == 0 ? "" : ":", *delay++,
+				i == LATENCY_STATS_MAX_SLOTS - 1 ?  avg : "",
+				i == LATENCY_STATS_MAX_SLOTS - 1 ?
+					b == bss_num - 1 ?  "] " : "," : "");
+		}
+	}
+
 	return pos;
 }
+
+static void diffTxDelayCounts(struct TX_LATENCY_STATS *prDiff,
+		struct TX_LATENCY_STATS *prCounting,
+		struct TX_LATENCY_STATS	*prReported)
+{
+	diffTxDelayCounter(BSSID_NUM * LATENCY_STATS_MAX_SLOTS,
+		   prDiff->au4DriverLatency[0],
+		   prCounting->au4DriverLatency[0],
+		   prReported->au4DriverLatency[0]);
+	diffTxDelayCounter(BSSID_NUM * LATENCY_STATS_MAX_SLOTS,
+		   prDiff->au4ConnsysLatency[0],
+		   prCounting->au4ConnsysLatency[0],
+		   prReported->au4ConnsysLatency[0]);
+	diffTxDelayCounter(BSSID_NUM * LATENCY_STATS_MAX_SLOTS,
+		   prDiff->au4MacLatency[0],
+		   prCounting->au4MacLatency[0],
+		   prReported->au4MacLatency[0]);
+	diffTxDelayCounter(BSSID_NUM * LATENCY_STATS_MAX_SLOTS,
+		   prDiff->au4FailConnsysLatency[0],
+		   prCounting->au4FailConnsysLatency[0],
+		   prReported->au4FailConnsysLatency[0]);
+}
+
+static void diffTxAccDelayCounts(struct TX_LATENCY_STATS *prDiff,
+		struct TX_LATENCY_STATS *prCounting,
+		struct TX_LATENCY_STATS	*prReported)
+{
+	enum ENUM_AVERAGE_TX_DELAY_TYPE type;
+
+	for (type = DRIVER_TX_DELAY; type < MAX_AVERAGE_TX_DELAY_TYPE; type++) {
+		diffTxAccDelayCounter(BSSID_NUM,
+			prDiff->au8AccumulatedDelay[type],
+			prCounting->au8AccumulatedDelay[type],
+			prReported->au8AccumulatedDelay[type]);
+	}
+
+}
+
+static void dumpTxDelayAverage(uint32_t (*au4TxAverage)[BSSID_NUM + 1])
+{
+	char buf[64];
+	char *p;
+	enum ENUM_AVERAGE_TX_DELAY_TYPE t;
+	int b;
+	uint32_t u4DebugLevel = 0;
+
+	wlanGetDriverDbgLevel(DBG_TX_IDX, &u4DebugLevel);
+	if (!(u4DebugLevel & DBG_CLASS_LOUD))
+		return;
+
+	for (t = DRIVER_TX_DELAY; t < MAX_AVERAGE_TX_DELAY_TYPE; t++) {
+		p = buf;
+		p += kalSnprintf(p, sizeof(buf) - (p - buf),
+				"%c", delayTypeChar[t]);
+		for (b = 0; b < BSSID_NUM+1; b++) {
+			p += kalSnprintf(p, sizeof(buf) - (p - buf),
+			"%c%u", b == 0 ? ':' : ',', au4TxAverage[t][b]);
+		}
+		DBGLOG(TX, LOUD, "%s\n", buf);
+	}
+}
+
+static void updateAverageTx(struct TX_LATENCY_STATS *prDiff,
+		uint32_t (*au4TxAverage)[BSSID_NUM + 1])
+{
+	enum ENUM_AVERAGE_TX_DELAY_TYPE t;
+	int b;
+	int i;
+	uint32_t one_bss_tx_count;
+	uint32_t all_bss_tx_count;
+	uint32_t all_bss_acc_delay;
+	/* struct TX_LATENCY_STATS: 5 delay categories */
+	uint32_t (*tx_count)[LATENCY_STATS_MAX_SLOTS] =
+		&prDiff->au4DriverLatency[0];
+	uint64_t (*acc_delay)[BSSID_NUM] = &prDiff->au8AccumulatedDelay[0];
+
+	memset(au4TxAverage, 0,
+		sizeof(uint32_t) * (BSSID_NUM + 1) * MAX_AVERAGE_TX_DELAY_TYPE);
+
+	for (t = DRIVER_TX_DELAY; t < MAX_AVERAGE_TX_DELAY_TYPE; t++) {
+		all_bss_acc_delay = 0;
+		all_bss_tx_count = 0;
+		for (b = 0; b < BSSID_NUM; b++) {
+			one_bss_tx_count = 0;
+			for (i = 0; i < LATENCY_STATS_MAX_SLOTS; i++)
+				one_bss_tx_count += tx_count[b][i];
+			all_bss_acc_delay += acc_delay[t][b];
+			all_bss_tx_count += one_bss_tx_count;
+			if (one_bss_tx_count) {
+				au4TxAverage[t][b] =
+					acc_delay[t][b] / one_bss_tx_count;
+			}
+		}
+		/* LAST element stores the all BSS average */
+		if (all_bss_tx_count) {
+			au4TxAverage[t][b] =
+				all_bss_acc_delay / all_bss_tx_count;
+		}
+	}
+
+	dumpTxDelayAverage(au4TxAverage);
+}
+
 
 static void kalDumpMsduReportStats(IN struct ADAPTER *prAdapter)
 {
@@ -9520,11 +9707,14 @@ static void kalDumpMsduReportStats(IN struct ADAPTER *prAdapter)
 	struct WIFI_VAR *prWifiVar = &prAdapter->rWifiVar;
 	struct TX_LATENCY_STATS rDiff;
 	struct TX_LATENCY_STATS *report;
+	uint8_t report_num = 1; /* Default: sum up */
+	uint32_t (*pAverage)[BSSID_NUM + 1] =
+		&stats->rAverage.au4AverageTxDelay[0];
 
 	if (!stats->fgTxLatencyEnabled || time_before(jiffies, next_update))
 		return;
 
-	buf = (char *)kalMemAlloc(u4BufferSize, VIR_MEM_TYPE);
+	buf = kalMemAlloc(u4BufferSize, VIR_MEM_TYPE);
 	if (buf == NULL)
 		return;
 	kalMemZero(buf, u4BufferSize);
@@ -9549,38 +9739,44 @@ static void kalDumpMsduReportStats(IN struct ADAPTER *prAdapter)
 	 */
 	report = &stats->rCounting;
 	if (!prWifiVar->fgTxLatencyKeepCounting) {
-		diffTxDelayCounter(LATENCY_STATS_MAX_SLOTS,
-				   rDiff.au4DriverLatency,
-				   report->au4DriverLatency,
-				   stats->rReported.au4DriverLatency);
-		diffTxDelayCounter(LATENCY_STATS_MAX_SLOTS,
-				   rDiff.au4ConnsysLatency,
-				   report->au4ConnsysLatency,
-				   stats->rReported.au4ConnsysLatency);
-		diffTxDelayCounter(LATENCY_STATS_MAX_SLOTS,
-				   rDiff.au4MacLatency,
-				   report->au4MacLatency,
-				   stats->rReported.au4MacLatency);
+		diffTxDelayCounts(&rDiff, &stats->rCounting, &stats->rReported);
+
+		/* Accumulated counters */
+		diffTxAccDelayCounts(&rDiff, &stats->rCounting,
+				&stats->rReported);
+
+		/* Accumulated delays / count */
+		updateAverageTx(&rDiff, pAverage);
+
 		rDiff.u4TxFail = stats->rCounting.u4TxFail -
 				 stats->rReported.u4TxFail;
+
 		report = &rDiff;
 	}
 	stats->rReported = stats->rCounting;
 
-	/* TX_Delay [%u:%u:%u:%u]=[%u:%u:%u:%u:%u] */
+	if (prWifiVar->fgTxLatencyPerBss)
+		report_num = BSSID_NUM;
+	/* TX_Delay [%u:%u:%u:%u]=[%u:%u:%u:%u:%u/%u,%u:%u:%u:%u:%u/%u,...]
+	 * [threholds]=[BSS0 slot0:slot1:slot2:slot3:slot4:slot5/avg,BSS1 ...
+	 */
 	pos += kalSnprintf(buf + pos, u4BufferSize - pos, "TX_Delay ");
-	pos += composeTxDelayLog(buf, pos, u4BufferSize, "D",
+	pos += composeTxDelayLog(buf, pos, u4BufferSize, DRIVER_TX_DELAY,
 				 prWifiVar->au4DriverTxDelayMax,
-				 report->au4DriverLatency);
-	pos += composeTxDelayLog(buf, pos, u4BufferSize, "C",
+				 report->au4DriverLatency[0],
+				 pAverage[DRIVER_TX_DELAY], report_num);
+	pos += composeTxDelayLog(buf, pos, u4BufferSize, CONNSYS_TX_DELAY,
 				 prWifiVar->au4ConnsysTxDelayMax,
-				 report->au4ConnsysLatency);
-	pos += composeTxDelayLog(buf, pos, u4BufferSize, "M",
+				 report->au4ConnsysLatency[0],
+				 pAverage[CONNSYS_TX_DELAY], report_num);
+	pos += composeTxDelayLog(buf, pos, u4BufferSize, MAC_TX_DELAY,
 				 prWifiVar->au4MacTxDelayMax,
-				 report->au4MacLatency);
-	pos += composeTxDelayLog(buf, pos, u4BufferSize, "F",
+				 report->au4MacLatency[0],
+				 pAverage[MAC_TX_DELAY], report_num);
+	pos += composeTxDelayLog(buf, pos, u4BufferSize, FAIL_CONNSYS_TX_DELAY,
 				 prWifiVar->au4ConnsysTxFailDelayMax,
-				 report->au4FailConnsysLatency);
+				 report->au4FailConnsysLatency[0],
+				 pAverage[FAIL_CONNSYS_TX_DELAY], report_num);
 	pos += kalSnprintf(buf + pos, u4BufferSize - pos, "Txfail:%u",
 			report->u4TxFail);
 
@@ -9588,6 +9784,46 @@ static void kalDumpMsduReportStats(IN struct ADAPTER *prAdapter)
 	kalMemFree(buf, VIR_MEM_TYPE, u4BufferSize);
 #endif
 }
+
+static void kalCheckTxDelayOverLimit(IN struct ADAPTER *prAdapter)
+{
+#if CFG_SUPPORT_TX_LATENCY_STATS
+	static unsigned long next_update; /* in ms */
+	unsigned long update_interval; /* in ms */
+	struct TX_DELAY_OVER_LIMIT_REPORT_STATS *stats =
+			&prAdapter->rTxDelayOverLimitStats;
+	uint8_t i;
+
+	if (!stats->fgTxDelayOverLimitReportEnabled ||
+	    time_before(jiffies, next_update))
+		return;
+
+	update_interval = stats->fgTxDelayOverLimitReportInterval * HZ / 1000;
+	next_update = jiffies + update_interval;
+	kalMemZero(stats->fgReported, sizeof(stats->fgReported));
+
+	if (stats->eTxDelayOverLimitStatsType != REPORT_AVERAGE)
+		return;
+
+	for (i = 0; i < MAX_TX_OVER_LIMIT_TYPE; i++) {
+		if (stats->u4DelayNum[i] == 0)
+			continue;
+
+		DBGLOG(HAL, INFO, "Delay[i]=%u, DelayNum[i]=%u, DelayLimit=%u",
+			stats->u4Delay[i], stats->u4DelayNum[i],
+			stats->u4DelayLimit[i]);
+		if (stats->u4Delay[i] / stats->u4DelayNum[i] >
+			stats->u4DelayLimit[i])
+			reportTxDelayOverLimit(prAdapter, i,
+				stats->u4Delay[i] / stats->u4DelayNum[i]);
+
+		stats->u4Delay[i] = 0;
+		stats->u4DelayNum[i] = 0;
+	}
+#endif
+}
+
+
 
 static void kalDumpHifStats(IN struct ADAPTER *prAdapter)
 {
@@ -9610,6 +9846,7 @@ static void kalDumpHifStats(IN struct ADAPTER *prAdapter)
 #endif
 #endif
 
+	kalCheckTxDelayOverLimit(prAdapter);
 	kalDumpMsduReportStats(prAdapter);
 
 	prHifStats = &prAdapter->rHifStats;

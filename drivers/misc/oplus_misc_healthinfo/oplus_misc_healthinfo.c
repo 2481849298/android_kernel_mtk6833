@@ -163,17 +163,17 @@ static int proc_misc_healthinfo_read(struct seq_file *s, void *v) {
 		}
 	}
 
-	seq_printf(s, "name:lights_all:%d\n", cnt_time);
+	seq_printf(s, "name:lights_all:%llu\n", cnt_time);
 
 	for (i = 0; i < MAX_LIGHTS; i++) {
-		seq_printf(s, "name:light_%s, power:%d, times_sec:%d, times_min:%d, times_hour:%d\n",
+		seq_printf(s, "name:light_%s, power:%llu, times_sec:%llu, times_min:%llu, times_hour:%llu\n",
 			lights_health_para[i][0] > LIGHTS_GREEN ? "blue" : \
 			lights_health_para[i][0] ==  LIGHTS_GREEN ? "green" : "red", \
 			lcd_para[i][1],
 			lcd_para[i][2],
 			lcd_para[i][3],
 			lcd_para[i][4]);
-		OMH_DEBUG("read lcd_para[%d][2][3][4] = %d, %d, %d", i,
+		OMH_DEBUG("read lcd_para[%d][2][3][4] = %llu, %llu, %llu", i,
 			lcd_para[i][2],
 			lcd_para[i][3],
 			lcd_para[i][4]);

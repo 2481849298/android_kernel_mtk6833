@@ -260,6 +260,7 @@ static struct imgsensor_info_struct imgsensor_info = {
 	 * only supprt 4 must end with 0xff
 	 */
 	.i2c_addr_table = {0x5a, 0xff},
+	.hs_trail = 100,
 };
 
 static struct imgsensor_struct imgsensor = {
@@ -2986,6 +2987,10 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 		*(feature_data + 1) = 1; /* margin info by scenario */
 		*(feature_data + 2) = imgsensor_info.margin;
 		LOG_INF("SENSOR_FEATURE_GET_FRAME_CTRL_INFO_BY_SCENARIO scenarioId:%d\n",imgsensor_info.margin);
+		break;
+	case SENSOR_FEATURE_GET_HS_TRAIL:
+		*feature_data = imgsensor_info.hs_trail;
+		*feature_para_len = 4;
 		break;
         default:
             break;

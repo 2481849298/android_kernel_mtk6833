@@ -37,7 +37,7 @@ static const char * const mt6768_sgen_mode_str[] = {
 	"I34I35",
 };
 
-static const int const mt6768_sgen_mode_idx[] = {
+static const int mt6768_sgen_mode_idx[] = {
 	0, 1, 2, 3,
 	4, 5, 6, 7,
 	8, 9, 10, 11,
@@ -58,7 +58,7 @@ static const char * const mt6768_sgen_rate_str[] = {
 	"192k"
 };
 
-static const int const mt6768_sgen_rate_idx[] = {
+static const int mt6768_sgen_rate_idx[] = {
 	0, 1, 2, 4,
 	5, 6, 8, 9,
 	10, 11, 12, 13,
@@ -961,7 +961,19 @@ static int mt6768_usb_echo_ref_set(struct snd_kcontrol *kcontrol,
 	if (!dl_memif->substream) {
 		dev_warn(afe->dev, "%s(), dl_memif->substream == NULL\n",
 			 __func__);
-		return -EINVAL;
+		if (afe_priv->usb_call_echo_ref_reallocate) {
+			dev_info(afe->dev, "%s(), free area: %llx\n", __func__,
+				 dl_memif->dma_area);
+			/* free previous allocate */
+			dma_free_coherent(afe->dev,
+					  dl_memif->dma_bytes,
+					  dl_memif->dma_area,
+					  dl_memif->dma_addr);
+
+			afe_priv->usb_call_echo_ref_reallocate = false;
+			afe_priv->usb_call_echo_ref_enable = false;
+		}
+		return 0;
 	}
 
 	if (!ul_memif->substream) {
@@ -988,6 +1000,9 @@ static int mt6768_usb_echo_ref_set(struct snd_kcontrol *kcontrol,
 			unsigned char *dma_area = NULL;
 
 			if (afe_priv->usb_call_echo_ref_reallocate) {
+				dev_info(afe->dev, "%s(), free area: %llx\n",
+					 __func__,
+					 dl_memif->dma_area);
 				/* free previous allocate */
 				dma_free_coherent(afe->dev,
 						  dl_memif->dma_bytes,
@@ -1018,7 +1033,8 @@ static int mt6768_usb_echo_ref_set(struct snd_kcontrol *kcontrol,
 		/* just to double confirm the buffer size is align */
 		if (dl_memif->dma_bytes !=
 		    word_size_align(dl_memif->dma_bytes)) {
-			AUDIO_AEE("buffer size not align");
+			dev_err(afe->dev, "%s(), buffer size not align\n",
+				__func__);
 		}
 
 		/* let ul use the same memory as dl */
@@ -1049,6 +1065,8 @@ static int mt6768_usb_echo_ref_set(struct snd_kcontrol *kcontrol,
 		mtk_memif_set_disable(afe, ul_id);
 
 		if (afe_priv->usb_call_echo_ref_reallocate) {
+			dev_info(afe->dev, "%s(), free area: %llx\n", __func__,
+				 dl_memif->dma_area);
 			/* free previous allocate */
 			dma_free_coherent(afe->dev,
 					  dl_memif->dma_bytes,
@@ -1230,27 +1248,27 @@ static const struct snd_kcontrol_new mt6768_afe_speech_controls[] = {
 		       speech_property_get, speech_property_set),
 };
 
-int mt6768_add_misc_control(struct snd_soc_platform *platform)
+int mt6768_add_misc_control(struct snd_soc_component *platform)
 {
 	dev_info(platform->dev, "%s()\n", __func__);
 
-	snd_soc_add_platform_controls(platform,
+	snd_soc_add_component_controls(platform,
 				      mt6768_afe_sgen_controls,
 				      ARRAY_SIZE(mt6768_afe_sgen_controls));
 
-	snd_soc_add_platform_controls(platform,
+	snd_soc_add_component_controls(platform,
 				      mt6768_afe_debug_controls,
 				      ARRAY_SIZE(mt6768_afe_debug_controls));
 
-	snd_soc_add_platform_controls(platform,
+	snd_soc_add_component_controls(platform,
 				      mt6768_afe_usb_controls,
 				      ARRAY_SIZE(mt6768_afe_usb_controls));
 
-	snd_soc_add_platform_controls(platform,
+	snd_soc_add_component_controls(platform,
 				      mt6768_afe_speech_controls,
 				      ARRAY_SIZE(mt6768_afe_speech_controls));
 #if defined(CONFIG_MTK_VOW_BARGE_IN_SUPPORT)
-	snd_soc_add_platform_controls(platform,
+	snd_soc_add_component_controls(platform,
 				      mt6768_afe_bargein_controls,
 				      ARRAY_SIZE(mt6768_afe_bargein_controls));
 #endif

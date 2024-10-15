@@ -48,6 +48,9 @@
 #include <mt-plat/mtk_boot_common.h>
 
 #include "ddp_hal.h"
+#ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
+#include "data_hw_roundedpattern.h"
+#endif
 
 /* #ifdef OPLUS_FEATURE_RAMLESS_AOD */
 #include <cmdq_helper_ext.h>
@@ -148,7 +151,7 @@ static struct dsi_debug debug;
 static struct dsi_debug debug_read;
 #endif /*OPLUS_BUG_STABILITY*/
 
-extern unsigned int esd_recovery_backlight_level;
+/*extern unsigned int esd_recovery_backlight_level;*/
 extern unsigned int islcmconnected;
 
 static unsigned int hbm_mode_backlight_level = 2;
@@ -160,7 +163,7 @@ static bool hbm_en;
 static bool hbm_wait;
 
 static unsigned int aod_light_brightness_mode = 0;
-unsigned int delay_uiready = 1;/* yihu.zhao@Multimedia add delay for uiready */
+unsigned int delay_uiready = 2;/* yihu.zhao@Multimedia add delay for uiready */
 /* #ifdef OPLUS_FEATURE_RAMLESS_AOD */
 extern s32 cmdqRecFlush(struct cmdqRecStruct *handle);
 extern s32 cmdqRecReset(struct cmdqRecStruct *handle);
@@ -232,14 +235,14 @@ static struct LCM_setting_table lcm_initialization_cmd_setting[] = {
 	{0xFC, 2, {0x5A, 0x5A}},
 #endif
 	/* Seed CRC mode enable */
-	{0xF0, 2, {0x5A,0x5A}},
+	{0xF0, 2, {0x5A, 0x5A}},
 	{0x80, 1, {0x92}},
 	{0xB1, 1, {0x00}},
-	{0xB0, 2, {0x2B,0xB1}},
+	{0xB0, 2, {0x2B, 0xB1}},
 	{0xB1, 21, SEED_PARAMETER},
-	{0xB0, 2, {0x55,0xB1}},
+	{0xB0, 2, {0x55, 0xB1}},
 	{0xB1, 1, {0x80}},
-	{0xF0, 2, {0xA5,0xA5}},
+	{0xF0, 2, {0xA5, 0xA5}},
 	{REGFLAG_DELAY, 105, {}},
 	/* Display On*/
 	{0x29, 0, {}},
@@ -1725,13 +1728,12 @@ static void lcm_get_params(struct LCM_PARAMS *params)
 	params->blmap = blmap_table;
 	params->blmap_size = sizeof(blmap_table)/sizeof(blmap_table[0]);
 
-
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	params->round_corner_en = 1;
-	params->full_content = 1;
-	params->corner_pattern_width = 1080;
-	params->corner_pattern_height = 153;
-	params->corner_pattern_height_bot = 153;
+	params->corner_pattern_height = ROUND_CORNER_H_TOP;
+	params->corner_pattern_height_bot = ROUND_CORNER_H_BOT;
+	params->corner_pattern_tp_size = sizeof(top_rc_pattern);
+	params->corner_pattern_lt_addr = (void *)top_rc_pattern;
 #endif
 
 	params->hbm_en_time = 2;
@@ -1938,7 +1940,7 @@ static void lcm_update(unsigned int x, unsigned int y, unsigned int width, unsig
 #define OPPO_DC_BACKLIGHT_THRESHOLD 1100
 
 extern int oplus_dc_enable_real;
-extern int oplus_dc_alpha;
+extern int oppo_dc_alpha;
 static int oplus_lcm_dc_backlight(void *handle, unsigned int level, int hbm_en)
 {
 	int i, k;
@@ -1950,7 +1952,7 @@ static int oplus_lcm_dc_backlight(void *handle, unsigned int level, int hbm_en)
 		goto dc_disable;
 	}
 
-	if (oplus_dc_alpha == seed_alpha)
+	if (oppo_dc_alpha == seed_alpha)
 		goto dc_enable;
 	seed_table = kmemdup(lcm_seed_setting, sizeof(lcm_seed_setting), GFP_KERNEL);
 	if (!seed_table)
@@ -1971,16 +1973,16 @@ static int oplus_lcm_dc_backlight(void *handle, unsigned int level, int hbm_en)
 			sizeof(lcm_seed_setting)/sizeof(lcm_seed_setting[0]), 1);
 
 	kfree(seed_table);
-	if (!oplus_dc_alpha)
+	if (!oppo_dc_alpha)
 		pr_err("Enter DC");
 
-	oplus_dc_alpha = seed_alpha;
+	oppo_dc_alpha = seed_alpha;
 
 dc_enable:
 	return OPPO_DC_BACKLIGHT_THRESHOLD;
 
 dc_disable:
-	if (oplus_dc_alpha) {
+	if (oppo_dc_alpha) {
 		if (handle)
 			push_table22(handle, lcm_seed_setting,
 				sizeof(lcm_seed_setting)/sizeof(lcm_seed_setting[0]), 1);
@@ -1990,7 +1992,7 @@ dc_disable:
 		pr_err("exit DC");
 	}
 
-	oplus_dc_alpha = 0;
+	oppo_dc_alpha = 0;
 	pr_info("\n");
 	return level;
 }
@@ -2058,7 +2060,7 @@ static void lcm_setbacklight_cmdq(void *handle, unsigned int level)
 			return;
 
 		if (mapped_level != 0)
-			esd_recovery_backlight_level = mapped_level;
+		/*	esd_recovery_backlight_level = mapped_level;*/
 
 		if (!aod_out && mapped_level > BRIGHTNESS_OFF && aod_state) {
 			aod_in = false;

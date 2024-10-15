@@ -1,15 +1,5 @@
-#
-# Copyright (C) 2015 MediaTek Inc.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
+# SPDX-License-Identifier: GPL-2.0
+
 #
 # Makefile for misc devices that really don't fit anywhere else.
 #
@@ -17,11 +7,18 @@ MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
 
 ifeq ($(CONFIG_MACH_MT6877),y)
 MTK_DERIVED_PLATFORM := mt6877
+subdir-ccflags-y += -DIMGSENSOR_MT6877
 endif
 
 ifeq ($(CONFIG_MACH_MT6833),y)
 MTK_DERIVED_PLATFORM := mt6833
 endif
+
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+ifeq ($(CONFIG_MACH_MT6877),y)
+subdir-ccflags-y += -DSENSOR_PLATFORM_NEXT_A
+endif
+#endif
 
 CONFIG_MTK_PLATFORM_SENSOR := $(subst ",,$(CONFIG_MTK_PLATFORM))
 

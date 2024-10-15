@@ -35,10 +35,10 @@
 #include "disp_dts_gpio.h"
 #endif
 
-//#ifdef ODM_WT_EDIT
-//#include <linux/update_tpfw_notifier.h>
-//#endif
-//#include "disp_cust.h"
+/*#ifdef ODM_WT_EDIT*/
+/*#include <linux/update_tpfw_notifier.h>*/
+/*#endif*/
+/*#include "disp_cust.h"*/
 #include <soc/oplus/device_info.h>
 static struct LCM_UTIL_FUNCS lcm_util;
 
@@ -64,7 +64,6 @@ static struct LCM_UTIL_FUNCS lcm_util;
 		lcm_util.dsi_dcs_read_lcm_reg_v2(cmd, buffer, buffer_size)
 
 #ifndef BUILD_LK
-#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
@@ -100,11 +99,12 @@ static struct LCM_UTIL_FUNCS lcm_util;
 #ifndef FALSE
 #define FALSE 0
 #endif
-//extern unsigned int esd_recovery_backlight_level;
+/*extern unsigned int esd_recovery_backlight_level;*/
 extern int gesture_flag;
 extern int tp_gesture_enable_flag(void);
-//extern void ili_resume_by_ddi(void);
-//extern void core_config_sleep_ctrl(bool out);
+extern int shut_down_flag;
+/*extern void ili_resume_by_ddi(void);*/
+/*extern void core_config_sleep_ctrl(bool out);*/
 struct LCM_setting_table {
 	unsigned int cmd;
 	unsigned char count;
@@ -192,7 +192,7 @@ static struct LCM_setting_table init_setting_cmd[] = {
 static struct LCM_setting_table init_setting_vdo[] = {
 		{0xFF, 03, {0x78, 0x07, 0x00}}, /*Page0*/
 		{0x11, 01, {0x00}},
-		{REGFLAG_DELAY, 110, {}},       //modify for timing between 60~120ms
+		{REGFLAG_DELAY, 110, {}},       /*modify for timing between 60~120ms*/
 
 		{0xFF, 03, {0x78, 0x07, 0x01}}, 	/*page1*/
 		{0x00, 01, {0x42}},
@@ -208,7 +208,7 @@ static struct LCM_setting_table init_setting_vdo[] = {
 		{0x0a, 01, {0x30}},
 		{0x0b, 01, {0x00}},
 		{0x0C, 01, {0x04}},   /*CLW_A1_RISE*/
-		{0x0E, 01, {0x04}},   /*CLW_A1_FALL*/ 
+		{0x0E, 01, {0x04}},   /*CLW_A1_FALL*/
 
 		{0xFF, 03, {0x78, 0x07, 0x11}}, 	/*page11*/
 		{0x00, 01, {0x04}},  /*CKV CLW Front*/
@@ -340,7 +340,7 @@ static struct LCM_setting_table init_setting_vdo[] = {
 		{0xDF, 01, {0x4A}},
 		{0xDE, 01, {0x03}},	/*VCSW1 OFF SEQ*/
 		{0xDD, 01, {0x08}},	/* GOFF OFF SEQ*/
-		//{0xE0, 01, {0x40}},	/*GOFF_Off   FAE--Chang20210129    */
+		/*{0xE0, 01, {0x40}},*/	/*GOFF_Off   FAE--Chang20210129    */
 		{0xE1, 01, {0x28}},	/*VGL_G_Off    */
 		{0xE2, 01, {0x06}},	/*VCSW1_Off    */
 		{0xE3, 01, {0x31}},
@@ -426,7 +426,7 @@ static struct LCM_setting_table init_setting_vdo[] = {
 
 		{0xFF, 03, {0x78, 0x07, 0x06}},
 		{0x08, 01, {0x20}},          /*PWM 0x20--28kHz*/
-		//{0x3E, 01, {0xE2}}, 		/*11 dont reload otp*/
+		/*{0x3E, 01, {0xE2}},*/ 		/*11 dont reload otp*/
 		{0xC0, 01, {0x40}},		/*Res=720*1600 Y       */
 		{0xC1, 01, {0x16}},		/*Res=720*1600 Y       */
 		{0xC2, 01, {0xFA}},		/*Res=720*1600 X       */
@@ -434,7 +434,7 @@ static struct LCM_setting_table init_setting_vdo[] = {
 		{0x96, 01, {0x50}},		/*save power mipi bais */
 		{0xDD, 01, {0x17}},		/*3LANE 1207           */
 		{0xD6, 01, {0x55}},
-		{0xCD, 01, {0x66}},     //0x66 output VSYNC
+		{0xCD, 01, {0x66}},     /*0x66 output VSYNC*/
 		{0xB4, 01, {0xDC}},
 		{0xB5, 01, {0x24}},
 
@@ -485,7 +485,6 @@ static struct LCM_setting_table init_setting_vdo[] = {
 		{0x13, 01, {0XA6}},
 		{0x14, 01, {0x27}},
 		{0x15, 01, {0xA2}},
-
 		{0xFF, 03, {0x78, 0x07, 0x0E}},
 		{0x00, 01, {0xA3}},		/*LH mode                                  */
 		{0x04, 01, {0x00}},		/*TSHD_1VP off & TSVD free run on (00 OFF) */
@@ -525,18 +524,21 @@ static struct LCM_setting_table init_setting_vdo[] = {
 		{0x0D, 01, {0x4F}},		/*TP3 t7_de     */
 
 		{0xFF, 03, {0x78, 0x07, 0x00}},
-		{0x68, 02, {0x04,0x00}},
-		{0x51, 02, {0x00,0x00}},
+		{0x68, 02, {0x04, 0x00}},
+		{0x51, 02, {0x00, 0x00}},
 		{0x53, 01, {0x24}},
+
+                /* cabc mode 1 */
+                {0x55, 0x01, {0x01}},
+
 		{0x29, 01, {0x00}},
 		{REGFLAG_DELAY, 20, {}},
 		{0x35, 01, {0x00}},
 		{REGFLAG_DELAY, 20, {}},
-
 };
 
 static struct LCM_setting_table bl_level[] = {
-	{0x51, 2, {0x00,0xFF} }
+	{0x51, 2, {0x00, 0xFF} }
 };
 
 static void push_table(void *cmdq, struct LCM_setting_table *table,
@@ -617,21 +619,22 @@ static void lcm_get_params(struct LCM_PARAMS *params)
 	params->dsi.vertical_sync_active = 2;
 	params->dsi.vertical_backporch = 16;
 	params->dsi.vertical_frontporch = 32;
-	//params->dsi.vertical_frontporch_for_low_power = 540;
+	/*params->dsi.vertical_frontporch_for_low_power = 540;*/
 	params->dsi.vertical_active_line = FRAME_HEIGHT;
 	params->dsi.horizontal_sync_active = 12;
         params->dsi.horizontal_backporch = 64;
         params->dsi.horizontal_frontporch = 80;
 	params->dsi.horizontal_active_pixel = FRAME_WIDTH;
 	params->dsi.ssc_disable = 1;
-	//params->dsi.HS_TRAIL = 6;
-	//params->dsi.HS_PRPR = 5;
+	/*params->dsi.HS_TRAIL = 6;*/
+	/*params->dsi.HS_PRPR = 5;*/
 	params->dsi.CLK_HS_PRPR = 7;
-	// jump pll_clk
+	/* jump pll_clk */
 	params->dsi.dynamic_switch_mipi = 1;
 	params->dsi.horizontal_sync_active_dyn = 12;
 	params->dsi.horizontal_backporch_dyn = 46;
 	params->dsi.data_rate_dyn = 720;
+	params->lcd_serial_number = 1;
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
 #if (LCM_DSI_CMD_MODE)
@@ -639,14 +642,14 @@ static void lcm_get_params(struct LCM_PARAMS *params)
 #else
 	params->dsi.data_rate = 735;	/* this value must be in MTK suggested table */
 #endif
-	//params->dsi.PLL_CK_CMD = 360;
-	//params->dsi.PLL_CK_VDO = 360;
+	/*params->dsi.PLL_CK_CMD = 360;*/
+	/*params->dsi.PLL_CK_VDO = 360;*/
 #else
 	params->dsi.pll_div1 = 0;
 	params->dsi.pll_div2 = 0;
 	params->dsi.fbk_div = 0x1;
 #endif
-	//params->dsi.clk_lp_per_line_enable = 0;
+	/*params->dsi.clk_lp_per_line_enable = 0;*/
 	params->dsi.esd_check_enable = 0;
 	params->dsi.customization_esd_check_enable = 0;
 	params->dsi.lcm_esd_check_table[0].cmd = 0x0A;
@@ -667,7 +670,6 @@ static void lcm_get_params(struct LCM_PARAMS *params)
 	params->brightness_min = 6;
 
 	register_device_proc("lcd", "ili7807s", "hlt_ilitek");
-
 }
 
 static void lcm_init_power(void)
@@ -682,7 +684,7 @@ static void lcm_init_power(void)
 static void lcm_suspend_power(void)
 {
 	pr_debug("lcm_suspend_power\n");
-	if(!tp_gesture_enable_flag()) {
+	if ((!shut_down_flag) && (!tp_gesture_enable_flag())) {
 		printk("lcm_tp_suspend_power_on\n");
 		SET_LCM_VSN_PIN(0);
 		MDELAY(2);
@@ -693,12 +695,12 @@ static void lcm_suspend_power(void)
 #ifdef OPLUS_BUG_STABILITY
 static void lcm_shudown_power(void)
 {
-    printk("samir lcm_shudown_power\n");
-    SET_RESET_PIN(0);
-    MDELAY(2);
-    SET_LCM_VSN_PIN(0);
-    MDELAY(2);
-    SET_LCM_VSP_PIN(0);
+	printk("samir lcm_shudown_power\n");
+	SET_RESET_PIN(0);
+	MDELAY(2);
+	SET_LCM_VSN_PIN(0);
+	MDELAY(2);
+	SET_LCM_VSP_PIN(0);
 }
 #endif
 
@@ -708,8 +710,8 @@ static void lcm_resume_power(void)
 	SET_LCM_VSP_PIN(1);
 	MDELAY(3);
 	SET_LCM_VSN_PIN(1);
-	//base voltage = 4.0 each step = 100mV; 4.0+20 * 0.1 = 6.0v;
-	if ( display_bias_setting(0x14) )
+	/*base voltage = 4.0 each step = 100mV; 4.0+20 * 0.1 = 6.0v;*/
+	if (display_bias_setting(0x14))
 		pr_err("fatal error: lcd gate ic setting failed \n");
 	MDELAY(5);
 }
@@ -740,10 +742,7 @@ static void lcm_suspend(void)
 	pr_err("lcm_suspend\n");
 
 	push_table(NULL, lcm_suspend_setting, sizeof(lcm_suspend_setting) / sizeof(struct LCM_setting_table), 1);
-
-
 }
-
 static void lcm_resume(void)
 {
 	pr_err("lcm_resume\n");
@@ -799,12 +798,11 @@ static void lcm_setbacklight_cmdq(void *handle, unsigned int level)
 
 	bl_level[0].para_list[0] = 0x000F&(level >> 8);
 	bl_level[0].para_list[1] = 0x00FF&(level << 0);
-	//MDELAY(5);
-	pr_err("[ HW check backlight ilt7807s+hlt]level=%d,para_list[0]=%x,para_list[1]=%x\n",level,bl_level[0].para_list[0],bl_level[0].para_list[1]);
+	/*MDELAY(5);*/
+	pr_err("[ HW check backlight ilt7807s+hlt]level=%d, para_list[0]=%x, para_list[1]=%x\n", level, bl_level[0]. para_list[0], bl_level[0]. para_list[1]);
 	push_table(handle, bl_level, sizeof(bl_level) / sizeof(struct LCM_setting_table), 1);
-	//push_table_cust(handle, bl_level, sizeof(bl_level) / sizeof(struct LCM_setting_table_V3), 0);
-	//dump_stack();
-
+	/*push_table_cust(handle, bl_level, sizeof(bl_level) / sizeof(struct LCM_setting_table_V3), 0);*/
+	/*dump_stack();*/
 }
 
 static struct LCM_setting_table set_cabc_off[] = {
@@ -828,23 +826,23 @@ static struct LCM_setting_table set_cabc_move[] = {
 };
 
 static int cabc_status;
-static void lcm_set_cabc_cmdq(void *handle, unsigned int level){
+static void lcm_set_cabc_cmdq(void *handle, unsigned int level) {
 	pr_err("[lcm] cabc set level %d\n", level);
-	if (level==0){
-		push_table(handle, set_cabc_off, sizeof(set_cabc_off) / sizeof(struct LCM_setting_table), 1);
-	}else if (level == 1){
-		push_table(handle, set_cabc_ui, sizeof(set_cabc_ui) / sizeof(struct LCM_setting_table), 1);
-	}else if(level==2){
+	if(level== 0) {
+		push_table (handle, set_cabc_off, sizeof(set_cabc_off) / sizeof(struct LCM_setting_table), 1);
+	} else if (level == 1) {
+		push_table (handle, set_cabc_ui, sizeof(set_cabc_ui) / sizeof(struct LCM_setting_table), 1);
+	} else if (level== 2) {
 		push_table(handle, set_cabc_still, sizeof(set_cabc_still) / sizeof(struct LCM_setting_table), 1);
-	}else if(level==3){
+	} else if (level== 3) {
 		push_table(handle, set_cabc_move, sizeof(set_cabc_move) / sizeof(struct LCM_setting_table), 1);
-	}else{
+	} else {
 		pr_info("[lcm]  level %d is not support\n", level);
 	}
 	cabc_status = level;
 }
 
-static void lcm_get_cabc_status(int *status){
+static void lcm_get_cabc_status(int *status) {
 	pr_info("[lcm] cabc get to %d\n", cabc_status);
 	*status = cabc_status;
 }
@@ -869,7 +867,7 @@ static unsigned int lcm_esd_recover(void)
 	}
 	pr_debug("lcm_esd_recovery\n");
 	push_table(NULL, bl_level, sizeof(bl_level) / sizeof(struct LCM_setting_table), 1);
-	//push_table_cust(NULL, bl_level, sizeof(bl_level) / sizeof(struct LCM_setting_table_V3), 0);
+	/*push_table_cust(NULL, bl_level, sizeof(bl_level) / sizeof(struct LCM_setting_table_V3), 0);*/
 	return FALSE;
 #else
 	return FALSE;

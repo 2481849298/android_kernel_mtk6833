@@ -67,7 +67,6 @@
 	qcom,usbtemp_cool_down_recovery_temp_second_gap = <11>;
 	qcom,new_usbtemp_cool_down_support;
 
-	//for oppo chg framework:
 	qcom,input_current_charger_ma = <2000>;
 	qcom,input_current_usb_ma = <500>;
 	qcom,input_current_cdp_ma = <1500>;
@@ -244,6 +243,8 @@
 	qcom,vbatt_pdqc_to_5v_thr = <4100>;
 	qcom,vbatt_pdqc_to_9v_thr = <4000>;
 
+	oplus,aging_ffc_version = <1>;
+
 	//for control:
 	//qcom,suspend_after_full;
 	qcom,check_batt_full_by_sw;
@@ -280,6 +281,7 @@
 	support_tuv_authentication;
 	max_charger_voltage = <9900000>;
 
+	support_sdp_screenoff;
 	support_new_charger_stander;
 	usb_charger_current = <500000>;
 	ac_charger_input_current = <2000000>;
@@ -370,18 +372,31 @@
 	vooc_ap_data_new_function:vooc_ap_data_new_function {
 		compatible = "mediatek, VOOC_EINT_NEW_FUNCTION";
 	};
+
+	oplus,track-charge {
+		compatible = "oplus,track-charge";
+		track,fast_chg_break_t_thd = <1000>;
+		track,general_chg_break_t_thd = <200>;
+		track,voocphy_type = <4>;
+		track,wired_max_power = <80000>;
+		track,wired_fast_chg_scheme = <1>;
+	};
+
+	oplus_battery_log: oplus,battery_log {
+		compatible = "oplus,battery_log";
+		oplus,battery_log_support;
+	};
 };
 
-
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <6>;
-	u2_term_ref = <6>;
-	u2_enhance = <2>;
-
-	u2_vrt_ref_host = <7>;
-	u2_term_ref_host = <7>;
-	u2_enhance_host = <3>;
+&u2port0 {
+	mediatek,eye-vrt = <7>; /* 0~7 */
+	mediatek,eye-term = <7>; /* 0~7 */
+	mediatek,eye-rev6 = <3>; /* 0~3 */
+	mediatek,eye-disc = <0xF>; /* 0~8 */
+	mediatek,host-eye-vrt = <7>; /* 0~7 */
+	mediatek,host-eye-term = <7>; /* 0~7 */
+	mediatek,host-eye-rev6 = <3>; /* 0~3 */
+	mediatek,host-eye-disc = <0xB>; /* 0~8 */
 };
 
 &i2c7 {
@@ -2489,8 +2504,8 @@
 	dischg_enable: dischg_enable {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO51__FUNC_GPIO51>;		//check
-			slew-rate = <1>;							//0:input direction 1:output direction
-			bias-pull-up;
+			output-enable;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 			output-high;
 		};
 	};
@@ -2498,8 +2513,8 @@
 	dischg_disable: dischg_disable {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO51__FUNC_GPIO51>;		//check
-			slew-rate = <1>;
-			bias-pull-down;
+			output-enable;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_01>;
 			output-low;
 		};
 	};

@@ -685,6 +685,25 @@ static u_int8_t scanSanityCheckBssDesc(struct ADAPTER *prAdapter,
 				MAC2STR(prBssDesc->aucBSSID), r2, r1);
 			return FALSE;
 		}
+
+		if (eRoamReason == ROAMING_REASON_BTM) {
+			struct BSS_TRANSITION_MGT_PARAM *prBtmParam;
+			uint8_t ucReqDisassocImminentMode = 0;
+
+			prBtmParam = aisGetBTMParam(prAdapter, ucBssIndex);
+			ucReqDisassocImminentMode =
+				((prBtmParam->ucRequestMode &
+				WNM_BSS_TM_REQ_DISASSOC_IMMINENT) ||
+				(prBtmParam->ucRequestMode &
+				WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT));
+			if ((ucReqDisassocImminentMode == 0) &&
+				(r2 < r1 || r2 < -75)) {
+				log_dbg(SCN, INFO,
+					MACSTR " BTM policy ignore %d (cur=%d)\n",
+					MAC2STR(prBssDesc->aucBSSID), r2, r1);
+				return FALSE;
+			}
+		}
 	}
 
 	if (ucBssIndex != AIS_DEFAULT_INDEX) {
@@ -771,8 +790,17 @@ static u_int8_t scanSanityCheckBssDesc(struct ADAPTER *prAdapter,
 
 		prBtmParam = aisGetBTMParam(prAdapter, ucBssIndex);
 		ucRequestMode = prBtmParam->ucRequestMode;
+		if (prBssDesc->prNeighbor &&
+			prBssDesc->prNeighbor->fgPrefPresence &&
+			!prBssDesc->prNeighbor->ucPreference) {
+			log_dbg(SCN, INFO,
+				MACSTR " preference is 0, skip it\n",
+				MAC2STR(prBssDesc->aucBSSID));
+			return FALSE;
+		}
 		if (ucRequestMode & WNM_BSS_TM_REQ_ABRIDGED) {
-			if (!prBssDesc->prNeighbor) {
+			if (!prBssDesc->prNeighbor &&
+				!prBssDesc->fgIsConnected) {
 				log_dbg(SCN, INFO,
 				     MACSTR " not in candidate list, skip it\n",
 				     MAC2STR(prBssDesc->aucBSSID));
@@ -1209,8 +1237,7 @@ struct BSS_DESC *scanSearchBssDescByScoreForAis(struct ADAPTER *prAdapter,
 	int32_t base, delta, goal;
 #endif
 
-	if (!prAdapter ||
-	    eRoamReason >= ROAMING_REASON_NUM || eRoamReason < 0) {
+	if (!prAdapter || eRoamReason >= ROAMING_REASON_NUM) {
 		log_dbg(SCN, ERROR,
 			"prAdapter %p, reason %d!\n", prAdapter, eRoamReason);
 		return NULL;
@@ -1338,6 +1365,14 @@ try_again:
 		}
 #endif
 
+		if (EQUAL_MAC_ADDR(prBssDesc->aucBSSID, prAisBssInfo->aucBSSID)
+			&& ROAMING_REASON_BTM_DISASSOC == eRoamReason) {
+			log_dbg(SCN, WARN,
+				"Skip " MACSTR " - BTM DisAssoc\n",
+				MAC2STR(prBssDesc->aucBSSID));
+			continue;
+		}
+
 		u2ScoreTotal = scanCalculateTotalScore(prAdapter, prBssDesc,
 			prRoamingFsmInfo->eReason, ucBssIndex);
 		if (!prCandBssDesc ||
@@ -1440,6 +1475,7 @@ void scanGetCurrentEssChnlList(struct ADAPTER *prAdapter,
 	struct ESS_CHNL_INFO *prEssChnlInfo;
 	struct LINK *prCurEssLink;
 	struct AIS_SPECIFIC_BSS_INFO *prAisSpecBssInfo;
+	struct ROAMING_INFO *prRoamingInfo;
 	uint8_t aucChnlBitMap[30] = {0,};
 	uint8_t aucChnlApNum[234] = {0,};
 	uint8_t aucChnlUtil[234] = {0,};
@@ -1479,6 +1515,8 @@ void scanGetCurrentEssChnlList(struct ADAPTER *prAdapter,
 		log_dbg(SCN, INFO, "No prCurEssLink\n");
 		return;
 	}
+
+	prRoamingInfo = aisGetRoamingInfo(prAdapter, ucBssIndex);
 
 	kalMemZero(prEssChnlInfo, CFG_MAX_NUM_OF_CHNL_INFO *
 		sizeof(struct ESS_CHNL_INFO));
@@ -1593,19 +1631,17 @@ updated:
 		prEssChnlInfo[j].ucApNum = aucChnlApNum[ucChnl];
 		prEssChnlInfo[j].ucUtilization = aucChnlUtil[ucChnl];
 	}
-#if 0
-	/* Sort according to AP number */
-	for (j = 0; j < ucChnlCount; j++) {
-		for (i = j + 1; i < ucChnlCount; i++)
-			if (prEssChnlInfo[j].ucApNum >
-				prEssChnlInfo[i].ucApNum) {
-				struct ESS_CHNL_INFO rTemp = prEssChnlInfo[j];
 
-				prEssChnlInfo[j] = prEssChnlInfo[i];
-				prEssChnlInfo[i] = rTemp;
-			}
+#if CFG_SUPPORT_802_11V_BTM_OFFLOAD
+	if (prCurEssLink->u4NumElem > 2) {
+		prRoamingInfo->rSkipBtmInfo.ucConsecutiveBtmCount = 0;
+		kalMemZero(&prRoamingInfo->rSkipBtmInfo,
+			sizeof(struct ROAMING_SKIP_BTM));
+		kalMemZero(&prRoamingInfo->rSkipPerInfo,
+			sizeof(struct ROAMING_SKIP_PER));
 	}
 #endif
+
 	log_dbg(SCN, INFO, "Find %s in %d BSSes, result %d\n",
 		prConnSettings->aucSSID, prBSSDescList->u4NumElem,
 		prCurEssLink->u4NumElem);
@@ -1676,7 +1712,8 @@ uint8_t scanBeaconTimeoutFilterPolicyForAis(struct ADAPTER *prAdapter,
 		target = aisGetTargetBssDesc(prAdapter, ucBssIndex);
 		bss = scanSearchBssDescByScoreForAis(prAdapter,
 			ROAMING_REASON_TX_ERR, ucBssIndex);
-		if (bss && UNEQUAL_MAC_ADDR(bss->aucBSSID, target->aucBSSID)) {
+		if (bss && target
+			&& UNEQUAL_MAC_ADDR(bss->aucBSSID, target->aucBSSID)) {
 			log_dbg(SCN, INFO, "Better AP for beacon timeout");
 			return TRUE;
 		}

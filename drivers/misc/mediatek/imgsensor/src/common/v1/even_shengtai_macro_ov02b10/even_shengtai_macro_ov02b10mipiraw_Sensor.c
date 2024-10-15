@@ -22,16 +22,21 @@
 #include <linux/types.h>
 //#include <linux/hardware_info.h>
 #include "even_shengtai_macro_ov02b10mipiraw_Sensor.h"
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 
 #define PFX "EVEN_SHENGTAI_MACRO_OV02B10_camera_sensor"
 #define LOG_INF(format, args...)    \
      pr_debug(PFX "[%s] " format, __func__, ##args)
 
 /* Camera Hardwareinfo */
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define DEVICE_VERSION_EVEN_SHENGTAI_MACRO_OV02B10  "even_shengtai_macro_ov02b10"
 // #define MODULE_ID_OFFSET 0X0000
+#endif
 static kal_uint32 streaming_control(kal_bool enable);
 static DEFINE_SPINLOCK(imgsensor_drv_lock);
 
@@ -191,6 +196,7 @@ static struct SENSOR_WINSIZE_INFO_STRUCT imgsensor_winsize_info[6] = {
     {1600, 1200, 0, 0, 1600, 1200, 1600, 1200, 0000, 0000, 1600, 1200, 0, 0, 1600, 1200}  /* custom 24fps */
 };
 
+// #ifdef OPLUS_FEATURE_CAMERA_COMMON
 //
 // static kal_uint16 read_module_id(void)
 // {

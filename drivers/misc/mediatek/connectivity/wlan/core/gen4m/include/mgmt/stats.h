@@ -43,13 +43,16 @@
 
 enum ENUM_STATS_TX_TLV_TAG_ID_T {
 	STATS_TX_TAG_QUEUE          = 0,
-	STATS_TX_TAG_BSS0          = 1,
+	STATS_TX_TAG_RETRY          = 1,
 	STATS_TX_TAG_TIME          = 2,
+	STATS_TX_TAG_LAT           = 3,
+	STATS_TX_TAG_AVG_LAT        = 4,
 	STATS_TX_TAG_MAX_NUM
 };
 
 enum ENUM_STATS_RX_TLV_TAG_ID_T {
 	STATS_RX_TAG_REORDER_DROP          = 0,
+	STATS_RX_TAG_AVG_RSSI          = 1,
 	STATS_RX_TAG_MAX_NUM
 };
 
@@ -66,9 +69,9 @@ struct STATS_TRX_TLV_T {
 	uint8_t  aucBuffer[0];
 };
 
-typedef void(*PFN_STATS_HANDLE)(struct GLUE_INFO*,
-	void *, uint32_t);
-typedef uint32_t(*PFN_STATS_GET_LENGTH)(void);
+typedef void(*PFN_STATS_HANDLE)(struct net_device *prNetDev,
+	struct GLUE_INFO*, void *, uint32_t);
+typedef uint32_t(*PFN_STATS_GET_LENGTH)(struct GLUE_INFO *);
 
 /* Tx Queue statistics */
 struct STATS_TX_QUEUE_STAT_T {
@@ -78,8 +81,8 @@ struct STATS_TX_QUEUE_STAT_T {
 	uint32_t u4PleHifRsvd;
 };
 
-/* tx per bss statistics */
-struct STATS_TX_PER_BSS_STAT_T {
+/* tx retry statistics */
+struct STATS_TX_RETRY_STAT_T {
 	uint64_t u8Retry;
 	uint64_t u8RtsFail;
 	uint64_t u8AckFail;
@@ -92,6 +95,29 @@ struct STATS_TX_TIME_STAT_T {
 	uint32_t au4Fail[TX_TIME_CAT_NUM];
 };
 
+/* tx latency statistics */
+struct STATS_TX_LAT_STAT_T {
+	/* from packet arrived driver to enqueued. (in ms) */
+	uint32_t au4DriverLat[TX_TIME_CAT_NUM];
+	/* the latency in HW MAC to transmission finished. (in ms) */
+	uint32_t au4MacLat[TX_TIME_CAT_NUM];
+};
+
+/* avg tx latency statistics */
+struct STATS_TX_AVG_LAT_STAT_T {
+	uint32_t u4DriverLat;
+	uint32_t u4ConnLat;
+	uint32_t u4MacLat;
+	uint32_t u4AirLat;
+	uint32_t u4FailConnLat;
+};
+
+/* Avg RSSI from LWTBL */
+struct STATS_RX_AVG_RSSI_STAT_T {
+	int32_t i4Rssi0;
+	int32_t i4Rssi1;
+};
+
 struct STATS_CGS_LAT_STAT_T {
 	uint32_t au4AirLatLvl[AIR_LAT_LVL_NUM];
 	uint32_t au4AirLatMpdu[AIR_LAT_CAT_NUM];
@@ -99,7 +125,12 @@ struct STATS_CGS_LAT_STAT_T {
 
 struct STATS_TLV_HDLR_T {
 	PFN_STATS_GET_LENGTH pfnTlvGetLen;
-	PFN_STATS_HANDLE pfnStstsTlvHdl;
+	PFN_STATS_HANDLE pfnStstsHdl;
+};
+
+struct STATS_TLV_MAP_T {
+	uint32_t u4Tag;
+	struct STATS_TLV_HDLR_T tlvHdl;
 };
 
 /*******************************************************************************
@@ -120,30 +151,49 @@ struct STATS_TLV_HDLR_T {
  *******************************************************************************
  */
 /* common tlv length */
-uint32_t statsGetTlvU4Len(void);
-uint32_t statsGetTlvU8Len(void);
+uint32_t statsGetTlvU4Len(struct GLUE_INFO *prGlueInfo);
+uint32_t statsGetTlvU8Len(struct GLUE_INFO *prGlueInfo);
 
 /* tx tlv length */
-uint32_t statsTxGetQueuetLen(void);
-uint32_t statsTxGetPerBssLen(void);
-uint32_t statsTxGetTimeLen(void);
+uint32_t statsTxGetQueueLen(struct GLUE_INFO *prGlueInfo);
+uint32_t statsTxGetRetryLen(struct GLUE_INFO *prGlueInfo);
+uint32_t statsTxGetTimeLen(struct GLUE_INFO *prGlueInfo);
+uint32_t statsTxGetLatLen(struct GLUE_INFO *prGlueInfo);
+uint32_t statsTxGetAvgLatLen(struct GLUE_INFO *prGlueInfo);
+
+uint32_t statsRxGetAvgRssiLen(struct GLUE_INFO *prGlueInfo);
 
 /* congestion tlv length */
-uint32_t statsCgsGetAirLatLen(void);
+uint32_t statsCgsGetAirLatLen(struct GLUE_INFO *prGlueInfo);
 
-void statsTxQueueHdlr(struct GLUE_INFO *prGlueInfo,
+void statsTxQueueHdlr(struct net_device *prNetDev,
+	struct GLUE_INFO *prGlueInfo,
 	void *prTlvBuf, uint32_t u4TlvLen);
-void statsTxTlvBss0Hdlr(struct GLUE_INFO *prGlueInfo,
+void statsTxGetRetryHdlr(struct net_device *prNetDev,
+	struct GLUE_INFO *prGlueInfo,
 	void *prTlvBuf, uint32_t u4TlvLen);
-void statsTxTimeHdlr(struct GLUE_INFO *prGlueInfo,
+void statsTxTimeHdlr(struct net_device *prNetDev,
+	struct GLUE_INFO *prGlueInfo,
+	void *prTlvBuf, uint32_t u4TlvLen);
+void statsTxLatHdlr(struct net_device *prNetDev,
+	struct GLUE_INFO *prGlueInfo,
+	void *prTlvBuf, uint32_t u4TlvLen);
+void statsTxAvgLatHdlr(struct net_device *prNetDev,
+	struct GLUE_INFO *prGlueInfo,
 	void *prTlvBuf, uint32_t u4TlvLen);
 
-void statsRxReorderDropHdlr(struct GLUE_INFO *prGlueInfo,
+void statsRxReorderDropHdlr(struct net_device *prNetDev,
+	struct GLUE_INFO *prGlueInfo,
+	void *prTlvBuf, uint32_t u4TlvLen);
+void statsRxAvgRssiHdlr(struct net_device *prNetDev,
+	struct GLUE_INFO *prGlueInfo,
 	void *prTlvBuf, uint32_t u4TlvLen);
 
-void statsCgsB0IdleSlotHdlr(struct GLUE_INFO *prGlueInfo,
+void statsCgsB0IdleSlotHdlr(struct net_device *prNetDev,
+	struct GLUE_INFO *prGlueInfo,
 	void *prTlvBuf, uint32_t u4TlvLen);
-void statsCgsAirLatHdlr(struct GLUE_INFO *prGlueInfo,
+void statsCgsAirLatHdlr(struct net_device *prNetDev,
+	struct GLUE_INFO *prGlueInfo,
 	void *prTlvBuf, uint32_t u4TlvLen);
 
 /*******************************************************************************
@@ -195,12 +245,10 @@ void StatsEnvGetPktDelay(OUT uint8_t *pucTxRxFlag,
 			 OUT uint16_t *pu2RxUdpPort,
 			 OUT uint32_t *pu4RxDelayThreshold);
 
-uint32_t statsTxGetTlvStatTotalLen(void);
-uint32_t statsRxGetTlvStatTotalLen(void);
-uint32_t statsCgsGetTlvStatTotalLen(void);
-
-void statsGetTxInfoHdlr(struct GLUE_INFO *prGlueInfo, void *prTlvBuf);
-void statsGetRxInfoHdlr(struct GLUE_INFO *prGlueInfo, void *prTlvBuf);
-void statsGetCgsInfoHdlr(struct GLUE_INFO *prGlueInfo, void *prTlvBuf);
+uint32_t statsGetTlvStatTotalLen(struct GLUE_INFO *prGlueInfo,
+	uint8_t type, uint8_t ucNum, uint32_t *arTagList);
+void
+statsGetInfoHdlr(struct net_device *prNetDev, struct GLUE_INFO *prGlueInfo,
+	void *prTlvBuf, uint8_t type, uint8_t ucNum, uint32_t *arTagList);
 
 /* End of stats.h */

@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/slab.h>
 
@@ -1041,14 +1033,14 @@ void load_lcm_resources_from_DT(struct LCM_DRIVER *lcm_drv)
 int tp_gesture = 0;
 EXPORT_SYMBOL(tp_gesture);
 char Lcm_name1[256];
-static char nt36525b_panel_xxx_mark;
+static char ili7807s_panel_xxx_mark;
 static inline char getLcmPanel_ID(void){
-	DISPCHECK("lcm nt36525b_panel kernel is %d\n",nt36525b_panel_xxx_mark);
-	return nt36525b_panel_xxx_mark;
+	DISPCHECK("lcm ili7807s_panel kernel is %d\n", ili7807s_panel_xxx_mark);
+	return ili7807s_panel_xxx_mark;
 }
 
 static inline void setLcmPanel_ID(char value){
-		nt36525b_panel_xxx_mark = value;
+		ili7807s_panel_xxx_mark = value;
 }
 #endif
 struct disp_lcm_handle *disp_lcm_probe(char *plcm_name,
@@ -1078,18 +1070,18 @@ struct disp_lcm_handle *disp_lcm_probe(char *plcm_name,
 //		strncpy(Lcm_name2,plcm_name,strlen(plcm_name)+1);
 	}
 	pr_err(" lcm name IS %s\n",Lcm_name1);
-	tddic_temp = strstr(plcm_name ,"ilt9881h");
+	tddic_temp = strstr(plcm_name ,"ili7807s");
 	if (tddic_temp != NULL){
-		temp = tddic_temp + strlen("ilt9881h");
-		if (!strncmp(temp ,"_truly_hdp_dsi_vdo_lcm_drv", strlen("_truly_hdp_dsi_vdo_lcm_drv"))){
-			lcm_panel_temp = "TRULY_ILI";
-		} else if (!strncmp(temp ,"_txd_hdp_dsi_vdo_lcm_drv", strlen("_txd_hdp_dsi_vdo_lcm_drv"))){
-			lcm_panel_temp = "TXD_ILI";
+		temp = tddic_temp + strlen("ili7807s");
+		if (!strncmp(temp ,"_xxx_fhd_dsi_vdo_dphy_lcm_drv", strlen("_xxx_fhd_dsi_vdo_dphy_lcm_drv"))){
+			lcm_panel_temp = "CSOT_ILI";
+		} else if (!strncmp(temp ,"_jdi_fhd_dsi_vdo_dphy_lcm_drv", strlen("_jdi_fhd_dsi_vdo_dphy_lcm_drv"))){
+			lcm_panel_temp = "JDI_ILI";
 		} else {
 			lcm_panel_temp = "TEMP_DEFAULT_ILI";
 		}
-		tddic_temp = "ili9881h";
-		setLcmPanel_ID(0);
+		tddic_temp = "ili7807s";
+		setLcmPanel_ID(1);
 	} else {
 			tddic_temp = strstr(plcm_name ,"hx83112a");
 			if (tddic_temp != NULL){
@@ -1101,7 +1093,7 @@ struct disp_lcm_handle *disp_lcm_probe(char *plcm_name,
 				}
 				tddic_temp = "hx83112a";
 			} else {
-			 	tddic_temp = strstr(plcm_name ,"ili9881tfh");
+				tddic_temp = strstr(plcm_name ,"ili9881tfh");
 				if (tddic_temp != NULL){
 						temp = tddic_temp + strlen("ili9881tfh");
 						if (!strncmp(temp ,"_txd_hdp_dsi_vdo_lcm_drv" ,strlen("_txd_hdp_dsi_vdo_lcm_drv"))){
@@ -1510,10 +1502,31 @@ int disp_lcm_shutdown(struct disp_lcm_handle *plcm)
 }
 #endif
 
+int disp_lcm_suspend_1p8(struct disp_lcm_handle *plcm)
+{
+	struct LCM_DRIVER *lcm_drv = NULL;
+	printk("%s enter \n", __func__);
+	DISPFUNC();
+	if (_is_lcm_inited(plcm)) {
+		lcm_drv = plcm->drv;
+		if (lcm_drv && lcm_drv->suspend_power_1p8) {
+			lcm_drv->suspend_power_1p8();
+		} else {
+			DISPERR("FATAL ERROR, lcm_drv->suspend_power_1p8 is null\n");
+			return -1;
+                }
+		printk("%s suspend 1p8 power ok \n", __func__);
+		return 0;
+	}
+	DISPERR("lcm_drv is null\n");
+
+	return -1;
+}
+
 int disp_lcm_suspend(struct disp_lcm_handle *plcm)
 {
 	struct LCM_DRIVER *lcm_drv = NULL;
-
+	printk("%s enter \n", __func__);
 	DISPFUNC();
 	if (_is_lcm_inited(plcm)) {
 		lcm_drv = plcm->drv;
@@ -1523,12 +1536,13 @@ int disp_lcm_suspend(struct disp_lcm_handle *plcm)
 			DISPERR("FATAL ERROR, lcm_drv->suspend is null\n");
 			return -1;
 		}
-
+		printk("%s suspend ok \n", __func__);
 		if (lcm_drv->suspend_power)
 			lcm_drv->suspend_power();
 #ifdef OPLUS_BUG_STABILITY
 		oplus_flag_lcd_off = true;
 #endif
+		printk("%s suspend power ok \n", __func__);
 		return 0;
 	}
 	DISPERR("lcm_drv is null\n");
@@ -1632,6 +1646,30 @@ int disp_lcm_adjust_fps(void *cmdq, struct disp_lcm_handle *plcm, int fps)
 	return -1;
 }
 
+#ifdef OPLUS_FEATURE_DISPLAY
+int disp_lcm_oplus_set_lcm_gamma_cmd(struct disp_lcm_handle *plcm, void *handle, unsigned int gamma_flag)
+{
+	struct LCM_DRIVER *lcm_drv = NULL;
+
+	DISPFUNC();
+	pr_info("check disp_lcm_oplus_set_lcm_gamma_cmd in disp_lcm_c\n");
+	if (_is_lcm_inited(plcm)) {
+		lcm_drv = plcm->drv;
+		if (lcm_drv->set_gamma_mode_cmdq) {
+			lcm_drv->set_gamma_mode_cmdq(handle, gamma_flag);
+		} else {
+			pr_err("FATAL ERROR, lcm_drv->oplus_set_gamma_mode_cmdq is null\n");
+			return -1;
+		}
+
+		return 0;
+	}
+
+	pr_info("lcm_drv is null\n");
+	return -1;
+}
+#endif
+
 #ifdef OPLUS_BUG_STABILITY
 unsigned int g_lcd_backlight = 0;
 #endif
@@ -1677,6 +1715,26 @@ int disp_lcm_set_backlight(struct disp_lcm_handle *plcm,
 
 	return 0;
 }
+
+#ifdef OPLUS_BUG_STABILITY
+int disp_lcm_set_esd_flag(struct disp_lcm_handle *plcm,int num)
+{
+	struct LCM_DRIVER *lcm_drv = NULL;
+	DISPFUNC();
+	if (!_is_lcm_inited(plcm)) {
+		DISPERR("lcm_drv is null\n");
+		return -1;
+	}
+	lcm_drv = plcm->drv;
+	if (lcm_drv->set_esd_flag) {
+		lcm_drv->set_esd_flag(num);
+	} else {
+		DISPERR("FATAL ERROR, lcm_drv->set_esd_flag is null\n");
+		return -1;
+	}
+	return 0;
+}
+#endif
 
 int disp_lcm_get_hbm_state(struct disp_lcm_handle *plcm)
 {

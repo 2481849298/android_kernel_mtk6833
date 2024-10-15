@@ -2,7 +2,7 @@
 #ifndef _UAPI__LINUX_NETLINK_H
 #define _UAPI__LINUX_NETLINK_H
 
-#include <linux/kernel.h>
+#include <linux/const.h>
 #include <linux/socket.h> /* for __kernel_sa_family_t */
 #include <linux/types.h>
 
@@ -32,13 +32,8 @@
 
 #define NETLINK_INET_DIAG	NETLINK_SOCK_DIAG
 
-//#ifdef OPLUS_FEATURE_WIFI_CAPCENTER
-#define NETLINK_OPLUS_WIFI_CAP_CENTER_SYNC 39
-#define NETLINK_OPLUS_WIFI_CAP_CENTER_ASYNC 40
-//#endif /* OPLUS_FEATURE_WIFI_CAPCENTER */
-
 #ifdef OPLUS_FEATURE_HANS_FREEZE
-#define NETLINK_OPPO_HANS       29      /* Socket for freezing solution*/
+#define NETLINK_OPLUS_HANS       29      /* Socket for freezing solution*/
 #endif /*OPLUS_FEATURE_HANS_FREEZE*/
 
 //#ifdef OPLUS_FEATURE_NWPOWER
@@ -49,10 +44,14 @@
 #define OPLUS_NETLINK_THEIA_KEVENT 43
 //#endif /* OPLUS_FEATURE_THEIA */
 
-//#ifdef OPLUS_FEATURE_SECURITY_COMMON
-#define MAX_LINKS 44
-//#endif /*OPLUS_FEATURE_SECURITY_COMMON*/
+//#ifdef OPLUS_FEATURE_WIFI_CAPCENTER
+#define NETLINK_OPLUS_WIFI_CAP_CENTER_SYNC 39
+#define NETLINK_OPLUS_WIFI_CAP_CENTER_ASYNC 40
+//#endif /* OPLUS_FEATURE_WIFI_CAPCENTER */
 
+
+//#define MAX_LINKS 32
+#define MAX_LINKS 45
 struct sockaddr_nl {
 	__kernel_sa_family_t	nl_family;	/* AF_NETLINK	*/
 	unsigned short	nl_pad;		/* zero		*/

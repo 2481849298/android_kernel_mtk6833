@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef _DDP_DISP_BDG_H_
 #define _DDP_DISP_BDG_H_
@@ -20,7 +12,7 @@
 #include "lcm_drv.h"
 #include <linux/interrupt.h>
 
-#define HW_NUM			(1)
+#define HW_NUM			(2)
 #define RX_V12			(1700)
 #ifdef CONFIG_MTK_MT6382_VDO_MODE
 #define _VDO_120FPS_
@@ -76,6 +68,7 @@ enum MIPI_TX_PAD_VALUE {
 #define REG_FLAG_ESCAPE_ID				(0x00)
 #define REG_FLAG_DELAY_MS_V3				(0xFF)
 
+int bdg_is_bdg_connected(void);
 int bdg_tx_init(enum DISP_BDG_ENUM module,
 		   struct disp_ddp_path_config *config, void *cmdq);
 int bdg_tx_deinit(enum DISP_BDG_ENUM module, void *cmdq);

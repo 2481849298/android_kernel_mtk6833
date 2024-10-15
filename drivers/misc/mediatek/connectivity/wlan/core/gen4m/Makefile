@@ -56,6 +56,10 @@ $(info $$MTK_PLATFORM is [${MTK_PLATFORM}])
 $(info $$WLAN_CHIP_ID is [${WLAN_CHIP_ID}])
 $(info $$MTK_COMBO_CHIP is [${MTK_COMBO_CHIP}])
 
+ifneq ($(CONFIG_MTK_EMI_LEGACY),)
+ccflags-y += -DCONFIG_WLAN_MTK_EMI=1
+endif
+
 ifneq ($(CONFIG_MTK_EMI),)
 ccflags-y += -DCONFIG_WLAN_MTK_EMI=1
 endif
@@ -81,6 +85,7 @@ ccflags-y += -Werror $(call cc-disable-warning, unused-but-set-variable)
 ccflags-y += -DLINUX
 
 #ifdef OPLUS_BUG_STABILITY
+#CONNECTIVITY.WIFI.CONNECTION.CONNECT, 20121/11/1, add for wlan common bug fix (replace OPLUS_BUG_STABILITY)
 ccflags-y += -DOPLUS_WLAN_BUG_STABILITY=1
 #endif  /* OPLUS_BUG_STABILITY */
 
@@ -203,6 +208,7 @@ ccflags-y += -DSOC7_0
 CONFIG_MTK_WIFI_CONNAC2X=y
 CONFIG_MTK_WIFI_11AX_SUPPORT=y
 #ifdef OPLUS_BUG_STABILITY
+#CONNECTIVITY.WIFI.CONNECTION.BASIC, 2021/11/23, Close 6GHz Support
 #CONFIG_MTK_WIFI_6G_SUPPORT=y
 #endif  /* OPLUS_BUG_STABILITY */
 CONFIG_MTK_WIFI_TWT_SUPPORT=y
@@ -215,6 +221,7 @@ CONFIG_MTK_WIFI_DOWNLOAD_DYN_MEMORY_MAP=y
 CONFIG_MTK_WIFI_POWER_THROTTLING=y
 CONFIG_MTK_WIFI_PKT_OFLD_SUPPORT=y
 CONFIG_MTK_WIFI_APF_SUPPORT=y
+#CONFIG_MTK_WIFI_SNIFFER_RADIOTAP=y
 CONFIG_MTK_WIFI_NAN=y
 
 CONFIG_MTK_WIFI_SNIFFER_RADIOTAP=y
@@ -557,15 +564,9 @@ obj-$(CONFIG_MTK_COMBO_WIFI) += $(MODULE_NAME).o
 #obj-y += $(MODULE_NAME).o
 endif
 
-ifeq ($(CONFIG_WLAN_DRV_BUILD_IN),y)
-$(warning $(MODULE_NAME) build-in boot.img)
+
 obj-y += $(MODULE_NAME).o
 ccflags-y += -DCONFIG_WLAN_DRV_BUILD_IN=1
-else
-$(warning $(MODULE_NAME) is kernel module)
-obj-m += $(MODULE_NAME).o
-ccflags-y += -DCONFIG_WLAN_DRV_BUILD_IN=0
-endif
 
 ifeq ($(CONFIG_MTK_WIFI_PKT_OFLD_SUPPORT), y)
 ccflags-y += -DCFG_SUPPORT_PKT_OFLD=1
@@ -579,10 +580,17 @@ ccflags-y += -DCFG_SUPPORT_PKT_OFLD=0
 endif
 
 #ifdef OPLUS_FEATURE_WIFI_SMARTGEAR
+#CONNECTIVITY.WIFI.HARDWARE.POWER.SMARTGEAR.1641437 , 2021/11/01
 ifeq ($(OPLUS_FEATURE_WIFI_SMARTGEAR), yes)
 ccflags-y += -DCFG_SUPPORT_SMART_GEAR=1
 endif
 #endif /* OPLUS_FEATURE_WIFI_SMARTGEAR */
+
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+#CONNECTIVITY.WIFI.HARDWARE.POWER, 2022/06/30, add for mtk connectivity power monitor
+ccflags-y += -DOPLUS_FEATURE_CONN_POWER_MONITOR
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
+
 # ---------------------------------------------------
 # Directory List
 # ---------------------------------------------------
@@ -911,6 +919,7 @@ endif
 endif
 
 #ifdef OPLUS_FEATURE_WIFI_OPLUSWFD
+#CONNECTIVITY.WIFI.BASIC.26106 2021/03/18 , add for oplus wfd
 ifeq ($(CONFIG_OPLUS_FEATURE_WIFI_OPLUSWFD), m)
 ccflags-y += -DOPLUS_FEATURE_WIFI_OPLUSWFD=1
 else ifeq ($(CONFIG_OPLUS_FEATURE_WIFI_OPLUSWFD), y)
@@ -927,8 +936,12 @@ OPLUS_WFD_OBJS += oplus_wfd/wlan_oplus_wfd.o
 # ---------------------------------------------------
 SERVICE_DIR  := wlan_service/
 
-
+ifneq ($(findstring wlan_service,$(MTK_WLAN_SERVICE_PATH)),)
 MTK_WLAN_SERVICE=yes
+SERVICE_DIR  := $(MTK_WLAN_SERVICE_PATH)
+$(info SERVICE_DIR is [{$(MTK_WLAN_SERVICE_PATH)}])
+endif
+
 ifeq ($(MTK_WLAN_SERVICE), yes)
 ccflags-y += -DCONFIG_WLAN_SERVICE=1
 ccflags-y += -DCONFIG_TEST_ENGINE_OFFLOAD=1
@@ -936,6 +949,7 @@ ccflags-y += -I$(src)/$(SERVICE_DIR)include
 ccflags-y += -I$(src)/$(SERVICE_DIR)service/include
 ccflags-y += -I$(src)/$(SERVICE_DIR)glue/osal/include
 ccflags-y += -I$(src)/$(SERVICE_DIR)glue/hal/include
+$(info $$CCFLAG is [{$(ccflags-y)}])
 SERVICE_OBJS := $(SERVICE_DIR)agent/agent.o \
                 $(SERVICE_DIR)service/service_test.o \
                 $(SERVICE_DIR)service/test_engine.o \
@@ -943,6 +957,7 @@ SERVICE_OBJS := $(SERVICE_DIR)agent/agent.o \
                 $(SERVICE_DIR)glue/osal/gen4m/net_adaption_gen4m.o \
                 $(SERVICE_DIR)glue/hal/gen4m/operation_gen4m.o
 $(MODULE_NAME)-objs  += $(SERVICE_OBJS)
+$(info $$MTK_WLAN_SERVICE is [{$(SERVICE_OBJS)}])
 else
 ccflags-y += -DCONFIG_WLAN_SERVICE=0
 ccflags-y += -DCONFIG_TEST_ENGINE_OFFLOAD=0
@@ -959,6 +974,7 @@ $(MODULE_NAME)-objs  += $(NAN_OBJS)
 $(MODULE_NAME)-objs  += $(NAN_SEC_OBJS)
 
 #ifdef OPLUS_FEATURE_WIFI_OPLUSWFD
+#CONNECTIVITY.WIFI.BASIC.26106 2021/03/18 , add for oplus wfd
 $(MODULE_NAME)-objs  += $(OPLUS_WFD_OBJS)
 #endif /* OPLUS_FEATURE_WIFI_OPLUSWFD */
 
@@ -967,7 +983,10 @@ include $(src)/test/ut.make
 endif
 
 #ifdef OPLUS_BUG_STABILITY
+#CONNECTIVITY.WIFI.BASIC, 2022/02/11, Power Limit for diff wifi standard
 ifeq ($(WLAN_CHIP_ID), 6781)
+ccflags-y += -DCFG_SUPPORT_DYNA_TX_PWR_CTRL_11AC_V2_SETTING=1
+else ifeq ($(OPLUS_FEATURE_TXPOWER_CTRL), yes)
 ccflags-y += -DCFG_SUPPORT_DYNA_TX_PWR_CTRL_11AC_V2_SETTING=1
 else
 ccflags-y += -DCFG_SUPPORT_DYNA_TX_PWR_CTRL_11AC_V2_SETTING=0
@@ -975,5 +994,6 @@ endif
 #endif  /* OPLUS_BUG_STABILITY */
 
 #ifdef OPLUS_FEATURE_WIFI_CAPCENTER_GC_AP_CONNECT
+#CONNECTIVITY.WIFI.P2P.3615099. Add for GC + AP support
 ccflags-y += -DCFG_P2P_CONNECT_ALL_BSS=1
 #endif /* OPLUS_FEATURE_WIFI_CAPCENTER_GC_AP_CONNECT */

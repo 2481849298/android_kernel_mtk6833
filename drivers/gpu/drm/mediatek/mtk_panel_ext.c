@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/err.h>
 #include <linux/module.h>
@@ -29,6 +21,7 @@ struct _panel_rst_ctx {
 };
 
 static DEFINE_MUTEX(panel_ext_lock);
+static DEFINE_MUTEX(panel_boot_lock);
 static LIST_HEAD(panel_ext_list);
 static struct _panel_rst_ctx panel_rst_ctx;
 
@@ -92,6 +85,18 @@ int mtk_panel_tch_rst(struct drm_panel *panel)
 
 	return ret;
 }
+
+void mtk_panel_lock(void)
+{
+	mutex_lock(&panel_boot_lock);
+}
+EXPORT_SYMBOL(mtk_panel_lock);
+
+void mtk_panel_unlock(void)
+{
+	mutex_unlock(&panel_boot_lock);
+}
+EXPORT_SYMBOL(mtk_panel_unlock);
 
 int mtk_panel_detach(struct mtk_panel_ctx *ctx)
 {

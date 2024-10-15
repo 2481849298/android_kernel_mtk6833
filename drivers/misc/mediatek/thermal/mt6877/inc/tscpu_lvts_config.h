@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 #ifndef __TSCPU_LVTS_SETTINGS_H__
 #define __TSCPU_LVTS_SETTINGS_H__
 
@@ -43,7 +35,16 @@
 #define LVTS_ADDRESS_INDEX_22	207 /* 0x11F10214 */
 
 
-
+/**************************************************************************** */
+/* RGU related registers. */
+/**************************************************************************** */
+#define MTK_WDT_REQ_MODE		(RGU_CTRL_BASE_2 + 0x0030)
+#define MTK_WDT_REQ_IRQ_EN		(RGU_CTRL_BASE_2 + 0x0034)
+#define MTK_WDT_REQ_MODE_KEY		(0x33000000)
+#define MTK_WDT_REQ_IRQ_KEY		(0x44000000)
+#define MTK_WDT_REQ_THERMAL_MARK		(1<<18)
+#define MTK_WDT_REQ_MODE_THERMAL		(1<<18)
+#define MTK_WDT_REQ_IRQ_THERMAL_EN		(1<<18)
 
 /**************************************************************************** */
 /* LVTS related registers. */
@@ -98,5 +99,8 @@
 #define LVTSSPARE3_0	(THERM_CTRL_BASE_2 + 0x0FC)
 
 #define THERMINTST	(THERM_CTRL_BASE_2 + 0xF04)
+
+#define STAGE3_INT_EN	(1 << 31)
+#define PROTOFFSET	GENMASK(15, 0)
 
 #endif	/* __TSCPU_LVTS_SETTINGS_H__ */

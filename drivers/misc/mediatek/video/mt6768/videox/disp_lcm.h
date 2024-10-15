@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef _DISP_LCM_H_
 #define _DISP_LCM_H_
@@ -56,6 +48,8 @@ int primary_disp_lcm_resume_power(struct disp_lcm_handle *plcm);
 int disp_lcm_shutdown(struct disp_lcm_handle *plcm);
 int disp_lcm_oplus_set_lcm_cabc_cmd(struct disp_lcm_handle *plcm, void *handle, unsigned int level);
 int disp_lcm_get_cabc(struct disp_lcm_handle *plcm, int *status);
+int disp_lcm_suspend_1p8(struct disp_lcm_handle *plcm);
+int disp_lcm_set_esd_flag(struct disp_lcm_handle *plcm,int num);
 #endif
 int disp_lcm_is_support_adjust_fps(struct disp_lcm_handle *plcm);
 int disp_lcm_adjust_fps(void *cmdq, struct disp_lcm_handle *plcm, int fps);
@@ -100,5 +94,8 @@ void disp_lcm_dynfps_send_cmd(
 
 /*-----------------------DynFPS end-----------------------------------*/
 #endif
-
+#ifdef OPLUS_FEATURE_DISPLAY
+int disp_lcm_oplus_set_lcm_gamma_cmd(struct disp_lcm_handle *plcm, void *handle, unsigned int gamma_flag);
 #endif
+#endif
+

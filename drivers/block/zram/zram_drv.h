@@ -21,13 +21,20 @@
 
 #include "zcomp.h"
 
-#define SECTOR_SHIFT		9
+#ifdef CONFIG_CONT_PTE_HUGEPAGE_64K_ZRAM
+#define SECTORS_PER_CONT_PTE_SHIFT	(CONT_PTE_SHIFT - SECTOR_SHIFT)
+#define SECTORS_PER_CONT_PTE	   (1 << SECTORS_PER_CONT_PTE_SHIFT)
+#endif
 #define SECTORS_PER_PAGE_SHIFT	(PAGE_SHIFT - SECTOR_SHIFT)
 #define SECTORS_PER_PAGE	(1 << SECTORS_PER_PAGE_SHIFT)
 #define ZRAM_LOGICAL_BLOCK_SHIFT 12
 #define ZRAM_LOGICAL_BLOCK_SIZE	(1 << ZRAM_LOGICAL_BLOCK_SHIFT)
 #define ZRAM_SECTOR_PER_LOGICAL_BLOCK	\
 	(1 << (ZRAM_LOGICAL_BLOCK_SHIFT - SECTOR_SHIFT))
+
+#ifdef CONFIG_CONT_PTE_HUGEPAGE_64K_ZRAM
+#define ENABLE_HUGEPAGE_ZRAM_DEBUG 0
+#endif
 
 
 /*
@@ -51,10 +58,6 @@ enum zram_pageflags {
 	ZRAM_UNDER_WB,	/* page is under writeback */
 	ZRAM_HUGE,	/* Incompressible page */
 	ZRAM_IDLE,	/* not accessed page since last idle marking */
-#ifdef CONFIG_HYBRIDSWAP_ASYNC_COMPRESS
-	ZRAM_CACHED,   /* page is cached in async compress cache buffer */
-	ZRAM_CACHED_COMPRESS, /* page is under async compress */
-#endif
 #ifdef CONFIG_HYBRIDSWAP_CORE
 	ZRAM_BATCHING_OUT,
 	ZRAM_FROM_HYBRIDSWAP,
@@ -71,9 +74,6 @@ struct zram_table_entry {
 	union {
 		unsigned long handle;
 		unsigned long element;
-#ifdef CONFIG_HYBRIDSWAP_ASYNC_COMPRESS
-		unsigned long page;
-#endif
 	};
 	unsigned long flags;
 #ifdef CONFIG_ZRAM_MEMORY_TRACKING
@@ -99,6 +99,15 @@ struct zram_stats {
 	atomic64_t bd_count;		/* no. of pages in backing device */
 	atomic64_t bd_reads;		/* no. of reads from backing device */
 	atomic64_t bd_writes;		/* no. of writes from backing device */
+#endif
+#ifdef CONFIG_CONT_PTE_HUGEPAGE_64K_ZRAM
+	atomic64_t zram_bio_write_count;
+	atomic64_t zram_bio_read_count;
+	atomic64_t zram_rw_write_count;
+	atomic64_t zram_rw_read_count;
+	atomic64_t zram_thp_write_alloc_all;
+	atomic64_t zram_thp_write_alloc_fail;
+	atomic64_t zram_thp_partial_read_count;
 #endif
 };
 
@@ -145,10 +154,7 @@ struct zram {
 	unsigned long increase_nr_pages;
 #endif
 #ifdef CONFIG_HYBRIDSWAP_CORE
-	struct hyb_info *infos;
+	struct hybridswap *hs_swap;
 #endif
 };
-
-/* mlog */
-unsigned long zram_mlog(void);
 #endif

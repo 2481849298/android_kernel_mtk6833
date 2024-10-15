@@ -60,6 +60,9 @@ extern char send_cmd[RAMLESS_AOD_PAYLOAD_SIZE];
 static int esd_brightness;
 extern unsigned long seed_mode;
 extern int oplus_dc_threshold;
+extern int exit_dc_flag;
+extern int oplus_dc_flag;
+
 extern void lcdinfo_notify(unsigned long val, void *v);
 
 static bool aod_state = false;
@@ -769,7 +772,8 @@ static struct mtk_panel_params ext_params = {
 		.rc_tgt_offset_hi = 3,
 		.rc_tgt_offset_lo = 3,
 		},
-
+		.vendor = "AMS643AG01",
+		.manufacture = "samsung2048",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
         .round_corner_en = 1,
         .corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -777,6 +781,12 @@ static struct mtk_panel_params ext_params = {
         .corner_pattern_tp_size = sizeof(top_rc_pattern),
         .corner_pattern_lt_addr = (void *)top_rc_pattern,
 #endif
+#ifdef CONFIG_OPLUS_OFP_V2
+	.oplus_ofp_need_keep_apart_backlight = false,
+	.oplus_ofp_hbm_on_delay = 0,
+	.oplus_ofp_pre_hbm_off_delay = 2,
+	.oplus_ofp_hbm_off_delay = 9,
+#else
 	.hbm_en_time = 1,
 	.hbm_dis_time = 0,
 	.oplus_need_hbm_wait = 1,
@@ -790,8 +800,12 @@ static struct mtk_panel_params ext_params = {
 	.before_hbm_dis_time = 0,
 	//delay time: us
 	.before_hbm_en_delay_time = 8000,
+#endif
 	.oplus_dc_then_hbm_on = 0,
 	.oplus_display_global_dre = 1,
+	.oplus_disable_hdr_d65 = 1,
+	.oplus_dc_exit_flag = true,
+	.oplus_dc_moss_flag = true,
 };
 
 static struct mtk_panel_params ext_params_90hz = {
@@ -844,7 +858,8 @@ static struct mtk_panel_params ext_params_90hz = {
         .rc_tgt_offset_hi = 3,
         .rc_tgt_offset_lo = 3,
         },
-
+		.vendor = "AMS643AG01",
+		.manufacture = "samsung2048",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
         .round_corner_en = 1,
         .corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -852,6 +867,12 @@ static struct mtk_panel_params ext_params_90hz = {
         .corner_pattern_tp_size = sizeof(top_rc_pattern),
         .corner_pattern_lt_addr = (void *)top_rc_pattern,
 #endif
+#ifdef CONFIG_OPLUS_OFP_V2
+	.oplus_ofp_need_keep_apart_backlight = true,
+	.oplus_ofp_hbm_on_delay = 11,
+	.oplus_ofp_pre_hbm_off_delay = 2,
+	.oplus_ofp_hbm_off_delay = 11,
+#else
 	.hbm_en_time = 1,
 	.hbm_dis_time = 0,
 	.oplus_need_hbm_wait = 0,
@@ -865,14 +886,20 @@ static struct mtk_panel_params ext_params_90hz = {
 	.before_hbm_dis_time = 0,
 	//delay time: us
 	.before_hbm_en_delay_time =8000,
+#endif
 	.oplus_dc_then_hbm_on = 0,
 	.oplus_display_global_dre = 1,
+	.oplus_disable_hdr_d65 = 1,
+	.oplus_dc_exit_flag = true,
+	.oplus_dc_moss_flag = true,
 };
 static int mtk_panel_ext_param_set(struct drm_panel *panel,
 			 unsigned int mode)
 {
 	struct mtk_panel_ext *ext = find_panel_ext(panel);
 	int ret = 0;
+	if (ext == NULL)
+        	return 1;
 	if (mode == 0)
 		ext->params = &ext_params;
 	else if (mode == 1)
@@ -1294,30 +1321,63 @@ dc_enable:
 	return OPLUS_DC_BACKLIGHT_THRESHOLD;
 
 dc_disable:
-	if (oplus_dc_alpha && level != 0) {
-		if (seed_mode == 102){ //DCI-P3
-			for (i = 0; i < sizeof(lcm_seed_mode0)/sizeof(struct LCM_setting_table); i++){
-				cb(dsi, handle, lcm_seed_mode0[i].para_list, lcm_seed_mode0[i].count);
+	printk("debug for lcm oplus_lcm_dc_backlight oplus_dc_flag = %d,oplus_dc_alpha = %d\n",oplus_dc_flag,oplus_dc_alpha);
+	if (oplus_dc_alpha && level != 0 ) {
+		if (oplus_dc_flag == 1) {
+			if (seed_mode == 102) { //DCI-P3
+				for (i = 0; i < sizeof(lcm_seed_mode0)/sizeof(struct LCM_setting_table); i++) {
+					cb(dsi, handle, lcm_seed_mode0[i].para_list, lcm_seed_mode0[i].count);
+				}
+			} else if (seed_mode == 101) { //sRGB
+				for (i = 0; i < sizeof(lcm_seed_mode1)/sizeof(struct LCM_setting_table); i++) {
+					cb(dsi, handle, lcm_seed_mode1[i].para_list, lcm_seed_mode1[i].count);
+				}
+			} else if (seed_mode == 100) {
+				for (i = 0; i < sizeof(lcm_seed_mode2)/sizeof(struct LCM_setting_table); i++) {
+					cb(dsi, handle, lcm_seed_mode2[i].para_list, lcm_seed_mode2[i].count);
+				}
+			} else if (seed_mode == 103) {
+				for (i = 0; i < sizeof(lcm_seed_mode3)/sizeof(struct LCM_setting_table); i++) {
+					cb(dsi, handle, lcm_seed_mode3[i].para_list, lcm_seed_mode3[i].count);
+				}
 			}
-		} else if (seed_mode == 101){ //sRGB
-			for (i = 0; i < sizeof(lcm_seed_mode1)/sizeof(struct LCM_setting_table); i++){
-				cb(dsi, handle, lcm_seed_mode1[i].para_list, lcm_seed_mode1[i].count);
-			}
-		} else if (seed_mode == 100){
-			for (i = 0; i < sizeof(lcm_seed_mode2)/sizeof(struct LCM_setting_table); i++){
-				cb(dsi, handle, lcm_seed_mode2[i].para_list, lcm_seed_mode2[i].count);
-			}
-		} else if (seed_mode == 103){
-			for (i = 0; i < sizeof(lcm_seed_mode3)/sizeof(struct LCM_setting_table); i++){
-				cb(dsi, handle, lcm_seed_mode3[i].para_list, lcm_seed_mode3[i].count);
-			}
+			oplus_dc_flag = 0;
+		} else {
+			exit_dc_flag = 1;
 		}
-		pr_err("exit DC");
+
+		pr_err("debug for lcm exit DC");
 	}
 
 	oplus_dc_alpha = 0;
 
 	return level;
+}
+
+static int oplus_lcm_dc_post_exitd(void *dsi, dcs_write_gce cb,void *handle)
+{
+	int i;
+
+	pr_err("debug for lcm, oplus_lcm_dc_post_exitd oplus_dc_enable = %d, \n", oplus_dc_enable);
+
+	if (seed_mode == 102) { //DCI-P3
+		for (i = 0; i < sizeof(lcm_seed_mode0)/sizeof(struct LCM_setting_table); i++) {
+			cb(dsi, handle, lcm_seed_mode0[i].para_list, lcm_seed_mode0[i].count);
+		}
+	} else if (seed_mode == 101) { //sRGB
+		for (i = 0; i < sizeof(lcm_seed_mode1)/sizeof(struct LCM_setting_table); i++) {
+			cb(dsi, handle, lcm_seed_mode1[i].para_list, lcm_seed_mode1[i].count);
+		}
+	} else if (seed_mode == 100) {
+		for (i = 0; i < sizeof(lcm_seed_mode2)/sizeof(struct LCM_setting_table); i++) {
+			cb(dsi, handle, lcm_seed_mode2[i].para_list, lcm_seed_mode2[i].count);
+		}
+	} else if (seed_mode == 103) {
+		for (i = 0; i < sizeof(lcm_seed_mode3)/sizeof(struct LCM_setting_table); i++) {
+			cb(dsi, handle, lcm_seed_mode3[i].para_list, lcm_seed_mode3[i].count);
+		}
+	}
+	return 0;
 }
 
 static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
@@ -1637,10 +1697,12 @@ static struct mtk_panel_funcs ext_funcs = {
 	.panel_poweroff = lcm_panel_poweroff,
 	//.panel_disp_off = lcm_panel_disp_off,
 	.hbm_set_cmdq = panel_hbm_set_cmdq,
+	#ifndef CONFIG_OPLUS_OFP_V2
 	.hbm_get_state = panel_hbm_get_state,
 	.hbm_set_state = panel_hbm_set_state,
 	.hbm_get_wait_state = panel_hbm_get_wait_state,
 	.hbm_set_wait_state = panel_hbm_set_wait_state,
+	#endif
 	//.doze_area_set = panel_doze_area_set,
 	//.panel_no_cv_switch = panel_no_video_cmd_switch_state,
 	.ext_param_set = mtk_panel_ext_param_set,
@@ -1650,6 +1712,7 @@ static struct mtk_panel_funcs ext_funcs = {
 	.set_seed = panel_set_seed,
 	.lcm_osc_change = panel_osc_freq_change,
 	.set_dc_backlight = lcm_set_dc_backlight,
+	.lcm_dc_post_exitd = oplus_lcm_dc_post_exitd,
 };
 #endif
 

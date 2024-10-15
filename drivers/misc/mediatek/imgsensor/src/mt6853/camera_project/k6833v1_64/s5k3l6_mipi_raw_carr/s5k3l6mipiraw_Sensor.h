@@ -195,6 +195,7 @@ struct imgsensor_info_struct {
 	 */
 	kal_uint32 i2c_speed;
 	kal_uint8 i2c_addr_table[5];
+	kal_uint32 hs_trail;
 
 };
 

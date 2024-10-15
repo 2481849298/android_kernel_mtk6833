@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef __CCU_CMN_H__
 #define __CCU_CMN_H__
@@ -176,8 +168,6 @@ int ccu_memcpy(void *dest, void *src, int length);
 
 int ccu_memclr(void *dest, int length);
 
-int ccu_read_info_reg(int regNo);
-
 int ccu_read_struct_size(uint32_t *structSizes, uint32_t structCnt);
 
 void ccu_print_reg(uint32_t *Reg);
@@ -224,10 +214,8 @@ void ccu_clock_disable(void);
 	pr_debug(CCU_TAG "[%s] " format, __func__, ##args)
 #define LOG_INF_MUST(format, args...) \
 	pr_info(CCU_TAG "[%s] " format, __func__, ##args)
-
 #define LOG_DBG(format, args...)
 #define LOG_INF(format, args...)
-
 #define LOG_WARN(format, args...) \
 	pr##_##warn(CCU_TAG "[%s] " format, __func__, ##args)
 #define LOG_ERR(format, args...) \

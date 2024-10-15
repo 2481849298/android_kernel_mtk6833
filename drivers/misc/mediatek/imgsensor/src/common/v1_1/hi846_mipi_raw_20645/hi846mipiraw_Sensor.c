@@ -36,17 +36,22 @@
 
 static DEFINE_SPINLOCK(imgsensor_drv_lock);
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 
 #define LONGEXP1	0xFFFF9   /* 最大曝光行（20bit） */
 #define LONGEXP2	0xFFF9   /* 65529 lines, =0.83s */
 
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define DEVICE_VERSION_HI846    "hi846"
 static kal_uint32 streaming_control(kal_bool enable);
 //extern void register_imgsensor_deviceinfo(char *name, char *version, u8 module_id);
 //static uint8_t deviceInfo_register_value;
 extern unsigned char hi846_get_module_id(void);
 #define MODULE_ID_OFFSET 0x0000
+#endif
 
 static imgsensor_info_struct imgsensor_info = {
 	.sensor_id = HI846_SENSOR_ID_20645,
@@ -270,6 +275,7 @@ static void write_cmos_sensor_8(kal_uint32 addr, kal_uint32 para)
 	//kdSetI2CSpeed(400);
 	iWriteRegI2C(pu_send_cmd, 3, imgsensor.i2c_write_id);
 }
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 static void read_module_data(void)
 {
     int i = 0;
@@ -296,6 +302,7 @@ static void read_module_data(void)
     gImgEepromInfo.i4CurSensorIdx = 2;
     gImgEepromInfo.i4CurSensorId = imgsensor_info.sensor_id;
 }
+#endif
 
 static void set_dummy(void)
 {
@@ -2624,7 +2631,9 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 				LOG_INF("hi846 [get_imgsensor_id] sensor_id = 0x%x",*sensor_id);
 				if (*sensor_id == 0x846) {
 					*sensor_id = imgsensor_info.sensor_id;
+                    #ifdef OPLUS_FEATURE_CAMERA_COMMON
                     	read_module_data();
+                    #endif
 					LOG_INF("i2c write id  : 0x%x, sensor id: 0x%x\n", imgsensor.i2c_write_id,*sensor_id);
 					return ERROR_NONE;
 				}
@@ -2686,9 +2695,15 @@ static kal_uint32 open(void)
 		}
 		retry = 2;
 	}
+	#ifndef OPLUS_FEATURE_CAMERA_COMMON
+	if (imgsensor_info.sensor_id != sensor_id) {
+		return ERROR_SENSOR_CONNECT_FAIL;
+	}
+	#else
 	if (imgsensor_info.sensor_id != sensor_id) {
 		return ERROR_SENSORID_READ_FAIL;
 	}
+	#endif
 	/* initail sequence write in  */
 
 	sensor_init();
@@ -3316,10 +3331,12 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
             LOG_INF("SENSOR_FEATURE_SET_SENSOR_OTP length :%d\n", (UINT32)*feature_para_len);
             ret = Eeprom_CallWriteService((ACDK_SENSOR_ENGMODE_STEREO_STRUCT *)(feature_para));
 
+            #ifdef OPLUS_FEATURE_CAMERA_COMMON
             if (ret == ERROR_NONE)
             return ERROR_NONE;
             else
             return ERROR_MSDK_IS_ACTIVATED;
+            #endif
         }
 		case SENSOR_FEATURE_GET_PERIOD:
 			*feature_return_para_16++ = imgsensor.line_length;
