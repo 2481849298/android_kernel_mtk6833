@@ -11,8 +11,8 @@ on:
         default: 'android12'
         type: choice
         options:
-        - android-12
-        - android-14
+        - android12
+        - android14
         
       KERNEL_NAME:
         description: 'KERNEL_NAME'
