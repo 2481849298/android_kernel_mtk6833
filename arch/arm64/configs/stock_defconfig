@@ -312,7 +312,6 @@ CONFIG_MACH_MT6833=y
 # CONFIG_MACH_MT6873 is not set
 # CONFIG_MACH_MT6877 is not set
 # CONFIG_MACH_MT6893 is not set
-# CONFIG_MACH_MT8167 is not set
 # CONFIG_MACH_MT8173 is not set
 # CONFIG_MACH_MT8195 is not set
 # CONFIG_ARCH_MESON is not set
