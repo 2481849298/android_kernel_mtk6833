@@ -128,7 +128,6 @@ obj-$(CONFIG_TOUCHSCREEN_ZFORCE)	+= zforce_ts.o
 obj-$(CONFIG_TOUCHSCREEN_COLIBRI_VF50)	+= colibri-vf50-ts.o
 obj-$(CONFIG_TOUCHSCREEN_ROHM_BU21023)	+= rohm_bu21023.o
 obj-$(CONFIG_TOUCHSCREEN_MTK_FOCALTECH_HD)	+= focaltech_hd_touch/
-
 #ifdef OPLUS_FEATURE_TP_BASIC
 subdir-ccflags-$(CONFIG_TOUCHPANEL_OPLUS) += -I$(srctree)/drivers/misc/mediatek/include
 obj-$(CONFIG_TOUCHPANEL_OPLUS) += oplus_touchscreen/

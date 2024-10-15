@@ -1,1007 +1,0 @@
-make[1]: 进入目录“/root/kernel-4.19/out”
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_HANS_FREEZE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_STORAGE_TOOL
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MMC_DRIVER
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_UFS_DRIVER
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_UFS_SHOW_LATENCY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_AOD
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_DC
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_ENABLE_MODEM_DB
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_ENGINEERTOOLS
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_FACERECOGNITION
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_FASTBOOT_UNLOCK_VERIFY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_FG_IO_OPT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SDCARD_INFO
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_FINGERPRINT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_HEALTHINFO
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_TASK_CPUSTATS
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MIPICLKCHANGE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MULTI_FREEAREA
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MULTI_KSWAPD
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_NFC_CONSOFT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_ONSCREENFINGERPRINT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_OSC
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_PHOENIX
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_AGINGTEST
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_PROCESS_RECLAIM
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_RESET_ROLLBACK_INDEX
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SELINUX_CONTROL_LOG
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SENSOR
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SENSOR_ALGORITHM
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SENSOR_SMEM
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SENSOR_WISELIGHT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_IOMONITOR
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SPEAKER_MUTE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MM_FEEDBACK
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_TP_BSPFWUPDATE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_TP_BASIC
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_CHG_BASIC
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SCHED_ASSIST
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SIGKILL_DIAGNOSIS
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_VIRTUAL_RESERVE_MEMORY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MEMLEAK_DETECT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_WIFI_MTUDETECT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_WIFI_RUSUPGRADE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_WIFI_SLA
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_DATA_EVAL
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_ZRAM_OPT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_EXFAT_SUPPORT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SDCARDFS_SUPPORT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_PERFORMANCE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_BUG_COMPATIBILITY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_BUG_STABILITY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_BUG_DEBUG
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_ARCH_INJECT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_ARCH_EXTENDS
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_LOWMEM_DBG
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_BUG_STABILITY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_POWERINFO_STANDBY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_CAMERA_COMMON
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MTK_ION_SEPARATE_LOCK
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_THEIA
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_APP_MONITOR
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SCHEDUTIL_USE_TL
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_HEALTHINFO
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_DISPLAY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_KMSG_WB
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_DATA_MODULE
-  GEN     ./Makefile
-scripts/kconfig/conf  --syncconfig Kconfig
-mm/damon/Kconfig:2:warning: ignoring unsupported character ''
-mm/damon/Kconfig:3:warning: ignoring unsupported character ''
-mm/damon/Kconfig:4:warning: ignoring unsupported character ''
-mm/damon/Kconfig:5:warning: ignoring unsupported character ''
-mm/damon/Kconfig:6:warning: ignoring unsupported character ''
-mm/damon/Kconfig:7:warning: ignoring unsupported character ''
-mm/damon/Kconfig:8:warning: ignoring unsupported character ''
-mm/damon/Kconfig:9:warning: ignoring unsupported character ''
-mm/damon/Kconfig:10:warning: ignoring unsupported character ''
-mm/damon/Kconfig:11:warning: ignoring unsupported character ''
-mm/damon/Kconfig:12:warning: ignoring unsupported character ''
-mm/damon/Kconfig:13:warning: ignoring unsupported character ''
-mm/damon/Kconfig:14:warning: ignoring unsupported character ''
-mm/damon/Kconfig:15:warning: ignoring unsupported character ''
-mm/damon/Kconfig:16:warning: ignoring unsupported character ''
-mm/damon/Kconfig:17:warning: ignoring unsupported character ''
-mm/damon/Kconfig:18:warning: ignoring unsupported character ''
-mm/damon/Kconfig:19:warning: ignoring unsupported character ''
-mm/damon/Kconfig:20:warning: ignoring unsupported character ''
-mm/damon/Kconfig:21:warning: ignoring unsupported character ''
-mm/malloc_track/Kconfig.compat:6: warning: ignoring unknown option env
-drivers/nfc/st21nfc-i2c/Kconfig:1:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:2:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:3:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:4:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:5:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:6:warning: ignoring unsupported character ''
-net/oplus_wificapcenter/Kconfig:3:warning: ignoring unsupported character ''
-net/oplus_wificapcenter/Kconfig:4:warning: ignoring unsupported character ''
-net/oplus_wificapcenter/Kconfig:5:warning: ignoring unsupported character ''
-net/oplus_wificapcenter/Kconfig:6:warning: ignoring unsupported character ''
-net/oplus_wificapcenter/Kconfig:8:warning: ignoring unsupported character ''
-net/oplus_wificapcenter/Kconfig:9:warning: ignoring unsupported character ''
-net/oplus_wificapcenter/Kconfig:10:warning: ignoring unsupported character ''
-net/oplus_wificapcenter/Kconfig:11:warning: ignoring unsupported character ''
-drivers/misc/mediatek/base/power/Kconfig:90:warning: ignoring type redefinition of 'MTK_QOS_FRAMEWORK' from 'tristate' to 'bool'
-drivers/misc/mediatek/sensors-1.0/oplus_virtual_sensor/sensors/pedo_minutehub/Kconfig:1:warning: ignoring unsupported character ''
-drivers/misc/mediatek/sensors-1.0/oplus_virtual_sensor/sensors/pedo_minutehub/Kconfig:2:warning: ignoring unsupported character ''
-drivers/misc/mediatek/sensors-1.0/oplus_virtual_sensor/sensors/pedo_minutehub/Kconfig:3:warning: ignoring unsupported character ''
-drivers/misc/mediatek/sensor/2.0/mtk_nanohub/Kconfig:3:warning: ignoring type redefinition of 'CUSTOM_KERNEL_SENSORHUB' from 'bool' to 'tristate'
-drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/pedo_minutehub/Kconfig:1:warning: ignoring unsupported character ''
-drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/pedo_minutehub/Kconfig:2:warning: ignoring unsupported character ''
-drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/pedo_minutehub/Kconfig:3:warning: ignoring unsupported character ''
-drivers/misc/aw8697_haptic/Kconfig:1:warning: ignoring unsupported character ''
-drivers/misc/aw8697_haptic/Kconfig:2:warning: ignoring unsupported character ''
-drivers/misc/aw8697_haptic/Kconfig:3:warning: ignoring unsupported character ''
-drivers/misc/aw8697_haptic/Kconfig:4:warning: ignoring unsupported character ''
-drivers/misc/aw8697_haptic/Kconfig:6:warning: ignoring unsupported character ''
-drivers/misc/aw8697_haptic/Kconfig:7:warning: ignoring unsupported character ''
-drivers/misc/aw8697_haptic/Kconfig:8:warning: ignoring unsupported character ''
-drivers/misc/aw8697_haptic/Kconfig:9:warning: ignoring unsupported character ''
-drivers/misc/aw8697_haptic/Kconfig:10:warning: ignoring unsupported character ''
-drivers/input/touchscreen/mediatek/goodix_berlin_driver/Kconfig:4:warning: ignoring type redefinition of 'TOUCHSCREEN_GOODIX_BRL' from 'bool' to 'tristate'
-drivers/power/supply/mediatek/charger/Kconfig:199:warning: ignoring type redefinition of 'CHARGER_BQ25890' from 'tristate' to 'bool'
-drivers/power/supply/mediatek/charger/Kconfig:199:warning: ignoring type redefinition of 'CHARGER_BQ25890' from 'tristate' to 'bool'
-drivers/power/supply/mediatek/charger/Kconfig:199:warning: ignoring type redefinition of 'CHARGER_BQ25890' from 'tristate' to 'bool'
-drivers/power/supply/mediatek/charger/Kconfig:199:warning: ignoring type redefinition of 'CHARGER_BQ25890' from 'tristate' to 'bool'
-drivers/power/supply/mediatek/charger/Kconfig:199:warning: ignoring type redefinition of 'CHARGER_BQ25890' from 'tristate' to 'bool'
-drivers/power/supply/mediatek/charger/Kconfig:199:warning: ignoring type redefinition of 'CHARGER_BQ25890' from 'tristate' to 'bool'
-drivers/power/supply/mediatek/charger/Kconfig:199:warning: ignoring type redefinition of 'CHARGER_BQ25890' from 'tristate' to 'bool'
-drivers/power/supply/mediatek/charger/Kconfig:199:warning: ignoring type redefinition of 'CHARGER_BQ25890' from 'tristate' to 'bool'
-drivers/power/supply/mediatek/charger/Kconfig:199:warning: ignoring type redefinition of 'CHARGER_BQ25890' from 'tristate' to 'bool'
-drivers/power/supply/mediatek/charger/Kconfig:199:warning: ignoring type redefinition of 'CHARGER_BQ25890' from 'tristate' to 'bool'
-drivers/power/supply/mediatek/charger/Kconfig:199:warning: ignoring type redefinition of 'CHARGER_BQ25890' from 'tristate' to 'bool'
-sound/soc/codecs/audio/Kconfig:17:warning: ignoring type redefinition of 'SND_SOC_AW87339' from 'tristate' to 'bool'
-drivers/soc/mediatek/Kconfig:7:warning: ignoring type redefinition of 'MTK_CMDQ' from 'bool' to 'tristate'
-drivers/soc/oplus/system/Kconfig:24:warning: prompt redefined
-drivers/soc/oplus/system/Kconfig:22:warning: ignoring type redefinition of 'OPPO_DEVICE_IFNO' from 'bool' to 'tristate'
-drivers/soc/oplus/system/oplus_pmic_monitor_mtk/Kconfig:4:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/oplus_pmic_monitor_mtk/Kconfig:5:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/oplus_pmic_monitor_mtk/Kconfig:6:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/oplus_pmic_monitor_mtk/Kconfig:7:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/oplus_saupwk/Kconfig:4:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/oplus_saupwk/Kconfig:5:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/oplus_saupwk/Kconfig:6:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/oplus_saupwk/Kconfig:7:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:3:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:4:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:5:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:6:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:8:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:9:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:10:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:11:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:12:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:14:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:15:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:16:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:17:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:18:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:20:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:21:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:22:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:23:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:24:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:26:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:27:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:28:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:29:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:30:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:32:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:33:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:34:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:35:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:36:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:38:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:39:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:40:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:41:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:42:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:45:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:46:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:47:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/cmdline_parser/Kconfig:48:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/rt_info/Kconfig:1:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/rt_info/Kconfig:2:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/rt_info/Kconfig:3:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/rt_info/Kconfig:4:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/last_boot_reason/Kconfig:3:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/last_boot_reason/Kconfig:4:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/last_boot_reason/Kconfig:5:warning: ignoring unsupported character ''
-drivers/soc/oplus/system/last_boot_reason/Kconfig:6:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:1:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:2:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:3:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:4:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:5:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:6:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:1:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:2:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:3:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:4:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:5:warning: ignoring unsupported character ''
-drivers/nfc/st21nfc-i2c/Kconfig:6:warning: ignoring unsupported character ''
-drivers/input/touchscreen/mediatek/hxchipset_hx83102p/Kconfig:19:warning: choice value used outside its choice group
-drivers/input/touchscreen/mediatek/hxchipset_hx83102p/Kconfig:28:warning: choice value used outside its choice group
-drivers/input/touchscreen/mediatek/hxchipset_hx83102p/Kconfig:16:warning: choice default symbol 'TOUCHSCREEN_HIMAX_INCELL' is not contained in the choice
-
-WARNING: unmet direct dependencies detected for MTK_PID_MAP
-  Depends on [n]: (MTK_GMO_RAM_OPTIMIZE [=n] && MTK_ENG_BUILD [=n] || !MTK_GMO_RAM_OPTIMIZE [=n]) && DEBUG_FS [=n]
-  Selected by [y]:
-  - MACH_MT6833 [=y]
-
-WARNING: unmet direct dependencies detected for MTK_PID_MAP
-  Depends on [n]: (MTK_GMO_RAM_OPTIMIZE [=n] && MTK_ENG_BUILD [=n] || !MTK_GMO_RAM_OPTIMIZE [=n]) && DEBUG_FS [=n]
-  Selected by [y]:
-  - MACH_MT6833 [=y]
-
-WARNING: unmet direct dependencies detected for MTK_PID_MAP
-  Depends on [n]: (MTK_GMO_RAM_OPTIMIZE [=n] && MTK_ENG_BUILD [=n] || !MTK_GMO_RAM_OPTIMIZE [=n]) && DEBUG_FS [=n]
-  Selected by [y]:
-  - MACH_MT6833 [=y]
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_HANS_FREEZE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_STORAGE_TOOL
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MMC_DRIVER
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_UFS_DRIVER
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_UFS_SHOW_LATENCY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_AOD
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_DC
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_ENABLE_MODEM_DB
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_ENGINEERTOOLS
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_FACERECOGNITION
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_FASTBOOT_UNLOCK_VERIFY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_FG_IO_OPT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SDCARD_INFO
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_FINGERPRINT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_HEALTHINFO
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_TASK_CPUSTATS
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MIPICLKCHANGE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MULTI_FREEAREA
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MULTI_KSWAPD
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_NFC_CONSOFT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_ONSCREENFINGERPRINT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_OSC
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_PHOENIX
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_AGINGTEST
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_PROCESS_RECLAIM
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_RESET_ROLLBACK_INDEX
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SELINUX_CONTROL_LOG
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SENSOR
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SENSOR_ALGORITHM
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SENSOR_SMEM
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SENSOR_WISELIGHT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_IOMONITOR
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SPEAKER_MUTE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MM_FEEDBACK
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_TP_BSPFWUPDATE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_TP_BASIC
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_CHG_BASIC
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SCHED_ASSIST
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SIGKILL_DIAGNOSIS
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_VIRTUAL_RESERVE_MEMORY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MEMLEAK_DETECT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_WIFI_MTUDETECT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_WIFI_RUSUPGRADE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_WIFI_SLA
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_DATA_EVAL
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_ZRAM_OPT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_EXFAT_SUPPORT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SDCARDFS_SUPPORT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_PERFORMANCE
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_BUG_COMPATIBILITY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_BUG_STABILITY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_BUG_DEBUG
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_ARCH_INJECT
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_ARCH_EXTENDS
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_LOWMEM_DBG
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_BUG_STABILITY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_POWERINFO_STANDBY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_CAMERA_COMMON
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_MTK_ION_SEPARATE_LOCK
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_THEIA
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_APP_MONITOR
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_SCHEDUTIL_USE_TL
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_HEALTHINFO
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_DISPLAY
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_KMSG_WB
-OplusKernelEnvConfig.mk:111: myfeature is OPLUS_FEATURE_DATA_MODULE
-  GEN     ./Makefile
-*GPU defined GPU BM QoS 2.0-414
-$GED: CONFIG_MTK_PLATFORM is ["mt6853"]
-$GED: CONFIG_MTK_PLATFORM is defined ["mt6853"]
-$GED: CONFIG_MTK_GPU_COMMON_DVFS_SUPPORT is defined [y]
-*MTK_GPU_VERSION 2 = valhall
-*MTK_GPU_VERSION 3 = r32p1
-mali MTK evironment, building r32p1 DDK
-mtk-Kbuild CONFIG_MALI_PLATFORM_THIRDPARTY := y
-mtk-Kbuild CONFIG_MALI_PLATFORM_THIRDPARTY_NAME := "mt6833"
-*GPU defined GPU BM QoS 2.0
-mali MTK evironment, building r32p1 DDK
-mtk-Kbuild CONFIG_MALI_PLATFORM_THIRDPARTY := y
-mtk-Kbuild CONFIG_MALI_PLATFORM_THIRDPARTY_NAME := "mt6833"
-*GPU defined GPU BM QoS 2.0
-mali MTK evironment, building r32p1 DDK
-mtk-Kbuild CONFIG_MALI_PLATFORM_THIRDPARTY := y
-mtk-Kbuild CONFIG_MALI_PLATFORM_THIRDPARTY_NAME := "mt6833"
-*GPU defined GPU BM QoS 2.0
-  Using .. as source for kernel
--- KernelSU version: 11872
--- KernelSU Manager signature size: 0x033b
--- KernelSU Manager signature hash: c371061b19d8c7d7d6133c6a9bafe198fa944e50c1b31c9d8daa8d7f1fc2d2d6
--- Did you know you can backport path_umount to fs/namespace.c from 5.9?
--- Read: https://kernelsu.org/guide/how-to-integrate-for-non-gki.html#how-to-backport-path-umount
-  CALL    ../scripts/checksyscalls.sh
-..
-FDVT: Drv use 5.1 folder
-..
-../drivers/misc/mediatek/base/power/ppm_v3/src/Makefile:110: USE_PPM_CPI
-..
-..
-../drivers/misc/mediatek/base/power/qos/Makefile:45: 在“else”指令之后含有不该出现的文字
-  CHK     include/generated/compile.h
-../drivers/misc/mediatek/ccu/src/Makefile:33: CCU_MAKE_FILE_CALLED
-ION:enable mtk ion
-[fm_drv:Kbuild] M = 
-[fm_drv:Kbuild] CFG_FM_PLAT = 
-[fm_drv:Kbuild] CFG_BUILD_CONNAC2 = false
-[fm_drv:Kbuild] CFG_FM_CHIP_ID = 
-[fm_drv:Kbuild] CFG_FM_CHIP = 
-[fm_drv:Kbuild] src = drivers/misc/mediatek/connectivity/fmradio
-[fm_drv:Kbuild] KO_CODE_PATH = ../drivers/misc/mediatek/connectivity/fmradio
-../drivers/misc/mediatek/connectivity/gps/Makefile:17: GPS_CHIP_ID != common
-os option: linux
-$MTK_PLATFORM is [mt6853]
-$WLAN_CHIP_ID is [6765]
-$MTK_COMBO_CHIP is [CONNAC]
-lowmem_dbg mtk_ion use kernel 4.19
-lowmem_dbg mtk_ion use kernel 4.19
-../drivers/misc/mediatek/connectivity/common/Makefile:207: KERNEL_VERSION_SUPPORT_CHIPID_LIST=[6833]
-  CC      arch/arm64/mm/mmu.o
-  CC      arch/arm64/mm/context.o
-  CC      arch/arm64/kernel/irq.o
-CONFIG_MTK_PLATFORM_CCCI := mt6853
-CONFIG_MTK_PLATFORM_CCCI := "mt6853"
-MTK_PLATFORM_CCCI := mt6853
-  AS      arch/arm64/mm/proc.o
-  CC      arch/arm64/kernel/fpsimd.o
-  CC      arch/arm64/mm/pageattr.o
-************  drivers/trusty/mtee-kree mk ************
-  AS      arch/arm64/kernel/entry-fpsimd.o
-  CC      kernel/bpf/inode.o
-imgsensor drv by common ../common/v1_1/s5kgm1st_mipi_raw_apollof/ ../common/v1_1/s5k3p9sp_mipi_raw_apollof/ ../common/v1_1/s5kgm1st_mipi_raw_apollob/ ../common/v1_1/imx355_mipi_raw_apollob/ ../common/v1_1/gc02m1b_mipi_mono_apollob/ ../common/v1_1/ov02b10_mipi_raw_apollob/ ../common/v1_1/s5k3p9sp_mipi_raw_apollob/ ../common/v1_1/ov13b10_mipi_raw_apollob/ ../common/v1_1/gc02m1_mipi_raw_apollot/ ../common/v1_1/ov64b40_mipi_raw_hawaii/ ../common/v1_1/ov08d10_mipi_raw_hawaii/ ../common/v1_1/ov16a1q_mipi_raw_hawaii/ ../common/v1_1/ov02b1b_mipi_mono_hawaii/
-imgsensor drv by platform ./camera_project/k6833v1_64/imx355_mipi_raw/ ./camera_project/k6833v1_64/s5kgm1st_mipi_raw/ ./camera_project/k6833v1_64/s5k3l6_mipi_raw/ ./camera_project/k6833v1_64/s5k3p9sp_mipi_raw/ ./camera_project/k6833v1_64/gc02m1b_mipi_mono/ ./camera_project/k6833v1_64/s5kjn103_mipi_raw/ ./camera_project/k6833v1_64/ov13b10_mipi_raw_carr/ ./camera_project/k6833v1_64/s5k3l6_mipi_raw_carr/ ./camera_project/k6833v1_64/imx355_mipi_raw_carr/ ./camera_project/k6833v1_64/gc02m1b_mipi_mono_carr/ ./camera_project/k6833v1_64/gc02m1_mipi_raw_carr/ ./camera_project/k6833v1_64/ov02b10_mipi_raw_carr/ ./camera_project/k6833v1_64/s5kgm1st_mipi_raw_odina/ ./camera_project/k6833v1_64/imx355_mipi_raw_odina/ ./camera_project/k6833v1_64/gc02m1b_mipi_mono_odina/ ./camera_project/k6833v1_64/ov02b10_mipi_raw_odina/ ./camera_project/k6833v1_64/s5k3l6_mipi_raw_alicert/ ./camera_project/k6833v1_64/imx355_mipi_raw_alicert/ ./camera_project/k6833v1_64/gc02m1b_mipi_mono_alicert/ ./camera_project/k6833v1_64/s5kjn103_mipi_raw_alicer/ ./camera_project/k6833v1_64/imx355_mipi_raw_alicer/ ./camera_project/k6833v1_64/gc02m1b_mipi_mono_alicer/ ./camera_project/k6833v1_64/s5kgm1st_mipi_raw_alicer/ ./camera_project/k6833v1_64/ov02b1b_mipi_mono_apollof/ ./camera_project/k6833v1_64/ov02b10_mipi_raw_apollof/ ./camera_project/k6833v1_64/ov64b_mipi_raw_apollof/ ./camera_project/k6833v1_64/s5k3p9sp_mipi_raw_apollow/ ./camera_project/k6833v1_64/ov64b_mipi_raw_apollow/ ./camera_project/k6833v1_64/ov02b1b_mipi_mono_apollow/ ./camera_project/k6833v1_64/ov02b10_mipi_raw_apollow/ ./camera_project/k6833v1_64/hi556_mipi_raw_blade/ ./camera_project/k6833v1_64/hi1336_mipi_raw_blade/ ./camera_project/k6833v1_64/bf20a1_mipi_raw_blade/ ./camera_project/k6833v1_64/hi5021sqt_mipi_raw_blade/ ./camera_project/k6833v1_64/sc800cs_mipi_raw_blade/ ./camera_project/k6833v1_64/sc201cs_mipi_mono_blade/ ./camera_project/k6833v1_64/gc030a_mipi_raw_blade/ ./camera_project/k6833v1_64/c2599_mipi_mono_blade/ ./camera_project/k6833v1_64/sc201cs_mipi_raw_blade/ ./camera_project/k6833v1_64/s5kjn103_mipi_raw_blade/ ./camera_project/k6833v1_64/s5k3l6_mipi_raw_lijing/ ./camera_project/k6833v1_64/sc800cs_mipi_raw_lijing/ ./camera_project/k6833v1_64/hi846_mipi_raw_lijing/ ./camera_project/k6833v1_64/sc201cs_mipi_raw_lijing/ ./camera_project/k6833v1_64/c2519_mipi_raw_lijing/ ./camera_project/k6833v1_64/s5kjn103_mipi_raw_lijing/ ./camera_project/k6833v1_64/ov08d10_mipi_raw_fanli/ ./camera_project/k6833v1_64/ov02b1b_mipi_mono_fanli/ ./camera_project/k6833v1_64/gc02m1_mipi_raw_fanli/ ./camera_project/k6833v1_64/s5kjn103_mipi_raw_fanli/ ./camera_project/k6833v1_64/s5k3l6_mipi_raw_fanli/ ./camera_project/k6833v1_64/s5k3l6_mipi_raw_lijinga/ ./camera_project/k6833v1_64/hi556_mipi_raw_lijinga/ ./camera_project/k6833v1_64/hi846_mipi_raw_lijinga/ ./camera_project/k6833v1_64/sc201cs_mipi_raw_lijinga/ ./camera_project/k6833v1_64/sc520cs_mipi_raw_lijinga/
-imgsensor subdir-ccflags-y = -I../drivers/misc/mediatek/imgsensor/src/common/v1_1 -I../drivers/misc/mediatek/mmdvfs -I../drivers/i2c/busses/ -I../drivers/misc/mediatek/imgsensor/src/mt6853/camera_hw_mt6833 -I../drivers/misc/mediatek/imgsensor/src/mt6853/camera_hw -I../drivers/misc/mediatek/imgsensor/src/common/v1_1/camera_hw -DSENSOR_PARALLEISM -DSENSOR_PLATFORM_5G_B -I../drivers/misc/mediatek/imgsensor/src/mt6853/seninf_mt6833/ -I../drivers/misc/mediatek/imgsensor/src/mt6853/seninf/
-  CC      arch/arm64/kernel/process.o
-  CC      kernel/bpf/helpers.o
-imgsensor drv by project imx355_mipi_raw/ s5kgm1st_mipi_raw/ s5k3l6_mipi_raw/ s5k3p9sp_mipi_raw/ gc02m1b_mipi_mono/ s5kjn103_mipi_raw/ ov13b10_mipi_raw_carr/ s5k3l6_mipi_raw_carr/ imx355_mipi_raw_carr/ gc02m1b_mipi_mono_carr/ gc02m1_mipi_raw_carr/ ov02b10_mipi_raw_carr/ s5kgm1st_mipi_raw_odina/ imx355_mipi_raw_odina/ gc02m1b_mipi_mono_odina/ ov02b10_mipi_raw_odina/ s5k3l6_mipi_raw_alicert/ imx355_mipi_raw_alicert/ gc02m1b_mipi_mono_alicert/ s5kjn103_mipi_raw_alicer/ imx355_mipi_raw_alicer/ gc02m1b_mipi_mono_alicer/ s5kgm1st_mipi_raw_alicer/ ov02b1b_mipi_mono_apollof/ ov02b10_mipi_raw_apollof/ ov64b_mipi_raw_apollof/ s5k3p9sp_mipi_raw_apollow/ ov64b_mipi_raw_apollow/ ov02b1b_mipi_mono_apollow/ ov02b10_mipi_raw_apollow/ hi556_mipi_raw_blade/ hi1336_mipi_raw_blade/ bf20a1_mipi_raw_blade/ hi5021sqt_mipi_raw_blade/ sc800cs_mipi_raw_blade/ sc201cs_mipi_mono_blade/ gc030a_mipi_raw_blade/ c2599_mipi_mono_blade/ sc201cs_mipi_raw_blade/ s5kjn103_mipi_raw_blade/ s5k3l6_mipi_raw_lijing/ sc800cs_mipi_raw_lijing/ hi846_mipi_raw_lijing/ sc201cs_mipi_raw_lijing/ c2519_mipi_raw_lijing/ s5kjn103_mipi_raw_lijing/ ov08d10_mipi_raw_fanli/ ov02b1b_mipi_mono_fanli/ gc02m1_mipi_raw_fanli/ s5kjn103_mipi_raw_fanli/ s5k3l6_mipi_raw_fanli/ s5k3l6_mipi_raw_lijinga/ hi556_mipi_raw_lijinga/ hi846_mipi_raw_lijinga/ sc201cs_mipi_raw_lijinga/ sc520cs_mipi_raw_lijinga/
-  CC      kernel/bpf/tnum.o
-  CC      kernel/bpf/hashtab.o
-  CC      kernel/bpf/arraymap.o
-  CC      kernel/bpf/percpu_freelist.o
-  AR      arch/arm64/mm/built-in.a
-  CC      arch/arm64/kernel/ptrace.o
-  CC      kernel/bpf/bpf_lru_list.o
-  CC      kernel/cgroup/legacy_freezer.o
-  CC      arch/arm64/kernel/setup.o
-  CC      fs/configfs/inode.o
-  CC      mm/filemap.o
-  CC      arch/arm64/kernel/signal.o
-  CC      kernel/bpf/lpm_trie.o
-  CC      kernel/cgroup/cpuset.o
-  CC      mm/mempool.o
-  CC      kernel/bpf/map_in_map.o
-  CC      fs/configfs/file.o
-  CC      kernel/bpf/local_storage.o
-  CC      mm/oom_kill.o
-  CC      kernel/bpf/disasm.o
-  CC      fs/configfs/dir.o
-TCORE_UT_TESTS_SUPPORT = n
-TCORE_PROFILING_SUPPORT = n
-TCORE_PROFILING_AUTO_DUMP = n
-TCORE_MEMORY_LEAK_DETECTION_SUPPORT = n
-  CC      mm/fadvise.o
-  CC      fs/crypto/crypto.o
-  CC      fs/crypto/fname.o
-  AR      kernel/cgroup/built-in.a
-  CC      arch/arm64/kernel/sys.o
-  CC      arch/arm64/kernel/stacktrace.o
-  CC      kernel/bpf/btf.o
-  CC      fs/configfs/symlink.o
-  CC      kernel/bpf/devmap.o
-  CC      fs/crypto/hkdf.o
-  CC      arch/arm64/kernel/time.o
-  CC      mm/maccess.o
-  CC      fs/crypto/hooks.o
-  CC      fs/configfs/mount.o
-  CC      fs/crypto/keyring.o
-  CC      fs/crypto/keysetup.o
-  CC      arch/arm64/kernel/traps.o
-  CC      mm/page_alloc.o
-  CC      fs/configfs/item.o
-  CC      fs/crypto/keysetup_v1.o
-  CC      kernel/bpf/cpumap.o
-  CC      kernel/bpf/offload.o
-  CC      fs/crypto/policy.o
-  AR      fs/configfs/built-in.a
-  CC      fs/crypto/bio.o
-  CC      fs/devpts/inode.o
-  CC      arch/arm64/kernel/io.o
-  CC      arch/arm64/kernel/vdso.o
-  CC      kernel/bpf/stackmap.o
-  CC      fs/crypto/inline_crypt.o
-  AR      fs/devpts/built-in.a
-  CC      fs/erofs/super.o
-  AS      arch/arm64/kernel/hyp-stub.o
-  CC      arch/arm64/kernel/psci.o
-  CC      arch/arm64/kernel/cpu_ops.o
-  CC      arch/arm64/kernel/insn.o
-  CC      fs/exfat/exfat_core.o
-  CC      kernel/bpf/cgroup.o
-  AR      fs/exofs/built-in.a
-  CC      kernel/bpf/reuseport_array.o
-  AR      fs/crypto/built-in.a
-  CC      fs/exportfs/expfs.o
-  CC      arch/arm64/kernel/return_address.o
-../mm/page_alloc.c:4956:6: warning: ISO C90 forbids mixing declarations and code [-Wdeclaration-after-statement]
-        int nr_populated = 0, nr_account = 0;
-            ^
-../mm/page_alloc.c:7074:17: warning: incompatible integer to pointer conversion assigning to 'struct deferred_split *' from 'unsigned long' [-Wint-conversion]
-        chp_lruvec->ds = (unsigned long)chp_lruvec; // pgdat->split_queue_len;
-                       ^ ~~~~~~~~~~~~~~~~~~~~~~~~~
-../mm/page_alloc.c:7065:21: warning: ISO C90 forbids mixing declarations and code [-Wdeclaration-after-statement]
-        struct chp_lruvec *chp_lruvec = NULL;
-                           ^
-3 warnings generated.
-  CC      fs/erofs/inode.o
-  CC      fs/ext4/balloc.o
-  CC      mm/page-writeback.o
-  AR      fs/exportfs/built-in.a
-  CC      arch/arm64/kernel/cpuinfo.o
-  CC      arch/arm64/kernel/cpu_errata.o
-  CC      fs/erofs/data.o
-  CC      fs/erofs/namei.o
-  CC      fs/exfat/exfat_super.o
-  CC      arch/arm64/kernel/cpufeature.o
-  CC      fs/exfat/exfat_api.o
-  AR      kernel/bpf/built-in.a
-  CC      kernel/events/core.o
-  CC      fs/exfat/exfat_blkdev.o
-  CC      fs/ext4/bitmap.o
-  CC      fs/erofs/dir.o
-  CC      fs/erofs/utils.o
-  CC      arch/arm64/kernel/alternative.o
-  CC      kernel/events/ring_buffer.o
-  CC      fs/exfat/exfat_cache.o
-  CC      fs/f2fs/dir.o
-  CC      fs/ext4/block_validity.o
-  CC      mm/readahead.o
-  CC      arch/arm64/kernel/cacheinfo.o
-  CC      fs/erofs/pcpubuf.o
-  CC      fs/exfat/exfat_data.o
-  CC      fs/ext4/dir.o
-  CC      arch/arm64/kernel/smp.o
-  CC      kernel/events/callchain.o
-  CC      fs/erofs/xattr.o
-  CC      fs/exfat/exfat_bitmap.o
-  CC      fs/f2fs/file.o
-  CC      fs/exfat/exfat_nls.o
-  CC      mm/swap.o
-  CC      fs/ext4/ext4_jbd2.o
-  CC      mm/truncate.o
-  CC      fs/erofs/decompressor.o
-  CC      arch/arm64/kernel/smp_spin_table.o
-  CC      fs/exfat/exfat_oal.o
-  CC      kernel/events/hw_breakpoint.o
-  CC      fs/exfat/exfat_upcase.o
-  CC      arch/arm64/kernel/topology.o
-  CC      fs/erofs/zmap.o
-  CC      fs/f2fs/inode.o
-  CC      fs/ext4/extents.o
-  AR      fs/exfat/built-in.a
-  CC      mm/vmscan.o
-  CC      kernel/irq/irqdesc.o
-  AS      arch/arm64/kernel/smccc-call.o
-  CC      arch/arm64/kernel/syscall.o
-  CC      fs/erofs/zdata.o
-  CC      kernel/events/uprobes.o
-  CC      kernel/irq/handle.o
-  CC      fs/f2fs/namei.o
-  CC      arch/arm64/kernel/sys32.o
-  CC      kernel/irq/manage.o
-  AR      fs/erofs/built-in.a
-  CC      kernel/irq/spurious.o
-  CC      fs/f2fs/hash.o
-  CC      arch/arm64/kernel/signal32.o
-  AR      kernel/events/built-in.a
-  CC      kernel/keventupload/oplus_kevent_upload.o
-  CC      kernel/irq/resend.o
-../mm/vmscan.c:1688:1: warning: unused label 'activate_locked_split' [-Wunused-label]
-activate_locked_split:
-^~~~~~~~~~~~~~~~~~~~~~
-../mm/vmscan.c:2780:6: warning: ISO C90 forbids mixing declarations and code [-Wdeclaration-after-statement]
-        int zid;
-            ^
-../mm/vmscan.c:2935:16: warning: unused variable 'totalswap' [-Wunused-variable]
-        unsigned long totalswap = total_swap_pages;
-                      ^
-../mm/vmscan.c:7087:17: warning: unused variable 'lruvec' [-Wunused-variable]
-        struct lruvec *lruvec = mem_cgroup_chp_lruvec(NULL, pgdat);
-                       ^
-../mm/vmscan.c:7085:13: warning: unused function 'clear_chp_pgdat_congested' [-Wunused-function]
-static void clear_chp_pgdat_congested(pg_data_t *pgdat)
-            ^
-5 warnings generated.
-  CC      fs/ext4/extents_status.o
-  CC      kernel/irq/chip.o
-  CC      arch/arm64/kernel/sys_compat.o
-  CC      fs/f2fs/super.o
-  CC      fs/f2fs/inline.o
-  CC      mm/shmem.o
-  CC      fs/f2fs/checkpoint.o
-  AS      arch/arm64/kernel/sigreturn32.o
-  AS      arch/arm64/kernel/kuser32.o
-  CC      arch/arm64/kernel/arm64ksyms.o
-  CC      kernel/irq/dummychip.o
-  AR      kernel/keventupload/built-in.a
-  CC      arch/arm64/kernel/module.o
-  CC      fs/ext4/file.o
-  CC      kernel/irq/devres.o
-  CC      fs/f2fs/gc.o
-  CC      arch/arm64/kernel/module-plts.o
-  CC      fs/fat/cache.o
-  CC      mm/util.o
-  CC      arch/arm64/kernel/perf_regs.o
-  CC      arch/arm64/kernel/perf_callchain.o
-  CC      fs/ext4/fsmap.o
-  CC      kernel/irq/autoprobe.o
-  CC      fs/fat/dir.o
-  CC      fs/fuse/dev.o
-  CC      fs/incfs/data_mgmt.o
-  CC      arch/arm64/kernel/perf_event.o
-  CC      kernel/irq/irqdomain.o
-  CC      mm/mmzone.o
-  CC      fs/f2fs/data.o
-  CC      fs/incfs/format.o
-  CC      arch/arm64/kernel/hw_breakpoint.o
-  CC      fs/ext4/fsync.o
-  CC      fs/fat/fatent.o
-  CC      mm/vmstat.o
-  CC      kernel/irq/proc.o
-  CC      fs/incfs/integrity.o
-  AS      arch/arm64/kernel/sleep.o
-  CC      arch/arm64/kernel/suspend.o
-  CC      kernel/irq/cpuhotplug.o
-  CC      fs/incfs/main.o
-  CC      fs/fat/file.o
-  CC      fs/fuse/dir.o
-  CC      fs/ext4/hash.o
-  CC      arch/arm64/kernel/cpuidle.o
-  CC      kernel/irq/pm.o
-  CC      fs/incfs/vfs.o
-  CC      mm/backing-dev.o
-  CC      arch/arm64/kernel/armv8_deprecated.o
-  CC      fs/ext4/ialloc.o
-  CC      fs/fuse/file.o
-  CC      fs/fat/inode.o
-  CC      fs/f2fs/node.o
-  CC      kernel/irq/msi.o
-  AR      fs/incfs/built-in.a
-  CC      arch/arm64/kernel/kaslr.o
-  CC      mm/mm_init.o
-  CC      mm/mmu_context.o
-  CC      arch/arm64/kernel/ssbd.o
-  CC      kernel/irq/affinity.o
-  CC      fs/fat/misc.o
-  AS      arch/arm64/kernel/head.o
-  CC      mm/percpu.o
-  CC      fs/fuse/inode.o
-  CC      fs/ext4/indirect.o
-  AR      kernel/irq/built-in.a
-  LDS     arch/arm64/kernel/vmlinux.lds
-  AR      kernel/livepatch/built-in.a
-  AR      arch/arm64/kernel/built-in.a
-  CC      fs/fuse/control.o
-  CC      kernel/locking/klockopt/klockopt.o
-  AR      ipc/built-in.a
-  CC      mm/slab_common.o
-  CC      fs/fat/nfs.o
-  CC      fs/f2fs/segment.o
-  CC      fs/fuse/xattr.o
-  CC      fs/fuse/acl.o
-../kernel/locking/klockopt/klockopt.c:239:33: warning: unused variable 'sleeping' [-Wunused-variable]
-        int ux_state, queued, running, sleeping, queue_flag =
-                                       ^
-../kernel/locking/klockopt/klockopt.c:239:6: warning: unused variable 'ux_state' [-Wunused-variable]
-        int ux_state, queued, running, sleeping, queue_flag =
-            ^
-../kernel/locking/klockopt/klockopt.c:408:23: warning: unused variable 'top_waiter' [-Wunused-variable]
-        struct mutex_waiter *top_waiter = waiter;
-                             ^
-../kernel/locking/klockopt/klockopt.c:485:22: warning: unused variable 'own' [-Wunused-variable]
-        struct task_struct *own;
-                            ^
-../kernel/locking/klockopt/klockopt.c:488:8: warning: unused variable 't' [-Wunused-variable]
-        pid_t t;
-              ^
-../kernel/locking/klockopt/klockopt.c:490:6: warning: unused variable 'flag' [-Wunused-variable]
-        int flag = false;
-            ^
-../kernel/locking/klockopt/klockopt.c:487:23: warning: unused variable 'waiter' [-Wunused-variable]
-        struct rwsem_waiter *waiter;
-                             ^
-../kernel/locking/klockopt/klockopt.c:635:7: warning: address of array 'page' will always evaluate to 'true' [-Wpointer-bool-conversion]
-        if (!page)
-            ~^~~~
-8 warnings generated.
-  CC      kernel/locking/klockopt/klocktest.o
-  CC      fs/fat/namei_vfat.o
-  CC      kernel/locking/mutex.o
-  CC      fs/ext4/inline.o
-  CC      fs/fuse/passthrough.o
-  CC      security/integrity/iint.o
-../kernel/locking/klockopt/klocktest.c:171:6: warning: unused variable 'before' [-Wunused-variable]
-        u64 before;
-            ^
-../kernel/locking/klockopt/klocktest.c:129:12: warning: unused function 'rw_write_wait_A' [-Wunused-function]
-static int rw_write_wait_A(void *data)
-           ^
-../kernel/locking/klockopt/klocktest.c:168:12: warning: unused function 'busy_wait_A' [-Wunused-function]
-static int busy_wait_A(void *data)
-           ^
-../kernel/locking/klockopt/klocktest.c:206:12: warning: unused function 'busy_wait_B' [-Wunused-function]
-static int busy_wait_B(void *data)
-           ^
-../kernel/locking/klockopt/klocktest.c:223:8: warning: unused function 'busy_wait_C' [-Wunused-function]
-static busy_wait_C(void *data)
-       ^
-../kernel/locking/klockopt/klocktest.c:240:12: warning: unused function 'busy_wait_ABC' [-Wunused-function]
-static int busy_wait_ABC(void *data)
-           ^
-6 warnings generated.
-  CC      mm/compaction.o
-  AR      kernel/locking/klockopt/built-in.a
-  CC      kernel/locking/semaphore.o
-  CC      fs/fat/namei_msdos.o
-  CC      kernel/locking/rwsem.o
-  AR      fs/fuse/built-in.a
-  CC      fs/isofs/namei.o
-  CC      security/integrity/integrity_audit.o
-  CC      fs/ext4/inode.o
-  AR      fs/fat/built-in.a
-  CC      kernel/locking/percpu-rwsem.o
-  CC      fs/jbd2/transaction.o
-  AR      security/integrity/built-in.a
-  CC      fs/isofs/inode.o
-  CC      security/keys/gc.o
-  CC      fs/f2fs/recovery.o
-  CC      fs/jbd2/commit.o
-  CC      mm/vmacache.o
-  CC      kernel/locking/spinlock.o
-  CC      security/keys/key.o
-  CC      fs/isofs/dir.o
-  CC      mm/interval_tree.o
-  CC      kernel/locking/osq_lock.o
-  CC      fs/jbd2/recovery.o
-  CC      mm/list_lru.o
-  CC      fs/f2fs/shrinker.o
-  CC      kernel/locking/qspinlock.o
-  CC      security/keys/keyring.o
-  CC      fs/isofs/util.o
-  CC      kernel/locking/rtmutex.o
-  CC      fs/isofs/rock.o
-  CC      fs/jbd2/checkpoint.o
-  CC      fs/f2fs/extent_cache.o
-  CC      security/keys/keyctl.o
-  CC      fs/ext4/ioctl.o
-  CC      mm/workingset.o
-  CC      fs/isofs/export.o
-  CC      kernel/locking/rwsem-xadd.o
-  CC      fs/isofs/joliet.o
-  CC      fs/jbd2/revoke.o
-../kernel/locking/rwsem-xadd.c:636:7: warning: unused variable 'already_on_list' [-Wunused-variable]
-        bool already_on_list = false;
-             ^
-1 warning generated.
-  CC      security/keys/permission.o
-  CC      fs/isofs/compress.o
-  CC      kernel/locking/qrwlock.o
-  CC      security/keys/process_keys.o
-  CC      mm/debug.o
-  AR      kernel/locking/built-in.a
-  CC      kernel/power/qos.o
-  CC      fs/f2fs/sysfs.o
-  AR      fs/isofs/built-in.a
-  CC      mm/gup.o
-  CC      fs/f2fs/debug.o
-  CC      fs/jbd2/journal.o
-  CC      fs/ext4/mballoc.o
-  CC      security/keys/request_key.o
-../kernel/power/qos.c:1004:13: warning: unused function 'pm_qos_irq_release' [-Wunused-function]
-static void pm_qos_irq_release(struct kref *ref)
-            ^
-../kernel/power/qos.c:1022:13: warning: unused function 'pm_qos_irq_notify' [-Wunused-function]
-static void pm_qos_irq_notify(struct irq_affinity_notify *notify,
-            ^
-2 warnings generated.
-  CC      security/keys/request_key_auth.o
-  CC      kernel/power/main.o
-  CC      kernel/power/process.o
-  CC      fs/f2fs/xattr.o
-  CC      kernel/power/suspend.o
-  CC      security/keys/user_defined.o
-  CC      mm/highmem.o
-  CC      fs/f2fs/acl.o
-  AR      fs/jbd2/built-in.a
-  CC      fs/kernfs/mount.o
-  CC      fs/nls/nls_base.o
-  CC      security/keys/compat.o
-  CC      fs/nls/nls_cp437.o
-  CC      mm/memory.o
-  CC      fs/kernfs/inode.o
-  CC      kernel/printk/printk.o
-  CC      fs/nls/nls_cp950.o
-  CC      fs/f2fs/verity.o
-  CC      kernel/power/wakelock.o
-  CC      fs/ext4/migrate.o
-  CC      security/keys/proc.o
-  CC      fs/nls/nls_ascii.o
-  CC      fs/kernfs/dir.o
-  CC      kernel/power/poweroff.o
-  CC      fs/f2fs/compress.o
-  CC      fs/nls/nls_iso8859-1.o
-  CC      security/keys/sysctl.o
-  CC      fs/ext4/mmp.o
-  CC      kernel/power/energy_model.o
-  CC      fs/nls/nls_utf8.o
-  AR      security/keys/built-in.a
-  GEN     security/selinux/flask.h security/selinux/av_permissions.h
-  CC      security/selinux/avc.o
-  CC      kernel/printk/printk_safe.o
-  AR      fs/nls/built-in.a
-  CC      kernel/power/wakeup_reason.o
-  CC      fs/kernfs/file.o
-  CC      fs/ext4/move_extent.o
-  AR      kernel/printk/built-in.a
-  CC      fs/ext4/namei.o
-  CC      crypto/asymmetric_keys/asymmetric_type.o
-  AR      kernel/power/built-in.a
-  CC      security/commoncap.o
-  CC      kernel/rcu/update.o
-  CC      mm/mincore.o
-  CC      fs/kernfs/symlink.o
-  CC      crypto/asymmetric_keys/restrict.o
-  CC      security/selinux/hooks.o
-  CC      crypto/asymmetric_keys/signature.o
-  CC      fs/f2fs/lz4armv8/lz4accel.o
-  AR      fs/kernfs/built-in.a
-  AS      fs/f2fs/lz4armv8/lz4armv8.o
-  CC      kernel/rcu/sync.o
-  AR      fs/f2fs/built-in.a
-  CC      mm/mlock.o
-  CC      block/blk/blk_monitor.o
-  CC      mm/mmap.o
-  CC      crypto/asymmetric_keys/public_key.o
-  CC      drivers/amba/bus.o
-  CC      kernel/rcu/srcutree.o
-  CC      fs/ext4/page-io.o
-  AR      block/blk/built-in.a
-  CC      block/partitions/check.o
-  ASN.1   crypto/asymmetric_keys/x509.asn1.c
-  ASN.1   crypto/asymmetric_keys/x509_akid.asn1.c
-  CC      crypto/asymmetric_keys/x509_public_key.o
-  AR      drivers/amba/built-in.a
-  CC      drivers/android/binderfs.o
-  CC      kernel/rcu/tree.o
-  AR      drivers/auxdisplay/built-in.a
-  CC      block/partitions/msdos.o
-  CC      fs/ext4/readpage.o
-  CC      security/selinux/selinuxfs.o
-  CC      security/selinux/netlink.o
-  ASN.1   crypto/asymmetric_keys/pkcs7.asn1.c
-  CC      crypto/asymmetric_keys/pkcs7_trust.o
-  CC      drivers/android/binder.o
-  CC      crypto/asymmetric_keys/pkcs7_verify.o
-  CC      mm/mprotect.o
-  CC      block/partitions/efi.o
-  CC      kernel/rcu/rcu_segcblist.o
-  CC      fs/ext4/resize.o
-  CC      crypto/asymmetric_keys/x509.asn1.o
-  CC      crypto/asymmetric_keys/x509_akid.asn1.o
-  CC      crypto/asymmetric_keys/x509_cert_parser.o
-  CC      kernel/sched/extension/eas_plus.o
-  CC      security/selinux/nlmsgtab.o
-  CC      mm/mremap.o
-  AR      block/partitions/built-in.a
-  CC      block/uxio_first/uxio_first_opt.o
-  CC      crypto/asymmetric_keys/pkcs7.asn1.o
-  CC      crypto/asymmetric_keys/pkcs7_parser.o
-  AR      kernel/rcu/built-in.a
-  CC      kernel/sched/extension/debug.o
-  CC      fs/ext4/super.o
-  CC      security/selinux/netif.o
-  CC      mm/msync.o
-  CC      block/uxio_first/high_prio_task.o
-  AR      crypto/asymmetric_keys/built-in.a
-  CC      crypto/api.o
-  CC      mm/page_vma_mapped.o
-  AR      block/uxio_first/built-in.a
-  CC      block/bio.o
-  CC      crypto/cipher.o
-  CC      kernel/sched/extension/tuning.o
-  CC      security/selinux/netnode.o
-  CC      crypto/compress.o
-  CC      crypto/memneq.o
-  CC      mm/pagewalk.o
-  CC      drivers/android/binder_alloc.o
-  CC      crypto/crypto_wq.o
-  CC      mm/pgtable-generic.o
-  CC      security/selinux/netport.o
-  CC      mm/rmap.o
-  CC      block/elevator.o
-  CC      crypto/algapi.o
-  CC      crypto/scatterwalk.o
-  CC      kernel/sched/extension/debug_aee.o
-  AR      drivers/android/built-in.a
-  CC      security/selinux/ibpkey.o
-  CC      drivers/base/firmware_loader/fallback_table.o
-  CC      mm/vmalloc.o
-  CC      block/blk-core.o
-  CC      fs/ext4/symlink.o
-  CC      drivers/base/kernelFwUpdate/kernelFwUpdate.o
-  CC      crypto/proc.o
-  AR      kernel/sched/extension/built-in.a
-  CC      kernel/sched/core.o
-  CC      drivers/base/firmware_loader/main.o
-  AR      drivers/base/kernelFwUpdate/built-in.a
-  CC      security/selinux/exports.o
-  CC      crypto/aead.o
-  CC      crypto/ablkcipher.o
-  CC      fs/ext4/sysfs.o
-  CC      security/selinux/ss/ebitmap.o
-  CC      drivers/base/firmware_loader/fallback.o
-  CC      mm/process_vm_access.o
-  CC      fs/ext4/xattr.o
-  CC      crypto/blkcipher.o
-  CC      crypto/skcipher.o
-  AR      drivers/base/firmware_loader/built-in.a
-  CC      block/blk-tag.o
-  CC      drivers/base/power/sysfs.o
-  CC      mm/init-mm.o
-  CC      security/selinux/ss/hashtab.o
-  CC      mm/nobootmem.o
-  CC      drivers/base/power/generic_ops.o
-  CC      security/selinux/ss/symtab.o
-  CC      security/selinux/ss/sidtab.o
-  CC      mm/madvise.o
-  CC      fs/ext4/xattr_trusted.o
-  CC      block/blk-sysfs.o
-  CC      crypto/seqiv.o
-  CC      drivers/base/power/common.o
-  CC      drivers/base/power/qos.o
-  CC      fs/ext4/xattr_user.o
-  CC      mm/memblock.o
-  CC      crypto/echainiv.o
-  CC      crypto/ahash.o
-  CC      block/blk-flush.o
-  CC      fs/ext4/acl.o
-  CC      kernel/sched/loadavg.o
-  CC      security/selinux/ss/avtab.o
-  CC      mm/page_io.o
-  CC      drivers/base/power/runtime.o
-  CC      mm/swap_state.o
-  CC      crypto/shash.o
-  CC      block/blk-settings.o
-  CC      fs/ext4/xattr_security.o
-  CC      security/selinux/ss/policydb.o
-  CC      kernel/sched/clock.o
-  CC      drivers/base/power/wakeirq.o
-  CC      mm/swapfile.o
-  CC      drivers/base/regmap/regmap.o
-  CC      fs/ext4/verity.o
-  CC      block/blk-ioc.o
-  CC      crypto/akcipher.o
-  CC      drivers/base/power/main.o
-  AR      fs/ext4/built-in.a
-  CC      fs/notify/dnotify/dnotify.o
-  CC      kernel/sched/cputime.o
-  CC      security/selinux/ss/services.o
-  CC      block/blk-map.o
-  CC      crypto/kpp.o
-  AR      fs/notify/dnotify/built-in.a
-  AR      fs/notify/fanotify/built-in.a
-  CC      fs/notify/inotify/inotify_fsnotify.o
-  CC      drivers/base/regmap/regcache.o
-  CC      mm/swap_slots.o
-  CC      fs/notify/inotify/inotify_user.o
-  CC      drivers/base/power/wakeup.o
-  CC      block/blk-exec.o
-  ASN.1   crypto/rsapubkey.asn1.c
-  ASN.1   crypto/rsaprivkey.asn1.c
-  CC      crypto/rsa.o
-  CC      kernel/sched/idle.o
-  CC      mm/dmapool.o
-  CC      drivers/base/regmap/regcache-rbtree.o
-  CC      security/selinux/ss/conditional.o
-  AR      fs/notify/inotify/built-in.a
-  CC      fs/notify/fsnotify.o
-  CC      drivers/base/regmap/regcache-flat.o
-  CC      crypto/rsa_helper.o
-  CC      mm/sparse.o
-  CC      block/blk-merge.o
-  CC      crypto/rsa-pkcs1pad.o
-  CC      drivers/base/power/wakeup_stats.o
-  CC      fs/notify/notification.o
-  CC      drivers/base/regmap/regmap-i2c.o
-  CC      security/selinux/ss/mls.o
-  CC      drivers/base/power/domain.o
-  CC      mm/sparse-vmemmap.o
-  CC      kernel/sched/fair.o
-  CC      crypto/acompress.o
-  CC      drivers/base/regmap/regmap-spi.o
-  CC      fs/notify/group.o
-  CC      block/blk-softirq.o
-  CC      mm/slub.o
-  CC      security/selinux/ss/status.o
-  CC      fs/notify/mark.o
-  CC      drivers/base/regmap/regmap-spmi.o
-  CC      drivers/base/power/domain_governor.o
-  CC      crypto/scompress.o
-  CC      block/blk-timeout.o
-  CC      drivers/base/power/clock_ops.o
-  CC      drivers/base/regmap/regmap-mmio.o
-  CC      fs/notify/fdinfo.o
-  AR      security/selinux/built-in.a
-  CC      security/min_addr.o
-  AR      drivers/base/power/built-in.a
-  CC      crypto/algboss.o
-  CC      block/blk-lib.o
-  AR      fs/notify/built-in.a
-  CC      fs/overlayfs/super.o
-  AR      drivers/base/regmap/built-in.a
-  AR      drivers/base/test/built-in.a
-  CC      drivers/base/component.o
-  CC      block/blk-mq.o
-  CC      security/security.o
-  CC      mm/migrate.o
-  CC      fs/overlayfs/namei.o
-  CC      crypto/testmgr.o
-  CC      block/blk-mq-tag.o
-  CC      drivers/base/core.o
-../kernel/sched/fair.c:7988:37: warning: comparison of distinct pointer types ('typeof (1) *' (aka 'int *') and 'typeof ((best_energy >> 4)) *' (aka 'unsigned long *')) [-Wcompare-distinct-pointer-types]
-                                if((best_energy - cur_energy) > max(1, (best_energy >> 4))) {
-                                                                ^~~~~~~~~~~~~~~~~~~~~~~~~~
-../include/linux/kernel.h:859:19: note: expanded from macro 'max'
-#define max(x, y)       __careful_cmp(x, y, >)
-                        ^~~~~~~~~~~~~~~~~~~~~~
-../include/linux/kernel.h:843:24: note: expanded from macro '__careful_cmp'
-        __builtin_choose_expr(__safe_cmp(x, y), \
-                              ^~~~~~~~~~~~~~~~
-../include/linux/kernel.h:833:4: note: expanded from macro '__safe_cmp'
-                (__typecheck(x, y) && __no_side_effects(x, y))
-                 ^~~~~~~~~~~~~~~~~
-../include/linux/kernel.h:819:29: note: expanded from macro '__typecheck'
-                (!!(sizeof((typeof(x) *)1 == (typeof(y) *)1)))
-                           ~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~
-../kernel/sched/fair.c:8088:22: warning: unused variable 'rd' [-Wunused-variable]
-        struct root_domain *rd = cpu_rq(smp_processor_id())->rd;
-                            ^
-../kernel/sched/fair.c:12011:6: warning: unused variable 'num_mincpu' [-Wunused-variable]
-        int num_mincpu = cpumask_weight(topology_core_cpumask(0));
-            ^
-3 warnings generated.
-  CC      fs/overlayfs/util.o
-  CC      kernel/sched/rt.o
-  CC      crypto/crypto_user.o
-  CC      fs/overlayfs/inode.o
-  CC      block/blk-stat.o
-  CC      mm/huge_memory.o
-  CC      block/blk-mq-sysfs.o
-  CC      security/lsm_audit.o
-  CC      crypto/cmac.o
-  CC      fs/overlayfs/file.o
-  CC      drivers/base/bus.o
-  CC      drivers/base/dd.o
-  CC      fs/overlayfs/dir.o
-  CC      crypto/hmac.o
-  CC      block/blk-mq-cpumap.o
-  CC      kernel/sched/deadline.o
-../mm/huge_memory.c:2778:22: warning: unused variable 'pgdata' [-Wunused-variable]
-        struct pglist_data *pgdata = NODE_DATA(page_to_nid(head));
-                            ^
-../mm/huge_memory.c:3018:24: warning: unused variable 'deferred_split_shrinker' [-Wunused-variable]
-static struct shrinker deferred_split_shrinker = {
-                       ^
-2 warnings generated.
-  AR      security/built-in.a
-  AR      sound/arm/built-in.a
-  CC      mm/khugepaged.o
-  AR      sound/atmel/built-in.a
-  CC      sound/core/seq/seq.o
-  CC      mm/page_counter.o
-  CC      fs/overlayfs/readdir.o
-  CC      crypto/xcbc.o
-  CC      drivers/base/syscore.o
-  CC      fs/overlayfs/copy_up.o
-  CC      sound/core/seq/seq_lock.o
-  CC      block/blk-mq-sched.o
-  CC      crypto/crypto_null.o
