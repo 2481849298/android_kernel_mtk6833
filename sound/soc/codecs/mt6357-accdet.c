@@ -131,7 +131,7 @@ struct mt63xx_accdet_data {
 static struct mt63xx_accdet_data *accdet;
 
 static struct head_dts_data accdet_dts;
-struct pwm_deb_settings *cust_pwm_deb;
+extern struct pwm_deb_settings *cust_pwm_deb;
 
 struct accdet_priv {
 	u32 caps;
@@ -144,7 +144,7 @@ static struct accdet_priv mt6357_accdet[] = {
 	},
 };
 
-const struct of_device_id accdet_of_match[] = {
+extern const struct of_device_id accdet_of_match[] = {
 	{
 		.compatible = "mediatek,mt6357-accdet",
 		.data = &mt6357_accdet,
@@ -195,7 +195,7 @@ static void config_eint_init_by_mode(void);
 static u32 get_triggered_eint(void);
 static void send_status_event(u32 cable_type, u32 status);
 /* global function declaration */
-inline u32 accdet_read(u32 addr)
+extern inline u32 accdet_read(u32 addr)
 {
 	u32 val = 0;
 
@@ -550,7 +550,7 @@ static int accdet_create_attr(struct device_driver *driver)
 }
 
 /* get plug-in Resister for audio call */
-int accdet_read_audio_res(unsigned int res_value)
+extern int accdet_read_audio_res(unsigned int res_value)
 {
 	pr_info("%s() resister value: R=%u(ohm)\n", __func__, res_value);
 
@@ -1183,7 +1183,7 @@ static void disable_hskey_block_callback(struct work_struct *work)
 }
 #endif /* CONFIG_HSKEY_BLOCK */
 
-void accdet_set_debounce(int state, unsigned int debounce)
+extern void accdet_set_debounce(int state, unsigned int debounce)
 {
 	switch (state) {
 	case accdet_state000:
@@ -1531,7 +1531,7 @@ static u32 moisture_detect(void)
 	return moisture_vol;
 
 }
-void accdet_irq_handle(void)
+extern void accdet_irq_handle(void)
 {
 	u32 eintID = 0;
 	u32 irq_status = 0, acc_sts = 0, eint_sts = 0;
@@ -1979,7 +1979,7 @@ static inline void accdet_init(void)
 }
 
 /* late init for DC trim, and this API  Will be called by audio */
-void accdet_late_init(unsigned long data)
+extern void accdet_late_init(unsigned long data)
 {
 	pr_info("%s()  now init accdet!\n", __func__);
 	if (atomic_cmpxchg(&accdet_first, 1, 0)) {
@@ -2326,7 +2326,7 @@ static const struct file_operations accdet_fops = {
 	.unlocked_ioctl = mt_accdet_unlocked_ioctl,
 };
 
-const struct file_operations *accdet_get_fops(void)
+extern const struct file_operations *accdet_get_fops(void)
 {
 	return &accdet_fops;
 }
