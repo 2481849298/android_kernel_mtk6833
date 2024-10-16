@@ -52,11 +52,57 @@ endif
 
 
         # for gen4m options
+MTK_PLATFORM_ID := $(patsubst CONSYS_%,%,$(subst ",,$(CONFIG_MTK_COMBO_CHIP)))
+
+    # Do build-in for Makefile checking
+     export CONFIG_WLAN_DRV_BUILD_IN=y
+        ifneq (,$(filter $(CONFIG_MTK_COMBO_CHIP), "CONSYS_6885" "CONSYS_6893"))
+            export MTK_COMBO_CHIP=CONNAC2X2_SOC3_0
+            PATH_TO_WMT_DRV      = conninfra
+        else ifneq (,$(filter $(CONFIG_MTK_COMBO_CHIP), "CONSYS_6779" "CONSYS_6873" "CONSYS_6853"))
+            export MTK_COMBO_CHIP=CONNAC2X2
+            PATH_TO_WMT_DRV      = common
+        else
+            export MTK_COMBO_CHIP=SOC2_1X1
+            PATH_TO_WMT_DRV      = common
+        endif
+
+
+
+    
+        # for gen4m options
         export CONFIG_MTK_COMBO_WIFI_HIF=axi
-        export MTK_COMBO_CHIP=CONNAC
-        export WLAN_CHIP_ID=6765
+        export WLAN_CHIP_ID=$(MTK_PLATFORM_ID)
         export MTK_ANDROID_WMT=y
+        export MTK_ANDROID_EMI=y
+        export ADAPTOR_OPTS=$(MTK_COMBO_CHIP)
+        export WIFI_ECO_VER=1
+        export BT_PLATFORM=connac1x
+        export CONNAC_VER=1_0
         export MTK_WLAN_SERVICE=y
+        WLAN_IP_SET_1_SERIES := 6765 6761 6885 6893
+        WLAN_IP_SET_2_SERIES := 3967 6785
+        WLAN_IP_SET_3_SERIES := 6779 6873 6853
+        ifneq ($(filter $(WLAN_IP_SET_3_SERIES), $(WLAN_CHIP_ID)),)
+            $(info WIFI_IP_SET is 3)
+            export WIFI_IP_SET=3
+        else ifneq ($(filter $(WLAN_IP_SET_2_SERIES), $(WLAN_CHIP_ID)),)
+            $(info WIFI_IP_SET is 2)
+            export WIFI_IP_SET=2
+        else
+            $(info WIFI_IP_SET is 1)
+            export WIFI_IP_SET=1
+        endif
+
+        # Do build-in for xxx.c checking
+        subdir-ccflags-y += -D MTK_WCN_REMOVE_KERNEL_MODULE
+        subdir-ccflags-y += -D MTK_WCN_BUILT_IN_DRIVER
+
+        obj-y += $(PATH_TO_WLAN_DRV)/
+
+
+        # @} For BT built-in mode end
+
 
         # For FM built-in mode start @{
         # for fmradio options
@@ -74,6 +120,10 @@ endif
         endif
         export CFG_FM_CHIP_ID=$(MTK_PLATFORM_ID)
         export CFG_FM_CHIP=$(FM_CHIP)
+        # @} For FM built-in mode end
+
+        # For GPS built-in mode start @{
+        # @} For GPS built-in mode end
     obj-$(CONFIG_MTK_COMBO) += common/
     obj-$(CONFIG_MTK_COMBO_WIFI) += wlan/adaptor/
     obj-$(CONFIG_MTK_COMBO_WIFI) += wlan/core/gen4m/

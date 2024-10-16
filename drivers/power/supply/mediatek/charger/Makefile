@@ -25,6 +25,8 @@ subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/typec/tcpc/inc
 subdir-ccflags-y += -I$(srctree)/drivers/power/supply/mediatek/misc/
 subdir-ccflags-y += -I$(srctree)/drivers/power/supply/mediatek/battery/
 
+ccflags-y += -I$(srctree)/drivers/power/supply/mediatek/charger
+
 ifeq (y, $(filter y, $(CONFIG_OPLUS_CHARGER_MTK6853) $(CONFIG_OPLUS_CHARGER_MTK6873) \
 					 $(CONFIG_OPLUS_CHARGER_MTK6885) $(CONFIG_OPLUS_CHARGER_MTK6889) \
 					 $(CONFIG_OPLUS_CHARGER_MTK6785) $(CONFIG_OPLUS_CHARGER_MTK6893) \
