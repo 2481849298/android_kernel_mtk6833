@@ -2571,6 +2571,6 @@ unsigned long scale_irq_capacity(unsigned long util, unsigned long irq, unsigned
 extern struct static_key_false sched_energy_present;
 #endif
 
-#include "extension/eas_plus.h"
+#include "eas_plus.h"
 
 #endif /* __KERNEL_SCHED_H__ */
