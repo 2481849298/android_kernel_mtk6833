@@ -2,7 +2,7 @@
 /*
  * Copyright (c) 2019 MediaTek Inc.
  */
-#include "../sched.h"
+#include "sched.h"
 #include <trace/events/sched.h>
 #ifdef CONFIG_MTK_TASK_TURBO
 #include <mt-plat/turbo_common.h>
