@@ -1,4 +1,4 @@
-subdir-ccflags-y += -Werror
+subdir-ccflags-y += 
 ccflags-y += -I$(srctree)/drivers/gpu/drm/oplus
 
 mediatek-drm-y := mtk_drm_drv.o \
@@ -119,9 +119,9 @@ endif
 
 ccflags-$(CONFIG_MTK_CMDQ_MBOX_EXT) += -I$(srctree)/drivers/misc/mediatek/cmdq/mailbox
 
-subdir-ccflags-y += -I$(srctree)/drivers/staging/android/ion/ \
+ccflags-y += -I$(srctree)/drivers/staging/android/ion/ \
 		    -I$(srctree)/drivers/staging/android/ion/mtk \
-		    -I$(srctree)/drivers/staging/android/mtk_ion\
+		    -I$(srctree)/drivers/staging/android/mtk_ion \
 		    -I$(srctree)/drivers/staging/android/mtk_ion/mtk \
 		    -I$(srctree)/drivers/misc/mediatek/trusted_mem/public
 
