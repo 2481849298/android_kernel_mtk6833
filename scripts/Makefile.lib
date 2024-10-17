@@ -6,8 +6,8 @@ cppflags-y += $(EXTRA_CPPFLAGS)
 ldflags-y  += $(EXTRA_LDFLAGS)
 
 # flags that take effect in current and sub directories
-KBUILD_AFLAGS += $(subdir-asflags-y)
-KBUILD_CFLAGS += $(subdir-ccflags-y)
+export KBUILD_SUBDIR_ASFLAGS := $(KBUILD_SUBDIR_ASFLAGS) $(subdir-asflags-y)
+export KBUILD_SUBDIR_CCFLAGS := $(KBUILD_SUBDIR_CCFLAGS) $(subdir-ccflags-y)
 
 # Figure out what we need to build from the various variables
 # ===========================================================================
