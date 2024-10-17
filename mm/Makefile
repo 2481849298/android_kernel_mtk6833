@@ -7,9 +7,8 @@
 ccflags-y += -I$(srctree)/drivers/gpu/mediatek
 #endif
 
-ifdef CONFIG_MTK_ION
-subdir-ccflags-y += -I$(srctree)/drivers/staging/android/mtk_ion
-endif
+
+ccflags-y += -I$(srctree)/drivers/staging/android/mtk_ion
 
 KASAN_SANITIZE_slab_common.o := n
 KASAN_SANITIZE_slab.o := n
