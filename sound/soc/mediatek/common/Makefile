@@ -18,8 +18,8 @@ obj-$(CONFIG_SND_SOC_MTK_SMART_PHONE) += snd-soc-mtk-sp-common.o mtk-usip.o
 
 obj-$(CONFIG_SND_SOC_MTK_BTCVSD) += mtk-btcvsd.o
 
-subdir-ccflags-y += -I$(srctree)/drivers/staging/android/mtk_ion
-subdir-ccflags-y += -I$(srctree)/drivers/staging/android/mtk_ion/mtk
+ccflags-y += -I$(srctree)/drivers/staging/android/mtk_ion
+ccflags-y += -I$(srctree)/drivers/staging/android/mtk_ion/mtk
 
 ifeq ($(CONFIG_SND_SOC_MTK_AUDIO_DSP),y)
 ifeq ($(CONFIG_MACH_MT6779),y)
